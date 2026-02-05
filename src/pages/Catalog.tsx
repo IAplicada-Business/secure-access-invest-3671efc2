@@ -70,7 +70,7 @@ export default function Catalog() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-charcoal">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="animate-pulse">
           <Logo className="h-16 opacity-50" />
         </div>
@@ -80,18 +80,18 @@ export default function Catalog() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-charcoal px-4 text-center">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 text-center">
         <div className="max-w-md animate-fade-in">
           <div className="mb-6 rounded-full bg-destructive/10 p-4 inline-block">
             <AlertCircle className="h-12 w-12 text-destructive" />
           </div>
-          <h1 className="mb-4 font-display text-2xl font-bold text-white">
+          <h1 className="mb-4 font-display text-2xl font-bold text-foreground">
             Link Indisponível
           </h1>
           <p className="mb-8 text-muted-foreground">
             {error}
           </p>
-          <Button asChild variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white">
+          <Button asChild className="bg-charcoal text-white hover:bg-charcoal-light">
             <a href="https://wa.me/5511999999999" target="_blank" rel="noopener noreferrer">
               Entrar em Contato
             </a>
@@ -102,25 +102,24 @@ export default function Catalog() {
   }
 
   return (
-    <div className="min-h-screen bg-charcoal">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-charcoal-light bg-charcoal/95 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Logo className="h-10" />
             <div className="text-right">
               <p className="text-xs text-muted-foreground">Acesso exclusivo para</p>
-              <p className="font-medium text-white">{accessLink?.investor_name}</p>
+              <p className="font-medium text-foreground">{accessLink?.investor_name}</p>
             </div>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="relative py-16 md:py-24">
-        <div className="absolute inset-0 bg-gradient-to-b from-charcoal via-charcoal to-charcoal-light" />
+      <section className="relative py-16 md:py-24 bg-gradient-to-b from-secondary via-background to-background">
         <div className="container relative mx-auto px-4 text-center">
-          <h1 className="mb-4 font-display text-3xl font-bold text-white md:text-4xl lg:text-5xl animate-slide-up">
+          <h1 className="mb-4 font-display text-3xl font-bold text-foreground md:text-4xl lg:text-5xl animate-slide-up">
             Oportunidades <span className="text-primary">Exclusivas</span> de Investimento
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground animate-fade-in">
@@ -136,7 +135,7 @@ export default function Catalog() {
           {properties.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <Building2 className="mb-4 h-16 w-16 text-muted-foreground/30" />
-              <h2 className="mb-2 font-display text-xl font-semibold text-white">
+              <h2 className="mb-2 font-display text-xl font-semibold text-foreground">
                 Nenhum imóvel disponível no momento
               </h2>
               <p className="text-muted-foreground">
@@ -146,7 +145,7 @@ export default function Catalog() {
           ) : (
             <>
               <div className="mb-8 flex items-center justify-between">
-                <h2 className="font-display text-xl font-semibold text-white">
+                <h2 className="font-display text-xl font-semibold text-foreground">
                   {properties.length} {properties.length === 1 ? 'Imóvel Disponível' : 'Imóveis Disponíveis'}
                 </h2>
               </div>
@@ -167,10 +166,10 @@ export default function Catalog() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-charcoal-light bg-charcoal py-8">
+      <footer className="border-t border-border bg-charcoal py-8">
         <div className="container mx-auto px-4 text-center">
           <Logo className="mx-auto mb-4 h-8" />
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-white/70">
             © {new Date().getFullYear()} JMob Gestão e Negócios. Todos os direitos reservados.
           </p>
         </div>
