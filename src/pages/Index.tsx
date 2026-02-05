@@ -5,25 +5,24 @@ import { Building2, Shield, TrendingUp, ArrowRight } from 'lucide-react';
 
 export default function Index() {
   return (
-    <div className="min-h-screen bg-charcoal">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-charcoal-light">
+      <header className="border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
           <Logo className="h-10" />
-          <Button asChild variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground">
+          <Button asChild className="bg-charcoal text-white hover:bg-charcoal-light">
             <Link to="/admin/login">Acesso Admin</Link>
           </Button>
         </div>
       </header>
 
       {/* Hero */}
-      <section className="relative py-24 md:py-32">
-        <div className="absolute inset-0 bg-gradient-to-b from-charcoal via-charcoal to-charcoal-light" />
+      <section className="relative py-24 md:py-32 bg-gradient-to-b from-background via-secondary to-background">
         <div className="container relative mx-auto px-4 text-center">
           <span className="inline-block mb-4 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium animate-fade-in">
             Regularização de Imóveis
           </span>
-          <h1 className="mb-6 font-display text-4xl font-bold text-white md:text-5xl lg:text-6xl animate-slide-up">
+          <h1 className="mb-6 font-display text-4xl font-bold text-foreground md:text-5xl lg:text-6xl animate-slide-up">
             Transforme <span className="text-primary">Irregularidades</span>
             <br />em Oportunidades
           </h1>
@@ -36,7 +35,7 @@ export default function Index() {
               Quero Investir
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <Button size="lg" variant="outline" className="border-charcoal-light text-white hover:bg-charcoal-light">
+            <Button size="lg" variant="outline" className="border-charcoal text-charcoal hover:bg-charcoal hover:text-white">
               Saiba Mais
             </Button>
           </div>
@@ -44,10 +43,10 @@ export default function Index() {
       </section>
 
       {/* Features */}
-      <section className="py-20 bg-charcoal-light">
+      <section className="py-20 bg-secondary">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="font-display text-3xl font-bold text-white mb-4">
+            <h2 className="font-display text-3xl font-bold text-foreground mb-4">
               Por que investir com a JMob?
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
@@ -116,10 +115,10 @@ export default function Index() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-charcoal-light py-8">
+      <footer className="border-t border-border py-8 bg-charcoal">
         <div className="container mx-auto px-4 text-center">
           <Logo className="mx-auto mb-4 h-8" />
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-white/70">
             © {new Date().getFullYear()} JMob Gestão e Negócios. Todos os direitos reservados.
           </p>
         </div>
