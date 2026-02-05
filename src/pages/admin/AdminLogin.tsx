@@ -36,8 +36,8 @@ export default function AdminLogin() {
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-secondary via-background to-secondary px-4">
       {/* Logo positioned at top */}
-      <div className="absolute top-8 left-1/2 -translate-x-1/2">
-        <Logo className="h-32 md:h-40" />
+      <div className="absolute top-6 left-1/2 -translate-x-1/2">
+        <Logo className="h-28 w-64 md:h-32 md:w-72" />
       </div>
 
       <div className="w-full max-w-sm animate-fade-in">

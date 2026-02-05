@@ -88,7 +88,7 @@ export default function AdminLayout() {
       {/* Mobile Header */}
       <header className="lg:hidden fixed top-0 left-0 right-0 z-50 border-b border-border bg-card">
         <div className="flex items-center justify-between px-4 py-3">
-          <Logo className="h-8" />
+          <Logo className="h-8 w-32" />
           <Button
             variant="ghost"
             size="icon"
@@ -117,7 +117,7 @@ export default function AdminLayout() {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="p-6 border-b border-border">
-            <Logo className="h-10" />
+            <Logo className="h-10 w-40" />
             <p className="text-xs text-muted-foreground mt-2">Painel Administrativo</p>
           </div>
 
