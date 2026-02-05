@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Outlet, useNavigate, Link, useLocation } from 'react-router-dom';
+import { Outlet, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/NotificationBell';
+import { SlideTabs } from '@/components/ui/slide-tabs';
 import { 
   LayoutDashboard, 
   Building2, 
@@ -15,20 +16,25 @@ import {
   X
 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const navItems = [
   { path: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
   { path: '/admin/imoveis', icon: Building2, label: 'Imóveis', exact: false },
-  { path: '/admin/links', icon: LinkIcon, label: 'Links de Acesso', exact: false },
+  { path: '/admin/links', icon: LinkIcon, label: 'Links', exact: false },
   { path: '/admin/relatorios', icon: BarChart3, label: 'Relatórios', exact: false },
   { path: '/admin/configuracoes', icon: Settings, label: 'Configurações', exact: false },
 ];
 
 export default function AdminLayout() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     async function checkAuth() {
@@ -86,95 +92,75 @@ export default function AdminLayout() {
 
   return (
     <div className="min-h-screen bg-secondary">
-      {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 border-b border-border bg-card">
-        <div className="flex items-center justify-between px-4 py-3">
-          <Logo className="h-8 w-32" />
-          <div className="flex items-center gap-2">
-            <NotificationBell />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-            >
-              {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
+      {/* Top Header */}
+      <header className="sticky top-0 z-50 border-b border-border bg-card">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between gap-4">
+            {/* Logo */}
+            <Link to="/admin" className="flex-shrink-0">
+              <Logo className="h-8 w-32" />
+            </Link>
+
+            {/* Desktop Navigation - Slide Tabs */}
+            <div className="hidden lg:flex flex-1 justify-center">
+              <SlideTabs tabs={navItems} />
+            </div>
+
+            {/* Mobile Menu Button */}
+            <div className="lg:hidden">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </Button>
+            </div>
+
+            {/* Right side actions */}
+            <div className="flex items-center gap-2">
+              <NotificationBell />
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
+                    <LogOut className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
-      </header>
 
-      {/* Sidebar Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="lg:hidden fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside className={`
-        fixed top-0 left-0 z-50 h-full w-64 bg-card border-r border-border
-        transform transition-transform duration-200 ease-in-out
-        lg:translate-x-0
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-        <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="p-6 border-b border-border">
-            <Logo className="h-10 w-40" />
-            <p className="text-xs text-muted-foreground mt-2">Painel Administrativo</p>
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-1">
-            {navItems.map((item) => {
-              const isActive = item.exact 
-                ? location.pathname === item.path
-                : location.pathname.startsWith(item.path);
-              
-              return (
+        {/* Mobile Navigation Dropdown */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden border-t border-border bg-card">
+            <nav className="mx-auto max-w-7xl px-4 py-3 space-y-1">
+              {navItems.map((item) => (
                 <Link
                   key={item.path}
                   to={item.path}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`
-                    flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors
-                    ${isActive 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-                    }
-                  `}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
                 >
                   <item.icon className="h-5 w-5" />
                   {item.label}
                 </Link>
-              );
-            })}
-          </nav>
-
-          {/* Desktop Notification Bell + Logout */}
-          <div className="p-4 border-t border-border space-y-2">
-            <div className="hidden lg:flex items-center justify-between px-4 py-2">
-              <span className="text-sm text-muted-foreground">Notificações</span>
-              <NotificationBell />
-            </div>
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-muted-foreground hover:text-destructive"
-              onClick={handleLogout}
-            >
-              <LogOut className="mr-3 h-5 w-5" />
-              Sair
-            </Button>
+              ))}
+            </nav>
           </div>
-        </div>
-      </aside>
+        )}
+      </header>
 
       {/* Main Content */}
-      <main className="lg:ml-64 min-h-screen pt-16 lg:pt-0">
-        <div className="p-6">
-          <Outlet />
-        </div>
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+        <Outlet />
       </main>
     </div>
   );
