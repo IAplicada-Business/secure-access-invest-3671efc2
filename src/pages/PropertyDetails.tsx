@@ -169,68 +169,26 @@ export default function PropertyDetails() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="grid gap-8 lg:grid-cols-2">
-          {/* Image Gallery */}
-          <div className="animate-fade-in">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-muted">
-              {allImages.length > 0 ? (
-                <>
+          {/* Image Gallery - Stacked Vertically */}
+          <div className="animate-fade-in space-y-4">
+            {allImages.length > 0 ? (
+              allImages.map((img, idx) => (
+                <div key={idx} className="relative aspect-[4/3] overflow-hidden rounded-xl bg-muted">
                   <img
-                    src={allImages[currentImageIndex]}
-                    alt={property.title}
+                    src={img}
+                    alt={`${property.title} - Imagem ${idx + 1}`}
                     className="h-full w-full object-cover"
                   />
-                  
-                  {allImages.length > 1 && (
-                    <>
-                      <button
-                        onClick={prevImage}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white backdrop-blur-sm hover:bg-black/70 transition-colors"
-                      >
-                        <ChevronLeft className="h-5 w-5" />
-                      </button>
-                      <button
-                        onClick={nextImage}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white backdrop-blur-sm hover:bg-black/70 transition-colors"
-                      >
-                        <ChevronRight className="h-5 w-5" />
-                      </button>
-                      
-                      {/* Dots */}
-                      <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
-                        {allImages.map((_, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => setCurrentImageIndex(idx)}
-                            className={`h-2 w-2 rounded-full transition-colors ${
-                              idx === currentImageIndex ? 'bg-white' : 'bg-white/50'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </>
+                  {idx === 0 && (
+                    <span className="absolute top-3 left-3 badge-gold text-xs">
+                      Imagem Principal
+                    </span>
                   )}
-                </>
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-muted to-secondary">
-                  <TypeIcon className="h-24 w-24 text-muted-foreground/30" />
                 </div>
-              )}
-            </div>
-
-            {/* Thumbnail strip */}
-            {allImages.length > 1 && (
-              <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
-                {allImages.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentImageIndex(idx)}
-                    className={`flex-shrink-0 h-16 w-16 rounded-lg overflow-hidden border-2 transition-colors ${
-                      idx === currentImageIndex ? 'border-primary' : 'border-transparent opacity-60 hover:opacity-100'
-                    }`}
-                  >
-                    <img src={img} alt="" className="h-full w-full object-cover" />
-                  </button>
-                ))}
+              ))
+            ) : (
+              <div className="aspect-[4/3] flex items-center justify-center rounded-xl bg-gradient-to-br from-muted to-secondary">
+                <TypeIcon className="h-24 w-24 text-muted-foreground/30" />
               </div>
             )}
           </div>
