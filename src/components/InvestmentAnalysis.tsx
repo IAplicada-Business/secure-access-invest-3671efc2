@@ -42,10 +42,10 @@ function calculateOpportunityScore(
 }
 
 function getScoreLabel(score: number): { label: string; color: string; bgColor: string } {
-  if (score >= 80) return { label: 'EXCELENTE', color: 'text-green-600', bgColor: 'bg-green-500' };
-  if (score >= 60) return { label: 'BOM', color: 'text-blue-600', bgColor: 'bg-blue-500' };
-  if (score >= 40) return { label: 'MODERADO', color: 'text-yellow-600', bgColor: 'bg-yellow-500' };
-  return { label: 'RISCO ALTO', color: 'text-red-600', bgColor: 'bg-red-500' };
+  if (score >= 80) return { label: 'EXCELENTE', color: 'text-primary', bgColor: 'bg-primary' };
+  if (score >= 60) return { label: 'BOM', color: 'text-primary', bgColor: 'bg-primary' };
+  if (score >= 40) return { label: 'MODERADO', color: 'text-primary', bgColor: 'bg-primary' };
+  return { label: 'RISCO ALTO', color: 'text-primary', bgColor: 'bg-primary' };
 }
 
 export function InvestmentAnalysis({ property }: InvestmentAnalysisProps) {
@@ -88,12 +88,12 @@ export function InvestmentAnalysis({ property }: InvestmentAnalysisProps) {
           </p>
         </div>
 
-        <div className="rounded-lg bg-green-500/10 p-4">
+        <div className="rounded-lg bg-primary/10 p-4">
           <div className="flex items-center gap-2 mb-1">
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <TrendingUp className="h-4 w-4 text-primary" />
             <p className="text-sm text-muted-foreground">Retorno Líquido</p>
           </div>
-          <p className="font-display text-xl font-bold text-green-600">
+          <p className="font-display text-xl font-bold text-primary">
             {formatCurrency(netReturn)}
           </p>
           <p className="text-xs text-muted-foreground mt-1">

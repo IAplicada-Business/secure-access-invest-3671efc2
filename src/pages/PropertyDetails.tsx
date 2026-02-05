@@ -277,14 +277,14 @@ export default function PropertyDetails() {
                 
                 <div className="rounded-lg bg-secondary p-4">
                   <p className="text-sm text-muted-foreground">Valor Projetado</p>
-                  <p className="font-display text-2xl font-bold text-green-600">
+                  <p className="font-display text-2xl font-bold text-primary">
                     {formatCurrency(property.projected_value)}
                   </p>
                 </div>
                 
-                <div className="rounded-lg bg-green-500/10 p-4">
+                <div className="rounded-lg bg-primary/10 p-4">
                   <p className="text-sm text-muted-foreground">Valorização Projetada</p>
-                  <p className="font-display text-2xl font-bold text-green-600 flex items-center gap-2">
+                  <p className="font-display text-2xl font-bold text-primary flex items-center gap-2">
                     <TrendingUp className="h-5 w-5" />
                     +{appreciation.toFixed(1)}%
                   </p>
@@ -319,7 +319,7 @@ export default function PropertyDetails() {
               {property.risks && (
                 <div className="card-premium p-5">
                   <div className="flex items-center gap-3 mb-2">
-                    <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                    <AlertTriangle className="h-5 w-5 text-primary" />
                     <h3 className="font-semibold text-foreground">Riscos Mapeados</h3>
                   </div>
                   <p className="text-muted-foreground text-sm">{property.risks}</p>
