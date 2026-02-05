@@ -37,7 +37,7 @@ export default function AdminLogin() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-secondary via-background to-secondary px-4">
       <div className="w-full max-w-sm animate-fade-in">
         <div className="text-center mb-8">
-          <Logo className="mx-auto h-28 mb-6" />
+          <Logo className="mx-auto h-40 mb-8" />
           <h1 className="font-display text-2xl font-bold text-foreground">
             Painel Administrativo
           </h1>
