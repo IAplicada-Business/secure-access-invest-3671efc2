@@ -34,11 +34,11 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-charcoal px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-secondary via-background to-secondary px-4">
       <div className="w-full max-w-sm animate-fade-in">
         <div className="text-center mb-8">
-          <Logo className="mx-auto h-12 mb-4" />
-          <h1 className="font-display text-2xl font-bold text-white">
+          <Logo className="mx-auto h-14 mb-6" />
+          <h1 className="font-display text-2xl font-bold text-foreground">
             Painel Administrativo
           </h1>
           <p className="text-muted-foreground mt-2">
@@ -46,9 +46,9 @@ export default function AdminLogin() {
           </p>
         </div>
 
-        <form onSubmit={handleLogin} className="card-premium p-6 space-y-4">
+        <form onSubmit={handleLogin} className="card-premium p-8 space-y-5 border border-border shadow-lg">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="text-foreground font-medium">Email</Label>
             <Input
               id="email"
               type="email"
@@ -56,12 +56,12 @@ export default function AdminLogin() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="seu@email.com"
               required
-              className="input-premium"
+              className="input-premium h-11"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
+            <Label htmlFor="password" className="text-foreground font-medium">Senha</Label>
             <Input
               id="password"
               type="password"
@@ -69,14 +69,14 @@ export default function AdminLogin() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="input-premium"
+              className="input-premium h-11"
             />
           </div>
 
           <Button 
             type="submit" 
             disabled={loading}
-            className="w-full btn-gold"
+            className="w-full h-11 bg-charcoal text-white hover:bg-charcoal-light font-medium text-base"
           >
             {loading ? (
               <>
@@ -88,6 +88,10 @@ export default function AdminLogin() {
             )}
           </Button>
         </form>
+
+        <p className="text-center text-sm text-muted-foreground mt-6">
+          Acesso restrito a administradores
+        </p>
       </div>
     </div>
   );
