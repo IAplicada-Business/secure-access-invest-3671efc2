@@ -34,10 +34,14 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-secondary via-background to-secondary px-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-secondary via-background to-secondary px-4">
+      {/* Logo positioned at top */}
+      <div className="absolute top-8 left-1/2 -translate-x-1/2">
+        <Logo className="h-32 md:h-40" />
+      </div>
+
       <div className="w-full max-w-sm animate-fade-in">
-        <div className="text-center mb-8">
-          <Logo className="mx-auto h-56 mb-4" />
+        <div className="text-center mb-6">
           <h1 className="font-display text-2xl font-bold text-foreground">
             Painel Administrativo
           </h1>
