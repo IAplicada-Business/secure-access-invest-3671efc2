@@ -169,8 +169,8 @@ export default function PropertyDetails() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="grid gap-8 lg:grid-cols-2">
-          {/* Image Gallery - Sticky on desktop */}
-          <div className="animate-fade-in space-y-4 lg:sticky lg:top-24 lg:self-start">
+          {/* Image Gallery - Stacked Vertically */}
+          <div className="animate-fade-in space-y-4">
             {allImages.length > 0 ? (
               <>
                 {/* Main image */}
@@ -185,14 +185,23 @@ export default function PropertyDetails() {
                   </span>
                 </div>
                 
-                {/* Additional images in grid */}
-                {allImages.length > 1 && (
+                {/* Second image - show same image again if only one exists */}
+                <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-muted">
+                  <img
+                    src={allImages.length > 1 ? allImages[1] : allImages[0]}
+                    alt={`${property.title} - Imagem ${allImages.length > 1 ? 2 : 1}`}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+
+                {/* Additional images if more than 2 */}
+                {allImages.length > 2 && (
                   <div className="grid grid-cols-2 gap-3">
-                    {allImages.slice(1).map((img, idx) => (
+                    {allImages.slice(2).map((img, idx) => (
                       <div key={idx} className="relative aspect-square overflow-hidden rounded-lg bg-muted">
                         <img
                           src={img}
-                          alt={`${property.title} - Imagem ${idx + 2}`}
+                          alt={`${property.title} - Imagem ${idx + 3}`}
                           className="h-full w-full object-cover hover:scale-105 transition-transform duration-300"
                         />
                       </div>
