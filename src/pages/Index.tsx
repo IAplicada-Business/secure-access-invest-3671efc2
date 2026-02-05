@@ -9,7 +9,7 @@ export default function Index() {
       {/* Header */}
       <header className="border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
-          <Logo className="h-16" />
+          <Logo className="h-20" />
           <Button asChild className="bg-charcoal text-white hover:bg-charcoal-light">
             <Link to="/admin/login">Acesso Admin</Link>
           </Button>
@@ -117,7 +117,7 @@ export default function Index() {
       {/* Footer */}
       <footer className="border-t border-border py-8 bg-charcoal">
         <div className="container mx-auto px-4 text-center">
-          <Logo className="mx-auto mb-4 h-14" />
+          <Logo className="mx-auto mb-4 h-20" />
           <p className="text-sm text-white/70">
             © {new Date().getFullYear()} JMob Gestão e Negócios. Todos os direitos reservados.
           </p>

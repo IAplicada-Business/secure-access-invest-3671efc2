@@ -4,7 +4,7 @@ interface LogoProps {
   className?: string;
 }
 
-export function Logo({ className = 'h-16' }: LogoProps) {
+export function Logo({ className = 'h-20' }: LogoProps) {
   return (
     <img 
       src={logoJmobi} 
