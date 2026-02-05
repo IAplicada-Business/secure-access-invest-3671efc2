@@ -152,9 +152,6 @@
     @apply text-primary;
   }
 
-  .bg-charcoal {
-    @apply bg-charcoal;
-  }
 
   .badge-gold {
     @apply bg-accent text-accent-foreground text-xs font-medium px-2.5 py-1 rounded-full;
