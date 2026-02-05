@@ -52,8 +52,17 @@ export function PropertyCard({ property, linkPrefix = '' }: PropertyCardProps) {
             </div>
           )}
           
+          {/* Highlight Tag Badge */}
+          {property.highlight_tag && (
+            <div className="absolute left-3 top-3 z-10">
+              <span className="rounded-md bg-primary px-2.5 py-1 text-xs font-bold text-primary-foreground uppercase tracking-wide shadow-lg">
+                {property.highlight_tag}
+              </span>
+            </div>
+          )}
+          
           {/* Property Type Badge */}
-          <div className="absolute left-3 top-3">
+          <div className={`absolute ${property.highlight_tag ? 'left-3 top-11' : 'left-3 top-3'}`}>
             <span className="badge-gold flex items-center gap-1.5">
               <TypeIcon className="h-3 w-3" />
               {propertyTypeLabels[property.property_type]}

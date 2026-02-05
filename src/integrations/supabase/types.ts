@@ -47,11 +47,78 @@ export type Database = {
         }
         Relationships: []
       }
+      cta_clicks: {
+        Row: {
+          access_link_id: string | null
+          clicked_at: string | null
+          id: string
+          property_id: string | null
+        }
+        Insert: {
+          access_link_id?: string | null
+          clicked_at?: string | null
+          id?: string
+          property_id?: string | null
+        }
+        Update: {
+          access_link_id?: string | null
+          clicked_at?: string | null
+          id?: string
+          property_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cta_clicks_access_link_id_fkey"
+            columns: ["access_link_id"]
+            isOneToOne: false
+            referencedRelation: "access_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cta_clicks_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string | null
+          metadata: Json | null
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string | null
+          metadata?: Json | null
+          title: string
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string | null
+          metadata?: Json | null
+          title?: string
+          type?: string
+        }
+        Relationships: []
+      }
       page_views: {
         Row: {
           access_link_id: string | null
           id: string
           property_id: string | null
+          scroll_depth_percent: number | null
           time_spent_seconds: number | null
           viewed_at: string | null
         }
@@ -59,6 +126,7 @@ export type Database = {
           access_link_id?: string | null
           id?: string
           property_id?: string | null
+          scroll_depth_percent?: number | null
           time_spent_seconds?: number | null
           viewed_at?: string | null
         }
@@ -66,6 +134,7 @@ export type Database = {
           access_link_id?: string | null
           id?: string
           property_id?: string | null
+          scroll_depth_percent?: number | null
           time_spent_seconds?: number | null
           viewed_at?: string | null
         }
@@ -94,13 +163,22 @@ export type Database = {
           cover_image: string | null
           created_at: string | null
           description: string | null
+          has_certidoes: boolean | null
+          has_iptu: boolean | null
+          has_matricula: boolean | null
+          has_planta: boolean | null
+          highlight_tag: string | null
           id: string
           images: string[] | null
+          investor_notes: string | null
+          latitude: number | null
+          longitude: number | null
           neighborhood: string | null
           projected_value: number | null
           property_type: Database["public"]["Enums"]["property_type"] | null
           regularization_cost: number | null
           regularization_time: string | null
+          risk_level: string | null
           risks: string | null
           status: Database["public"]["Enums"]["property_status"] | null
           title: string
@@ -113,13 +191,22 @@ export type Database = {
           cover_image?: string | null
           created_at?: string | null
           description?: string | null
+          has_certidoes?: boolean | null
+          has_iptu?: boolean | null
+          has_matricula?: boolean | null
+          has_planta?: boolean | null
+          highlight_tag?: string | null
           id?: string
           images?: string[] | null
+          investor_notes?: string | null
+          latitude?: number | null
+          longitude?: number | null
           neighborhood?: string | null
           projected_value?: number | null
           property_type?: Database["public"]["Enums"]["property_type"] | null
           regularization_cost?: number | null
           regularization_time?: string | null
+          risk_level?: string | null
           risks?: string | null
           status?: Database["public"]["Enums"]["property_status"] | null
           title: string
@@ -132,13 +219,22 @@ export type Database = {
           cover_image?: string | null
           created_at?: string | null
           description?: string | null
+          has_certidoes?: boolean | null
+          has_iptu?: boolean | null
+          has_matricula?: boolean | null
+          has_planta?: boolean | null
+          highlight_tag?: string | null
           id?: string
           images?: string[] | null
+          investor_notes?: string | null
+          latitude?: number | null
+          longitude?: number | null
           neighborhood?: string | null
           projected_value?: number | null
           property_type?: Database["public"]["Enums"]["property_type"] | null
           regularization_cost?: number | null
           regularization_time?: string | null
+          risk_level?: string | null
           risks?: string | null
           status?: Database["public"]["Enums"]["property_status"] | null
           title?: string

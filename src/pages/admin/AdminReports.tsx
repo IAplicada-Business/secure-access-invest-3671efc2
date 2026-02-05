@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,7 +18,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Search, TrendingUp } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Clock, Search, TrendingUp, Flame, MessageCircle, Check, Minus } from 'lucide-react';
 
 interface ViewReport {
   investor_name: string;
@@ -26,7 +27,32 @@ interface ViewReport {
   property_title: string;
   property_id: string;
   time_spent_seconds: number;
+  scroll_depth_percent: number;
   viewed_at: string;
+  has_cta_click: boolean;
+  score: number;
+}
+
+type PeriodFilter = '7d' | '30d' | 'all';
+
+function calculateScore(timeSpent: number, scrollDepth: number, hasCtaClick: boolean): number {
+  let score = 0;
+  
+  if (timeSpent > 120) {
+    score += 5;
+  } else if (timeSpent > 60) {
+    score += 3;
+  }
+  
+  if (scrollDepth > 75) {
+    score += 2;
+  }
+  
+  if (hasCtaClick) {
+    score += 10;
+  }
+  
+  return score;
 }
 
 export default function AdminReports() {
@@ -34,21 +60,34 @@ export default function AdminReports() {
   const [loading, setLoading] = useState(true);
   const [searchInvestor, setSearchInvestor] = useState('');
   const [searchProperty, setSearchProperty] = useState('');
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('30d');
 
   useEffect(() => {
     loadViews();
   }, []);
 
   async function loadViews() {
+    // Load page views
     const { data: viewsData } = await supabase
       .from('page_views')
       .select('*')
-      .order('time_spent_seconds', { ascending: false });
+      .order('viewed_at', { ascending: false });
 
     if (!viewsData || viewsData.length === 0) {
       setLoading(false);
       return;
     }
+
+    // Load CTA clicks
+    const { data: ctaClicks } = await supabase
+      .from('cta_clicks')
+      .select('*');
+
+    const ctaClicksMap = new Map<string, boolean>();
+    ctaClicks?.forEach(click => {
+      const key = `${click.access_link_id}_${click.property_id}`;
+      ctaClicksMap.set(key, true);
+    });
 
     const linkIds = [...new Set(viewsData.map(v => v.access_link_id).filter(Boolean))];
     const propertyIds = [...new Set(viewsData.map(v => v.property_id).filter(Boolean))];
@@ -66,14 +105,25 @@ export default function AdminReports() {
     const linksMap = new Map(links?.map(l => [l.id, l.investor_name]) || []);
     const propertiesMap = new Map(properties?.map(p => [p.id, p.title]) || []);
 
-    const reports: ViewReport[] = viewsData.map(v => ({
-      investor_name: linksMap.get(v.access_link_id || '') || 'Desconhecido',
-      investor_id: v.access_link_id || '',
-      property_title: propertiesMap.get(v.property_id || '') || 'Imóvel removido',
-      property_id: v.property_id || '',
-      time_spent_seconds: v.time_spent_seconds,
-      viewed_at: v.viewed_at,
-    }));
+    const reports: ViewReport[] = viewsData.map(v => {
+      const hasCtaClick = ctaClicksMap.get(`${v.access_link_id}_${v.property_id}`) || false;
+      const scrollDepth = v.scroll_depth_percent || 0;
+      
+      return {
+        investor_name: linksMap.get(v.access_link_id || '') || 'Desconhecido',
+        investor_id: v.access_link_id || '',
+        property_title: propertiesMap.get(v.property_id || '') || 'Imóvel removido',
+        property_id: v.property_id || '',
+        time_spent_seconds: v.time_spent_seconds || 0,
+        scroll_depth_percent: scrollDepth,
+        viewed_at: v.viewed_at || '',
+        has_cta_click: hasCtaClick,
+        score: calculateScore(v.time_spent_seconds || 0, scrollDepth, hasCtaClick),
+      };
+    });
+
+    // Sort by score DESC by default
+    reports.sort((a, b) => b.score - a.score);
 
     setViews(reports);
     setLoading(false);
@@ -96,19 +146,39 @@ export default function AdminReports() {
     });
   }
 
-  const filteredViews = views.filter(v => 
-    v.investor_name.toLowerCase().includes(searchInvestor.toLowerCase()) &&
-    v.property_title.toLowerCase().includes(searchProperty.toLowerCase())
-  );
+  function getScrollColor(percent: number): string {
+    if (percent < 25) return 'bg-red-500';
+    if (percent < 75) return 'bg-yellow-500';
+    return 'bg-green-500';
+  }
+
+  const filteredViews = useMemo(() => {
+    let result = views.filter(v => 
+      v.investor_name.toLowerCase().includes(searchInvestor.toLowerCase()) &&
+      v.property_title.toLowerCase().includes(searchProperty.toLowerCase())
+    );
+
+    // Apply period filter
+    if (periodFilter !== 'all') {
+      const now = new Date();
+      const days = periodFilter === '7d' ? 7 : 30;
+      const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+      result = result.filter(v => new Date(v.viewed_at) >= cutoff);
+    }
+
+    return result;
+  }, [views, searchInvestor, searchProperty, periodFilter]);
 
   const highInterestCount = filteredViews.filter(v => v.time_spent_seconds > 60).length;
+  const hotLeadsCount = new Set(filteredViews.filter(v => v.score >= 10).map(v => v.investor_id)).size;
+  const totalCtaClicks = filteredViews.filter(v => v.has_cta_click).length;
 
   return (
     <div className="space-y-6">
       <h1 className="font-display text-2xl font-bold">Relatório de Interesse</h1>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -117,7 +187,7 @@ export default function AdminReports() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{views.length}</div>
+            <div className="text-3xl font-bold">{filteredViews.length}</div>
           </CardContent>
         </Card>
 
@@ -133,16 +203,27 @@ export default function AdminReports() {
           </CardContent>
         </Card>
 
+        <Card className="border-destructive/30 bg-destructive/5">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-destructive">
+              Leads Quentes 🔥
+            </CardTitle>
+            <Flame className="h-4 w-4 text-destructive" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-destructive">{hotLeadsCount}</div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Investidores Únicos
+              Cliques no WhatsApp
             </CardTitle>
+            <MessageCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">
-              {new Set(views.map(v => v.investor_id)).size}
-            </div>
+            <div className="text-3xl font-bold text-green-600">{totalCtaClicks}</div>
           </CardContent>
         </Card>
       </div>
@@ -167,6 +248,16 @@ export default function AdminReports() {
             className="pl-9"
           />
         </div>
+        <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as PeriodFilter)}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Período" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="7d">Últimos 7 dias</SelectItem>
+            <SelectItem value="30d">Últimos 30 dias</SelectItem>
+            <SelectItem value="all">Todos</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Table */}
@@ -178,19 +269,22 @@ export default function AdminReports() {
                 <TableHead>Investidor</TableHead>
                 <TableHead>Imóvel</TableHead>
                 <TableHead>Tempo</TableHead>
-                <TableHead className="hidden sm:table-cell">Data</TableHead>
+                <TableHead className="hidden md:table-cell">Scroll</TableHead>
+                <TableHead className="hidden sm:table-cell">CTA</TableHead>
+                <TableHead>Score</TableHead>
+                <TableHead className="hidden lg:table-cell">Data</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     Carregando...
                   </TableCell>
                 </TableRow>
               ) : filteredViews.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     Nenhuma visualização encontrada
                   </TableCell>
                 </TableRow>
@@ -198,10 +292,12 @@ export default function AdminReports() {
                 filteredViews.map((view, idx) => (
                   <TableRow 
                     key={idx}
-                    className={view.time_spent_seconds > 60 ? 'bg-primary/5' : ''}
+                    className={view.score >= 10 ? 'bg-destructive/5' : view.time_spent_seconds > 60 ? 'bg-primary/5' : ''}
                   >
                     <TableCell className="font-medium">{view.investor_name}</TableCell>
-                    <TableCell className="text-muted-foreground">{view.property_title}</TableCell>
+                    <TableCell className="text-muted-foreground max-w-[200px] truncate">
+                      {view.property_title}
+                    </TableCell>
                     <TableCell>
                       <Badge 
                         variant={view.time_spent_seconds > 60 ? 'default' : 'secondary'}
@@ -211,7 +307,39 @@ export default function AdminReports() {
                         {formatTime(view.time_spent_seconds)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell text-muted-foreground">
+                    <TableCell className="hidden md:table-cell">
+                      <div className="flex items-center gap-2">
+                        <Progress 
+                          value={view.scroll_depth_percent} 
+                          className={`h-2 w-16 ${getScrollColor(view.scroll_depth_percent)}`}
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {view.scroll_depth_percent}%
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      {view.has_cta_click ? (
+                        <Check className="h-5 w-5 text-green-600" />
+                      ) : (
+                        <Minus className="h-5 w-5 text-muted-foreground/40" />
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {view.score >= 10 ? (
+                        <Badge variant="destructive" className="gap-1">
+                          <Flame className="h-3 w-3" />
+                          {view.score}
+                        </Badge>
+                      ) : view.score >= 5 ? (
+                        <Badge className="bg-yellow-500 hover:bg-yellow-500/80 text-white">
+                          {view.score}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">{view.score}</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell text-muted-foreground">
                       {formatDate(view.viewed_at)}
                     </TableCell>
                   </TableRow>
