@@ -169,23 +169,37 @@ export default function PropertyDetails() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="grid gap-8 lg:grid-cols-2">
-          {/* Image Gallery - Stacked Vertically */}
-          <div className="animate-fade-in space-y-4">
+          {/* Image Gallery - Sticky on desktop */}
+          <div className="animate-fade-in space-y-4 lg:sticky lg:top-24 lg:self-start">
             {allImages.length > 0 ? (
-              allImages.map((img, idx) => (
-                <div key={idx} className="relative aspect-[4/3] overflow-hidden rounded-xl bg-muted">
+              <>
+                {/* Main image */}
+                <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-muted">
                   <img
-                    src={img}
-                    alt={`${property.title} - Imagem ${idx + 1}`}
+                    src={allImages[0]}
+                    alt={`${property.title} - Imagem Principal`}
                     className="h-full w-full object-cover"
                   />
-                  {idx === 0 && (
-                    <span className="absolute top-3 left-3 badge-gold text-xs">
-                      Imagem Principal
-                    </span>
-                  )}
+                  <span className="absolute top-3 left-3 badge-gold text-xs">
+                    Imagem Principal
+                  </span>
                 </div>
-              ))
+                
+                {/* Additional images in grid */}
+                {allImages.length > 1 && (
+                  <div className="grid grid-cols-2 gap-3">
+                    {allImages.slice(1).map((img, idx) => (
+                      <div key={idx} className="relative aspect-square overflow-hidden rounded-lg bg-muted">
+                        <img
+                          src={img}
+                          alt={`${property.title} - Imagem ${idx + 2}`}
+                          className="h-full w-full object-cover hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             ) : (
               <div className="aspect-[4/3] flex items-center justify-center rounded-xl bg-gradient-to-br from-muted to-secondary">
                 <TypeIcon className="h-24 w-24 text-muted-foreground/30" />
