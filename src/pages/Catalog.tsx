@@ -107,7 +107,7 @@ export default function Catalog() {
       <header className="border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Logo className="h-10" />
+            <Logo className="h-10 w-40" />
             <div className="text-right">
               <p className="text-xs text-muted-foreground">Acesso exclusivo para</p>
               <p className="font-medium text-foreground">{accessLink?.investor_name}</p>
