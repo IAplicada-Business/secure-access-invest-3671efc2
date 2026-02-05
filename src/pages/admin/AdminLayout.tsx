@@ -38,6 +38,21 @@ export default function AdminLayout() {
         return;
       }
 
+      // Check if user is admin
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      if (roleError || !roleData) {
+        toast.error('Acesso negado. Você não tem permissão de administrador.');
+        await supabase.auth.signOut();
+        navigate('/admin/login');
+        return;
+      }
+
       setLoading(false);
     }
 
