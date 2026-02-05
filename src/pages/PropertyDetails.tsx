@@ -19,6 +19,7 @@ import {
   LandPlot,
   Store
 } from 'lucide-react';
+import { InvestmentAnalysis } from '@/components/InvestmentAnalysis';
 
 const propertyTypeLabels: Record<string, string> = {
   casa: 'Casa',
@@ -115,7 +116,7 @@ export default function PropertyDetails() {
 
   if (loading || !property) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-charcoal">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="animate-pulse">
           <Logo className="h-16 opacity-50" />
         </div>
@@ -149,14 +150,14 @@ export default function PropertyDetails() {
   };
 
   return (
-    <div className="min-h-screen bg-charcoal pb-24">
+    <div className="min-h-screen bg-background pb-24">
       {/* Header */}
-      <header className="border-b border-charcoal-light bg-charcoal/95 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link 
               to={`/catalogo/${token}`}
-              className="flex items-center gap-2 text-muted-foreground hover:text-white transition-colors"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="h-5 w-5" />
               <span className="hidden sm:inline">Voltar ao catálogo</span>
@@ -242,7 +243,7 @@ export default function PropertyDetails() {
               {propertyTypeLabels[property.property_type]}
             </span>
 
-            <h1 className="mb-2 font-display text-3xl font-bold text-white">
+            <h1 className="mb-2 font-display text-3xl font-bold text-foreground">
               {property.title}
             </h1>
 
@@ -325,12 +326,15 @@ export default function PropertyDetails() {
                 </div>
               )}
             </div>
+
+            {/* Investment Analysis Section */}
+            <InvestmentAnalysis property={property} />
           </div>
         </div>
       </main>
 
       {/* Fixed CTA */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-charcoal-light bg-charcoal/95 backdrop-blur-sm p-4 z-50">
+      <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 backdrop-blur-sm p-4 z-50">
         <div className="container mx-auto">
           <Button asChild className="w-full btn-gold py-6 text-lg">
             <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
