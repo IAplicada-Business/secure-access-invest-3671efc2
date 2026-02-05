@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Property, PropertyStatus, PropertyType } from '@/types/database';
+import { Property, PropertyStatus, PropertyType, RiskLevel } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -24,6 +25,12 @@ const propertyTypes: { value: PropertyType; label: string }[] = [
   { value: 'terreno', label: 'Terreno' },
   { value: 'comercial', label: 'Comercial' },
   { value: 'outro', label: 'Outro' },
+];
+
+const riskLevels: { value: RiskLevel; label: string }[] = [
+  { value: 'baixo', label: 'Baixo' },
+  { value: 'medio', label: 'Médio' },
+  { value: 'alto', label: 'Alto' },
 ];
 
 export default function PropertyForm() {
@@ -50,6 +57,16 @@ export default function PropertyForm() {
     status: 'draft' as PropertyStatus,
     images: [] as string[],
     cover_image: '',
+    // New fields
+    highlight_tag: '',
+    investor_notes: '',
+    latitude: '',
+    longitude: '',
+    risk_level: 'medio' as RiskLevel,
+    has_matricula: false,
+    has_planta: false,
+    has_iptu: false,
+    has_certidoes: false,
   });
 
   useEffect(() => {
@@ -88,6 +105,16 @@ export default function PropertyForm() {
       status: property.status,
       images: property.images || [],
       cover_image: property.cover_image || '',
+      // New fields
+      highlight_tag: property.highlight_tag || '',
+      investor_notes: property.investor_notes || '',
+      latitude: property.latitude?.toString() || '',
+      longitude: property.longitude?.toString() || '',
+      risk_level: property.risk_level || 'medio',
+      has_matricula: property.has_matricula || false,
+      has_planta: property.has_planta || false,
+      has_iptu: property.has_iptu || false,
+      has_certidoes: property.has_certidoes || false,
     });
     setLoading(false);
   }
@@ -160,6 +187,16 @@ export default function PropertyForm() {
       status: publish ? 'published' : form.status,
       images: form.images,
       cover_image: form.cover_image || null,
+      // New fields
+      highlight_tag: form.highlight_tag || null,
+      investor_notes: form.investor_notes || null,
+      latitude: form.latitude ? parseFloat(form.latitude) : null,
+      longitude: form.longitude ? parseFloat(form.longitude) : null,
+      risk_level: form.risk_level,
+      has_matricula: form.has_matricula,
+      has_planta: form.has_planta,
+      has_iptu: form.has_iptu,
+      has_certidoes: form.has_certidoes,
     };
 
     let error;
@@ -436,6 +473,146 @@ export default function PropertyForm() {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Complementary Info - NEW SECTION */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Informações Complementares</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="highlight_tag">Tag de Destaque</Label>
+                  <Input
+                    id="highlight_tag"
+                    value={form.highlight_tag}
+                    onChange={(e) => setForm(prev => ({ ...prev, highlight_tag: e.target.value }))}
+                    placeholder="Ex: OPORTUNIDADE, NOVO"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Será exibido como badge no card do imóvel
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="risk_level">Nível de Risco</Label>
+                  <Select 
+                    value={form.risk_level} 
+                    onValueChange={(v) => setForm(prev => ({ ...prev, risk_level: v as RiskLevel }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {riskLevels.map(level => (
+                        <SelectItem key={level.value} value={level.value}>
+                          {level.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="investor_notes">Notas para o Investidor</Label>
+                <Textarea
+                  id="investor_notes"
+                  value={form.investor_notes}
+                  onChange={(e) => setForm(prev => ({ ...prev, investor_notes: e.target.value }))}
+                  placeholder="Notas visíveis apenas na ficha completa do investidor..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="latitude">Latitude</Label>
+                  <Input
+                    id="latitude"
+                    type="number"
+                    step="any"
+                    value={form.latitude}
+                    onChange={(e) => setForm(prev => ({ ...prev, latitude: e.target.value }))}
+                    placeholder="-23.5505"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="longitude">Longitude</Label>
+                  <Input
+                    id="longitude"
+                    type="number"
+                    step="any"
+                    value={form.longitude}
+                    onChange={(e) => setForm(prev => ({ ...prev, longitude: e.target.value }))}
+                    placeholder="-46.6333"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label>Documentação Disponível</Label>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="has_matricula"
+                      checked={form.has_matricula}
+                      onCheckedChange={(checked) => setForm(prev => ({ ...prev, has_matricula: !!checked }))}
+                    />
+                    <label
+                      htmlFor="has_matricula"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Matrícula
+                    </label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="has_planta"
+                      checked={form.has_planta}
+                      onCheckedChange={(checked) => setForm(prev => ({ ...prev, has_planta: !!checked }))}
+                    />
+                    <label
+                      htmlFor="has_planta"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Planta Aprovada
+                    </label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="has_iptu"
+                      checked={form.has_iptu}
+                      onCheckedChange={(checked) => setForm(prev => ({ ...prev, has_iptu: !!checked }))}
+                    />
+                    <label
+                      htmlFor="has_iptu"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      IPTU em Dia
+                    </label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="has_certidoes"
+                      checked={form.has_certidoes}
+                      onCheckedChange={(checked) => setForm(prev => ({ ...prev, has_certidoes: !!checked }))}
+                    />
+                    <label
+                      htmlFor="has_certidoes"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Certidões
+                    </label>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>

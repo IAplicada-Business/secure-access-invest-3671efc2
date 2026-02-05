@@ -3,6 +3,7 @@ import { Outlet, useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
+import { NotificationBell } from '@/components/NotificationBell';
 import { 
   LayoutDashboard, 
   Building2, 
@@ -89,13 +90,16 @@ export default function AdminLayout() {
       <header className="lg:hidden fixed top-0 left-0 right-0 z-50 border-b border-border bg-card">
         <div className="flex items-center justify-between px-4 py-3">
           <Logo className="h-8 w-32" />
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
-            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+            >
+              {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -148,8 +152,12 @@ export default function AdminLayout() {
             })}
           </nav>
 
-          {/* Logout */}
-          <div className="p-4 border-t border-border">
+          {/* Desktop Notification Bell + Logout */}
+          <div className="p-4 border-t border-border space-y-2">
+            <div className="hidden lg:flex items-center justify-between px-4 py-2">
+              <span className="text-sm text-muted-foreground">Notificações</span>
+              <NotificationBell />
+            </div>
             <Button
               variant="ghost"
               className="w-full justify-start text-muted-foreground hover:text-destructive"
