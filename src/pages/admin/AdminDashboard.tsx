@@ -29,6 +29,7 @@ interface DashboardStats {
     time_spent_seconds: number;
     viewed_at: string;
   }>;
+  unregisteredOwners: number;
 }
 
 export default function AdminDashboard() {
