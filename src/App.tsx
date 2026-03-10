@@ -50,6 +50,8 @@ const App = () => (
             <Route path="relatorios" element={<AdminReports />} />
             <Route path="configuracoes" element={<AdminSettings />} />
             <Route path="submissoes" element={<AdminSubmissions />} />
+            <Route path="clientes" element={<AdminClients />} />
+            <Route path="clientes/:id" element={<ClientDetails />} />
           </Route>
           
           <Route path="*" element={<NotFound />} />
