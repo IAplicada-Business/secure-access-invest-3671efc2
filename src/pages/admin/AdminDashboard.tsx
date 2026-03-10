@@ -104,6 +104,23 @@ export default function AdminDashboard() {
         }));
       }
 
+      // Count unregistered owners from submissions
+      const { data: submissions } = await supabase
+        .from('property_submissions')
+        .select('owner_name, property_id');
+      
+      let unregisteredCount = 0;
+      if (submissions && submissions.length > 0) {
+        const ownerNames = [...new Set(submissions.map(s => s.owner_name).filter(Boolean))] as string[];
+        if (ownerNames.length > 0) {
+          const { data: existingClients } = await supabase
+            .from('clients')
+            .select('name');
+          const clientNames = new Set((existingClients || []).map(c => c.name.toLowerCase()));
+          unregisteredCount = ownerNames.filter(n => !clientNames.has(n.toLowerCase())).length;
+        }
+      }
+
       setStats({
         totalProperties: total,
         publishedProperties: published,
@@ -112,6 +129,7 @@ export default function AdminDashboard() {
         pendingReview: pendingReview,
         activeLinks: activeLinks || 0,
         recentViews,
+        unregisteredOwners: unregisteredCount,
       });
 
       setLoading(false);
