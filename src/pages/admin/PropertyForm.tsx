@@ -258,6 +258,70 @@ export default function PropertyForm() {
         </h1>
       </div>
 
+      {/* Submission Data Card */}
+      {submission && (
+        <Card className="border-amber-400 bg-amber-50/50 dark:bg-amber-950/20">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg text-amber-800 dark:text-amber-300">
+              <ClipboardList className="h-5 w-5" />
+              Dados da Submissão
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Corretor</p>
+                <p className="text-sm font-semibold">{submission.broker_name}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Telefone</p>
+                <p className="text-sm">{submission.broker_phone}</p>
+              </div>
+              {submission.broker_company && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Imobiliária</p>
+                  <p className="text-sm">{submission.broker_company}</p>
+                </div>
+              )}
+              {submission.owner_name && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Proprietário</p>
+                  <p className="text-sm">{submission.owner_name}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Matrícula (informado)</p>
+                <p className="text-sm capitalize">{submission.matricula_status}</p>
+              </div>
+            </div>
+
+            {submission.irregularity_notes && (
+              <div className="rounded-md border border-amber-300 bg-amber-100/60 dark:bg-amber-900/30 p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">Observações de Irregularidades</p>
+                </div>
+                <p className="text-sm text-amber-900 dark:text-amber-200 whitespace-pre-wrap">{submission.irregularity_notes}</p>
+              </div>
+            )}
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-green-500 text-green-700 hover:bg-green-50"
+              onClick={() => {
+                const phone = submission.broker_phone.replace(/\D/g, '');
+                window.open(`https://wa.me/55${phone}`, '_blank');
+              }}
+            >
+              <MessageCircle className="mr-1.5 h-4 w-4" />
+              Contatar Corretor
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <form onSubmit={(e) => handleSubmit(e)} className="space-y-6">
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Basic Info */}

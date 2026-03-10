@@ -84,6 +84,11 @@ export interface SubmissionLink {
   created_at: string;
 }
 
+/**
+ * Nota de arquitetura: quando o módulo de parceiros for construído,
+ * adicionar campo opcional `partner_id: string | null` para vincular
+ * submissões a parceiros cadastrados (ligação retroativa).
+ */
 export interface PropertySubmission {
   id: string;
   property_id: string;
