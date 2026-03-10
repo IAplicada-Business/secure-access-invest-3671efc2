@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { AccessLink, SubmissionLink } from '@/types/database';
+import { AccessLink, SubmissionLink, Client } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +14,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -37,7 +40,8 @@ export default function AdminLinks() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ investor_name: '', investor_email: '', investor_phone: '', expires_at: '' });
+  const [form, setForm] = useState({ investor_name: '', investor_email: '', investor_phone: '', expires_at: '', client_id: '' });
+  const [clients, setClients] = useState<Client[]>([]);
 
   const [subLinks, setSubLinks] = useState<SubmissionLink[]>([]);
   const [subLoading, setSubLoading] = useState(true);
@@ -59,7 +63,12 @@ export default function AdminLinks() {
     setSubLoading(false);
   }
 
-  useEffect(() => { loadLinks(); loadSubLinks(); }, []);
+  async function loadClients() {
+    const { data } = await supabase.from('clients').select('*').eq('type', 'investor').order('name');
+    setClients((data as Client[]) || []);
+  }
+
+  useEffect(() => { loadLinks(); loadSubLinks(); loadClients(); }, []);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -70,11 +79,12 @@ export default function AdminLinks() {
       investor_email: form.investor_email || null,
       investor_phone: form.investor_phone || null,
       expires_at: form.expires_at || null,
-    });
+      client_id: form.client_id || null,
+    } as any);
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
     toast.success('Link criado!');
     setDialogOpen(false);
-    setForm({ investor_name: '', investor_email: '', investor_phone: '', expires_at: '' });
+    setForm({ investor_name: '', investor_email: '', investor_phone: '', expires_at: '', client_id: '' });
     setSaving(false);
     loadLinks();
   }
@@ -263,6 +273,16 @@ export default function AdminLinks() {
             <div className="space-y-2">
               <Label>Data de Expiração (opcional)</Label>
               <Input type="date" value={form.expires_at} onChange={(e) => setForm(p => ({ ...p, expires_at: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label>Vincular a cliente (opcional)</Label>
+              <Select value={form.client_id} onValueChange={(v) => setForm(p => ({ ...p, client_id: v === 'none' ? '' : v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione um cliente..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>

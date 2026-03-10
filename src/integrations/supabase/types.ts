@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       access_links: {
         Row: {
+          client_id: string | null
           created_at: string | null
           expires_at: string | null
           id: string
@@ -26,6 +27,7 @@ export type Database = {
           token: string
         }
         Insert: {
+          client_id?: string | null
           created_at?: string | null
           expires_at?: string | null
           id?: string
@@ -36,6 +38,7 @@ export type Database = {
           token: string
         }
         Update: {
+          client_id?: string | null
           created_at?: string | null
           expires_at?: string | null
           id?: string
@@ -44,6 +47,126 @@ export type Database = {
           investor_phone?: string | null
           is_active?: boolean | null
           token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_documents: {
+        Row: {
+          category: string
+          client_id: string
+          file_name: string
+          file_url: string
+          id: string
+          uploaded_at: string
+        }
+        Insert: {
+          category?: string
+          client_id: string
+          file_name: string
+          file_url: string
+          id?: string
+          uploaded_at?: string
+        }
+        Update: {
+          category?: string
+          client_id?: string
+          file_name?: string
+          file_url?: string
+          id?: string
+          uploaded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_documents_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_interactions: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          interaction_date: string
+          note: string
+          type: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          interaction_date?: string
+          note: string
+          type?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          interaction_date?: string
+          note?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_interactions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clients: {
+        Row: {
+          cpf_cnpj: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          origin: string | null
+          partner_name: string | null
+          phone: string
+          status: Database["public"]["Enums"]["client_status"]
+          type: Database["public"]["Enums"]["client_type"]
+        }
+        Insert: {
+          cpf_cnpj?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          origin?: string | null
+          partner_name?: string | null
+          phone: string
+          status?: Database["public"]["Enums"]["client_status"]
+          type?: Database["public"]["Enums"]["client_type"]
+        }
+        Update: {
+          cpf_cnpj?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          origin?: string | null
+          partner_name?: string | null
+          phone?: string
+          status?: Database["public"]["Enums"]["client_status"]
+          type?: Database["public"]["Enums"]["client_type"]
         }
         Relationships: []
       }
@@ -380,6 +503,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      client_status: "prospect" | "active" | "completed"
+      client_type: "investor" | "incorporator" | "individual"
       property_status:
         | "draft"
         | "published"
@@ -515,6 +640,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      client_status: ["prospect", "active", "completed"],
+      client_type: ["investor", "incorporator", "individual"],
       property_status: [
         "draft",
         "published",

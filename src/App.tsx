@@ -17,6 +17,8 @@ import AdminLinks from "./pages/admin/AdminLinks";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminSubmissions from "./pages/admin/AdminSubmissions";
+import AdminClients from "./pages/admin/AdminClients";
+import ClientDetails from "./pages/admin/ClientDetails";
 import PropertySubmission from "./pages/PropertySubmission";
 
 const queryClient = new QueryClient();
@@ -48,6 +50,8 @@ const App = () => (
             <Route path="relatorios" element={<AdminReports />} />
             <Route path="configuracoes" element={<AdminSettings />} />
             <Route path="submissoes" element={<AdminSubmissions />} />
+            <Route path="clientes" element={<AdminClients />} />
+            <Route path="clientes/:id" element={<ClientDetails />} />
           </Route>
           
           <Route path="*" element={<NotFound />} />

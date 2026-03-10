@@ -2,6 +2,11 @@ export type PropertyStatus = 'draft' | 'published' | 'sold' | 'archived' | 'pend
 export type PropertyType = 'casa' | 'terreno' | 'apartamento' | 'comercial' | 'outro';
 export type RiskLevel = 'baixo' | 'medio' | 'alto';
 
+export type ClientType = 'investor' | 'incorporator' | 'individual';
+export type ClientStatus = 'prospect' | 'active' | 'completed';
+export type InteractionType = 'meeting' | 'whatsapp' | 'email' | 'call' | 'other';
+export type DocumentCategory = 'rg' | 'cpf' | 'matricula' | 'contract' | 'proposal' | 'other';
+
 export interface Property {
   id: string;
   title: string;
@@ -20,7 +25,6 @@ export interface Property {
   cover_image: string | null;
   created_at: string;
   updated_at: string;
-  // New fields - Sprint 1
   highlight_tag: string | null;
   investor_notes: string | null;
   latitude: number | null;
@@ -58,6 +62,7 @@ export interface AccessLink {
   is_active: boolean;
   expires_at: string | null;
   created_at: string;
+  client_id: string | null;
 }
 
 export interface PageView {
@@ -99,5 +104,37 @@ export interface PropertySubmission {
   owner_name: string | null;
   irregularity_notes: string | null;
   matricula_status: string;
+  created_at: string;
+}
+
+export interface Client {
+  id: string;
+  name: string;
+  type: ClientType;
+  cpf_cnpj: string | null;
+  phone: string;
+  email: string | null;
+  origin: string | null;
+  partner_name: string | null;
+  status: ClientStatus;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface ClientDocument {
+  id: string;
+  client_id: string;
+  file_name: string;
+  file_url: string;
+  category: DocumentCategory;
+  uploaded_at: string;
+}
+
+export interface ClientInteraction {
+  id: string;
+  client_id: string;
+  type: InteractionType;
+  note: string;
+  interaction_date: string;
   created_at: string;
 }

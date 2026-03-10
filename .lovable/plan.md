@@ -1,102 +1,249 @@
 
+# Sprint 1: Melhorias no Catalogo de Imoveis JMob
 
-# Modulo de Clientes (CRM)
+Este plano abrange tres blocos principais de funcionalidades: novos campos e filtros, melhorias na pagina de detalhes, e rastreamento avancado de interesse.
 
-Este e o maior modulo ate agora. Envolve banco de dados, storage, 4 paginas novas e integracao com o sistema existente de links/rastreamento.
+---
 
-## 1. Banco de Dados — 3 tabelas novas + 1 alteracao
+## Bloco 1 - Novos Campos + Cards + Filtros
 
-### Tabela `clients`
-```
-id uuid PK, name text, type text (investor/incorporator/individual),
-cpf_cnpj text nullable, phone text, email text nullable,
-origin text, partner_name text nullable, status text default 'prospect',
-notes text nullable, created_at timestamptz
-```
+### 1.1 Migracao do Banco de Dados
 
-### Tabela `client_documents`
-```
-id uuid PK, client_id uuid FK->clients, file_name text,
-file_url text, category text, uploaded_at timestamptz
-```
+Adicionar novos campos na tabela `properties`:
 
-### Tabela `client_interactions`
-```
-id uuid PK, client_id uuid FK->clients, type text,
-note text, interaction_date timestamptz, created_at timestamptz
-```
-
-### Alteracao em `access_links`
-Adicionar coluna `client_id uuid nullable FK->clients`.
-
-### RLS (todas PERMISSIVE)
-- clients, client_documents, client_interactions: ALL para authenticated com `has_role(admin)`. Sem acesso publico.
-
-### Storage
-Usar o bucket `property-images` existente com subpasta `client-docs/` ou criar bucket `client-documents` (publico nao, privado com policy de admin).
-
-**Decisao:** Criar bucket privado `client-documents` com RLS para admin apenas.
-
-## 2. Tipos TypeScript
-
-Adicionar em `src/types/database.ts`:
-- `Client`, `ClientDocument`, `ClientInteraction`
-- `ClientType = 'investor' | 'incorporator' | 'individual'`
-- `ClientStatus = 'prospect' | 'active' | 'completed'`
-- `InteractionType = 'meeting' | 'whatsapp' | 'email' | 'call' | 'other'`
-- `DocumentCategory = 'rg' | 'cpf' | 'matricula' | 'contract' | 'proposal' | 'other'`
-
-## 3. Paginas Novas
-
-### `src/pages/admin/AdminClients.tsx` — Listagem
-- Tabela com nome, tipo, parceiro, status, data, botao WhatsApp
-- Filtros: busca por nome, select por tipo, select por status
-- Botao "Novo Cliente" abre dialog de cadastro
-- Mesma linguagem visual de AdminProperties/AdminLinks
-
-### `src/pages/admin/ClientForm.tsx` — Cadastro/Edicao
-- Dialog ou pagina com campos: nome, tipo, cpf/cnpj, telefone, email, origem, parceiro (texto livre), status, observacoes
-- Validacao basica com estados do React
-
-### `src/pages/admin/ClientDetails.tsx` — Pasta do Cliente
-- Rota `/admin/clientes/:id`
-- 4 abas internas usando componente Tabs existente:
-
-**Aba Resumo:** Dados cadastrais, botao editar, botao WhatsApp, card de origem/parceiro
-
-**Aba Documentos:** Upload de arquivos para bucket `client-documents`, lista com nome, categoria, data, download. Categories: RG, CPF, Matricula, Contrato, Proposta, Outro
-
-**Aba Historico:** Timeline de interacoes. Form inline para adicionar (data, tipo, nota). Lista cronologica reversa
-
-**Aba Imoveis Vinculados (so se tipo=investor):** Query em `page_views` JOIN `access_links` WHERE `client_id = X`. Mostra imoveis acessados com score de interesse
-
-## 4. Navegacao
-
-Adicionar item "Clientes" no `navItems` do `AdminLayout.tsx` (icone `Users`).
-
-## 5. Rotas
-
-No `App.tsx`:
-```
-/admin/clientes → AdminClients
-/admin/clientes/:id → ClientDetails
+```text
++------------------------+-------------+----------------------------------+
+| Campo                  | Tipo        | Descricao                        |
++------------------------+-------------+----------------------------------+
+| highlight_tag          | text        | Tag de destaque (OPORTUNIDADE)   |
+| investor_notes         | text        | Notas visiveis na ficha          |
+| latitude               | decimal     | Coordenada geografica            |
+| longitude              | decimal     | Coordenada geografica            |
+| risk_level             | text        | baixo, medio, alto (default)     |
+| has_matricula          | boolean     | Documentacao disponivel          |
+| has_planta             | boolean     | Documentacao disponivel          |
+| has_iptu               | boolean     | Documentacao disponivel          |
+| has_certidoes          | boolean     | Documentacao disponivel          |
++------------------------+-------------+----------------------------------+
 ```
 
-## 6. Integracao com Links
+### 1.2 Atualizar PropertyCard
 
-No `AdminLinks.tsx`, ao criar link de investidor, adicionar campo opcional "Vincular a cliente" com select dos clientes tipo investor.
+**Arquivo:** `src/components/PropertyCard.tsx`
 
-## 7. Dashboard — Card de proprietarios sem cadastro
+- Adicionar badge de `highlight_tag` no canto superior esquerdo
+- Estilo: fundo dourado (primary), texto branco, fonte bold
+- Condicional: so exibe se highlight_tag nao for null/vazio
 
-No `AdminDashboard.tsx`, query em `property_submissions` JOIN `properties` (status=draft) para contar proprietarios (`owner_name`) que nao tem match em `clients.name`. Exibir card discreto com contagem.
+### 1.3 Filtros e Ordenacao no Catalogo
 
-## 8. Ordem de Implementacao
+**Arquivo:** `src/pages/Catalog.tsx`
 
-1. Migracao SQL (tabelas + bucket + RLS + alteracao access_links)
-2. Tipos TypeScript
-3. AdminClients.tsx (listagem + dialog de cadastro)
-4. ClientDetails.tsx (4 abas)
-5. Rotas + navegacao no layout
-6. Integracao no AdminLinks (vincular cliente ao criar link)
-7. Card no Dashboard
+Adicionar acima da grid:
+- **Select de Ordenacao:**
+  - Mais recentes (created_at DESC) - padrao
+  - Maior valorizacao (calculo percentual DESC)
+  - Menor investimento (acquisition_cost ASC)
+  - Maior investimento (acquisition_cost DESC)
 
+- **Select de Tipo de Imovel:**
+  - Todos, Casa, Terreno, Apartamento, Comercial
+
+- **Select de Cidade:**
+  - Dinamico baseado nas cidades distintas dos imoveis publicados
+
+Layout responsivo: empilhado em mobile, lado a lado em desktop.
+
+### 1.4 Atualizar PropertyForm Admin
+
+**Arquivo:** `src/pages/admin/PropertyForm.tsx`
+
+Nova secao "Informacoes Complementares":
+- Campo `highlight_tag` (texto, opcional)
+- Campo `investor_notes` (textarea, opcional)
+- Select `risk_level` (Baixo/Medio/Alto, default Medio)
+- Inputs `latitude` e `longitude` (numericos, lado a lado)
+- Checkboxes de documentacao (has_matricula, has_planta, has_iptu, has_certidoes)
+
+### 1.5 Atualizar Tipos TypeScript
+
+**Arquivo:** `src/types/database.ts`
+
+Adicionar novos campos na interface Property.
+
+---
+
+## Bloco 2 - Melhorias na Pagina de Detalhes
+
+### 2.1 Carrossel de Imagens
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+Substituir galeria empilhada por carrossel horizontal:
+- Navegacao por setas (esquerda/direita)
+- Indicadores de pagina (dots)
+- Suporte a swipe/touch em mobile
+- Aspect ratio 16:9 com object-fit cover
+- Usando Embla Carousel (ja instalado como dependencia)
+
+### 2.2 Secao de Riscos Melhorada
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+Adicionar badge visual de nivel de risco acima do texto:
+- Risco Baixo: fundo verde-claro, icone ShieldCheck
+- Risco Medio: fundo amarelo-claro, icone AlertTriangle
+- Risco Alto: fundo vermelho-claro, icone AlertOctagon
+
+### 2.3 Secao Documentacao Disponivel
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+Nova secao com grid 2x2:
+- Matricula (FileText)
+- Planta Aprovada (Map)
+- IPTU em Dia (Receipt)
+- Certidoes (FileCheck)
+
+Cada item mostra CheckCircle (verde) se true, XCircle (cinza) se false.
+
+### 2.4 Notas do Investidor
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+Se `investor_notes` preenchido:
+- Card com fundo primary/5%, borda dourada
+- Icone Info, titulo "Observacoes para o Investidor"
+- Posicionado acima do CTA fixo
+
+### 2.5 Mapa de Localizacao
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+Se latitude e longitude preenchidos:
+- Iframe do Google Maps abaixo do endereco
+- Altura 200px mobile, 250px desktop
+- Bordas arredondadas
+
+---
+
+## Bloco 3 - Rastreamento Avancado
+
+### 3.1 Migracao: scroll_depth na page_views
+
+```text
+ALTER TABLE page_views ADD COLUMN scroll_depth_percent integer DEFAULT 0;
+```
+
+### 3.2 Nova Tabela: cta_clicks
+
+```text
++------------------+-------------+----------------------------------+
+| Campo            | Tipo        | Descricao                        |
++------------------+-------------+----------------------------------+
+| id               | uuid        | Chave primaria                   |
+| access_link_id   | uuid        | FK para access_links             |
+| property_id      | uuid        | FK para properties               |
+| clicked_at       | timestamptz | Timestamp do clique              |
++------------------+-------------+----------------------------------+
+```
+
+RLS: insert anonimo permitido, select apenas admin.
+
+### 3.3 Nova Tabela: notifications
+
+```text
++------------------+-------------+----------------------------------+
+| Campo            | Tipo        | Descricao                        |
++------------------+-------------+----------------------------------+
+| id               | uuid        | Chave primaria                   |
+| type             | text        | hot_lead, new_view, system       |
+| title            | text        | Titulo da notificacao            |
+| message          | text        | Corpo da mensagem                |
+| is_read          | boolean     | Lida ou nao                      |
+| metadata         | jsonb       | Dados extras                     |
+| created_at       | timestamptz | Timestamp de criacao             |
++------------------+-------------+----------------------------------+
+```
+
+RLS: full access para admin, insert anonimo permitido.
+
+### 3.4 Rastreamento de Scroll Depth
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+- Listener de scroll calculando percentual maximo
+- Formula: (scrollTop + windowHeight) / documentHeight * 100
+- Salvar junto com time_spent_seconds no onUnmount
+
+### 3.5 Rastreamento de Cliques CTA
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+- Ao clicar no botao WhatsApp, inserir registro em cta_clicks
+- Insert assincrono (fire and forget)
+- Nao bloqueia abertura do WhatsApp
+
+### 3.6 Sistema de Score de Interesse
+
+**Nova Edge Function:** `supabase/functions/calculate-interest-score/index.ts`
+
+Calculo de pontuacao:
+- time_spent > 120s: +5 pontos
+- time_spent > 60s: +3 pontos
+- scroll_depth > 75%: +2 pontos
+- clique no CTA: +10 pontos
+
+Se score >= 10: criar notificacao "hot_lead" (sem duplicar).
+
+### 3.7 Icone de Notificacoes no Admin
+
+**Arquivo:** `src/pages/admin/AdminLayout.tsx`
+
+- Icone Bell no header ao lado do logout
+- Badge vermelho com contagem de nao lidas
+- Popover com lista das ultimas 20 notificacoes
+- Opcao "Marcar todas como lidas"
+- Poll automatico a cada 60 segundos
+
+### 3.8 Melhorias no Relatorio Admin
+
+**Arquivo:** `src/pages/admin/AdminReports.tsx`
+
+Novas colunas na tabela:
+- **Scroll:** progress bar colorida (vermelho < 25%, amarelo 25-75%, verde > 75%)
+- **CTA:** icone Check verde ou traco cinza
+- **Score:** pontuacao calculada com destaque visual
+
+Novos cards de metricas:
+- Leads Quentes (score >= 10)
+- Cliques no WhatsApp (total cta_clicks)
+
+Filtro por periodo: 7 dias, 30 dias, todos.
+Ordenacao por score DESC (padrao).
+
+---
+
+## Arquivos a Criar/Modificar
+
+| Arquivo | Acao |
+|---------|------|
+| Migration SQL | Criar novos campos e tabelas |
+| `src/types/database.ts` | Adicionar novos tipos |
+| `src/components/PropertyCard.tsx` | Badge highlight_tag |
+| `src/pages/Catalog.tsx` | Filtros e ordenacao |
+| `src/pages/admin/PropertyForm.tsx` | Novos campos |
+| `src/pages/PropertyDetails.tsx` | Carrossel, docs, mapa, scroll tracking |
+| `src/pages/admin/AdminLayout.tsx` | Sistema notificacoes |
+| `src/pages/admin/AdminReports.tsx` | Colunas score, CTA, scroll |
+| `supabase/functions/calculate-interest-score/` | Edge function score |
+
+---
+
+## Notas Tecnicas
+
+- **Embla Carousel:** Ja instalado (`embla-carousel-react ^8.6.0`)
+- **shadcn/ui:** Usar Select, Popover, Badge, Progress existentes
+- **TanStack Query:** Usar para todas queries e mutations
+- **RLS:** Tabelas publicas permitem insert anonimo; notifications requer admin
+- **Edge Function:** Chamar apos update page_view e insert cta_click (fire and forget)

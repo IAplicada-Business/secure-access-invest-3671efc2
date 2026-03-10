@@ -12,7 +12,8 @@ import {
   Clock,
   Plus,
   TrendingUp,
-  Inbox
+  Inbox,
+  Users
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -28,6 +29,7 @@ interface DashboardStats {
     time_spent_seconds: number;
     viewed_at: string;
   }>;
+  unregisteredOwners: number;
 }
 
 export default function AdminDashboard() {
@@ -39,6 +41,7 @@ export default function AdminDashboard() {
     pendingReview: 0,
     activeLinks: 0,
     recentViews: [],
+    unregisteredOwners: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -101,6 +104,23 @@ export default function AdminDashboard() {
         }));
       }
 
+      // Count unregistered owners from submissions
+      const { data: submissions } = await supabase
+        .from('property_submissions')
+        .select('owner_name, property_id');
+      
+      let unregisteredCount = 0;
+      if (submissions && submissions.length > 0) {
+        const ownerNames = [...new Set(submissions.map(s => s.owner_name).filter(Boolean))] as string[];
+        if (ownerNames.length > 0) {
+          const { data: existingClients } = await supabase
+            .from('clients')
+            .select('name');
+          const clientNames = new Set((existingClients || []).map(c => c.name.toLowerCase()));
+          unregisteredCount = ownerNames.filter(n => !clientNames.has(n.toLowerCase())).length;
+        }
+      }
+
       setStats({
         totalProperties: total,
         publishedProperties: published,
@@ -109,6 +129,7 @@ export default function AdminDashboard() {
         pendingReview: pendingReview,
         activeLinks: activeLinks || 0,
         recentViews,
+        unregisteredOwners: unregisteredCount,
       });
 
       setLoading(false);
@@ -225,6 +246,24 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Unregistered Owners Alert */}
+      {stats.unregisteredOwners > 0 && (
+        <Card className="border-amber-300 bg-amber-50/50">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Users className="h-5 w-5 text-amber-500" />
+              <div>
+                <p className="font-medium">{stats.unregisteredOwners} proprietário{stats.unregisteredOwners > 1 ? 's' : ''} sem cadastro</p>
+                <p className="text-sm text-muted-foreground">Proprietários de submissões ainda não cadastrados como clientes</p>
+              </div>
+            </div>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/admin/clientes">Cadastrar</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent Views */}
       <Card>
