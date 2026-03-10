@@ -41,6 +41,7 @@ export default function AdminDashboard() {
     pendingReview: 0,
     activeLinks: 0,
     recentViews: [],
+    unregisteredOwners: 0,
   });
   const [loading, setLoading] = useState(true);
 
