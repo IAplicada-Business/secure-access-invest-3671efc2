@@ -302,7 +302,12 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
-      property_status: "draft" | "published" | "sold" | "archived"
+      property_status:
+        | "draft"
+        | "published"
+        | "sold"
+        | "archived"
+        | "pending_review"
       property_type: "casa" | "terreno" | "apartamento" | "comercial" | "outro"
     }
     CompositeTypes: {
@@ -432,7 +437,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
-      property_status: ["draft", "published", "sold", "archived"],
+      property_status: [
+        "draft",
+        "published",
+        "sold",
+        "archived",
+        "pending_review",
+      ],
       property_type: ["casa", "terreno", "apartamento", "comercial", "outro"],
     },
   },
