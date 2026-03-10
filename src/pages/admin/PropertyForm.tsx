@@ -41,6 +41,7 @@ export default function PropertyForm() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [submission, setSubmission] = useState<PropertySubmission | null>(null);
 
   const [form, setForm] = useState({
     title: '',
