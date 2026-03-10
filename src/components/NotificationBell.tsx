@@ -18,6 +18,7 @@ const typeIcons: Record<string, { icon: React.ElementType; emoji: string }> = {
   hot_lead: { icon: Flame, emoji: '🔥' },
   new_view: { icon: Eye, emoji: '👁️' },
   system: { icon: Settings, emoji: '⚙️' },
+  new_property_submission: { icon: Eye, emoji: '📋' },
 };
 
 export function NotificationBell() {
