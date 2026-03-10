@@ -14,7 +14,8 @@ import {
   LogOut,
   Menu,
   X,
-  Inbox
+  Inbox,
+  Users
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
