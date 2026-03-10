@@ -28,8 +28,24 @@ import { cn } from '@/lib/utils';
 
 export default function AdminLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const isRouteActive = (path: string, exact = false) => {
+    if (exact) return location.pathname === path;
+    return location.pathname.startsWith(path);
+  };
+
+  const isGroupActive = (paths: string[]) => paths.some(p => location.pathname.startsWith(p));
+
+  const navLinkClasses = (active: boolean) =>
+    cn(
+      "relative z-10 flex items-center gap-2 cursor-pointer px-4 py-1.5 text-sm font-medium rounded-full transition-colors",
+      active
+        ? "bg-primary text-primary-foreground"
+        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+    );
 
   useEffect(() => {
     async function checkAuth() {
