@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Loader2, Upload, X, Save, Eye } from 'lucide-react';
+import { ArrowLeft, Loader2, Upload, X, Save, Eye, ClipboardList, MessageCircle, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 
