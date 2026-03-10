@@ -247,6 +247,24 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
+      {/* Unregistered Owners Alert */}
+      {stats.unregisteredOwners > 0 && (
+        <Card className="border-amber-300 bg-amber-50/50">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Users className="h-5 w-5 text-amber-500" />
+              <div>
+                <p className="font-medium">{stats.unregisteredOwners} proprietário{stats.unregisteredOwners > 1 ? 's' : ''} sem cadastro</p>
+                <p className="text-sm text-muted-foreground">Proprietários de submissões ainda não cadastrados como clientes</p>
+              </div>
+            </div>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/admin/clientes">Cadastrar</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Recent Views */}
       <Card>
         <CardHeader>
