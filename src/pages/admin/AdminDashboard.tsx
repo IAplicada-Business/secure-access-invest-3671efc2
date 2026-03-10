@@ -11,7 +11,8 @@ import {
   Link as LinkIcon,
   Clock,
   Plus,
-  TrendingUp
+  TrendingUp,
+  Inbox
 } from 'lucide-react';
 
 interface DashboardStats {
