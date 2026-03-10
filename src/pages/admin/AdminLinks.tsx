@@ -86,7 +86,7 @@ export default function AdminLinks() {
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
     toast.success('Link criado!');
     setDialogOpen(false);
-    setForm({ investor_name: '', investor_email: '', investor_phone: '', expires_at: '' });
+    setForm({ investor_name: '', investor_email: '', investor_phone: '', expires_at: '', client_id: '' });
     setSaving(false);
     loadLinks();
   }
