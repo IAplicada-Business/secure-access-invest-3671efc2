@@ -65,7 +65,12 @@ export default function AdminLinks() {
     setSubLoading(false);
   }
 
-  useEffect(() => { loadLinks(); loadSubLinks(); }, []);
+  async function loadClients() {
+    const { data } = await supabase.from('clients').select('*').eq('type', 'investor').order('name');
+    setClients((data as Client[]) || []);
+  }
+
+  useEffect(() => { loadLinks(); loadSubLinks(); loadClients(); }, []);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
