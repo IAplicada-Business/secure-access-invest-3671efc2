@@ -47,6 +47,7 @@ const statusLabels: Record<PropertyStatus, string> = {
   published: 'Publicado',
   sold: 'Vendido',
   archived: 'Arquivado',
+  pending_review: 'Aguardando Avaliação',
 };
 
 const statusColors: Record<PropertyStatus, string> = {
@@ -54,6 +55,7 @@ const statusColors: Record<PropertyStatus, string> = {
   published: 'bg-primary/10 text-primary',
   sold: 'bg-green-100 text-green-700',
   archived: 'bg-secondary text-secondary-foreground',
+  pending_review: 'bg-amber-100 text-amber-700',
 };
 
 export default function AdminProperties() {
