@@ -20,6 +20,7 @@ interface DashboardStats {
   publishedProperties: number;
   draftProperties: number;
   soldProperties: number;
+  pendingReview: number;
   activeLinks: number;
   recentViews: Array<{
     investor_name: string;
