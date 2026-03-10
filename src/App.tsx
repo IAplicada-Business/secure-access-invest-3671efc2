@@ -35,6 +35,9 @@ const App = () => (
           <Route path="/catalogo/:token/imovel/:propertyId" element={<PropertyDetails />} />
           <Route path="/link-invalido" element={<InvalidLink />} />
           
+          {/* Broker Submission Route */}
+          <Route path="/submit/:token" element={<PropertySubmission />} />
+          
           {/* Admin Routes */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<AdminLayout />}>
