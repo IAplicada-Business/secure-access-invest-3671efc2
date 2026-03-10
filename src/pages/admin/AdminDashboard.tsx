@@ -11,7 +11,8 @@ import {
   Link as LinkIcon,
   Clock,
   Plus,
-  TrendingUp
+  TrendingUp,
+  Inbox
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -19,6 +20,7 @@ interface DashboardStats {
   publishedProperties: number;
   draftProperties: number;
   soldProperties: number;
+  pendingReview: number;
   activeLinks: number;
   recentViews: Array<{
     investor_name: string;
@@ -34,6 +36,7 @@ export default function AdminDashboard() {
     publishedProperties: 0,
     draftProperties: 0,
     soldProperties: 0,
+    pendingReview: 0,
     activeLinks: 0,
     recentViews: [],
   });
@@ -50,6 +53,7 @@ export default function AdminDashboard() {
       const published = properties?.filter(p => p.status === 'published').length || 0;
       const draft = properties?.filter(p => p.status === 'draft').length || 0;
       const sold = properties?.filter(p => p.status === 'sold').length || 0;
+      const pendingReview = properties?.filter(p => p.status === 'pending_review').length || 0;
 
       // Get active links count
       const { count: activeLinks } = await supabase
@@ -102,6 +106,7 @@ export default function AdminDashboard() {
         publishedProperties: published,
         draftProperties: draft,
         soldProperties: sold,
+        pendingReview: pendingReview,
         activeLinks: activeLinks || 0,
         recentViews,
       });
@@ -154,7 +159,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -188,6 +193,23 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{stats.draftProperties}</div>
+          </CardContent>
+        </Card>
+
+        <Card className={stats.pendingReview > 0 ? 'border-amber-300 bg-amber-50/50' : ''}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Aguardando Avaliação
+            </CardTitle>
+            <Inbox className="h-4 w-4 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-3xl font-bold ${stats.pendingReview > 0 ? 'text-amber-600' : ''}`}>{stats.pendingReview}</div>
+            {stats.pendingReview > 0 && (
+              <Link to="/admin/submissoes" className="text-xs text-primary hover:underline mt-1 inline-block">
+                Ver submissões →
+              </Link>
+            )}
           </CardContent>
         </Card>
 

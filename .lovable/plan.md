@@ -1,151 +1,249 @@
 
+# Sprint 1: Melhorias no Catalogo de Imoveis JMob
 
-# Sistema de Submissao de Imoveis por Corretores
-
-## Resumo
-
-Criar um fluxo completo para corretores parceiros submeterem imoveis via link secreto, com fila de avaliacao no admin e notificacoes automaticas.
+Este plano abrange tres blocos principais de funcionalidades: novos campos e filtros, melhorias na pagina de detalhes, e rastreamento avancado de interesse.
 
 ---
 
-## 1. Migracoes de Banco de Dados
+## Bloco 1 - Novos Campos + Cards + Filtros
 
-### 1.1 Novo status `pending_review` no enum `property_status`
+### 1.1 Migracao do Banco de Dados
 
-```sql
-ALTER TYPE property_status ADD VALUE 'pending_review';
+Adicionar novos campos na tabela `properties`:
+
+```text
++------------------------+-------------+----------------------------------+
+| Campo                  | Tipo        | Descricao                        |
++------------------------+-------------+----------------------------------+
+| highlight_tag          | text        | Tag de destaque (OPORTUNIDADE)   |
+| investor_notes         | text        | Notas visiveis na ficha          |
+| latitude               | decimal     | Coordenada geografica            |
+| longitude              | decimal     | Coordenada geografica            |
+| risk_level             | text        | baixo, medio, alto (default)     |
+| has_matricula          | boolean     | Documentacao disponivel          |
+| has_planta             | boolean     | Documentacao disponivel          |
+| has_iptu               | boolean     | Documentacao disponivel          |
+| has_certidoes          | boolean     | Documentacao disponivel          |
++------------------------+-------------+----------------------------------+
 ```
 
-### 1.2 Nova tabela `submission_links` (links secretos para corretores)
+### 1.2 Atualizar PropertyCard
+
+**Arquivo:** `src/components/PropertyCard.tsx`
+
+- Adicionar badge de `highlight_tag` no canto superior esquerdo
+- Estilo: fundo dourado (primary), texto branco, fonte bold
+- Condicional: so exibe se highlight_tag nao for null/vazio
+
+### 1.3 Filtros e Ordenacao no Catalogo
+
+**Arquivo:** `src/pages/Catalog.tsx`
+
+Adicionar acima da grid:
+- **Select de Ordenacao:**
+  - Mais recentes (created_at DESC) - padrao
+  - Maior valorizacao (calculo percentual DESC)
+  - Menor investimento (acquisition_cost ASC)
+  - Maior investimento (acquisition_cost DESC)
+
+- **Select de Tipo de Imovel:**
+  - Todos, Casa, Terreno, Apartamento, Comercial
+
+- **Select de Cidade:**
+  - Dinamico baseado nas cidades distintas dos imoveis publicados
+
+Layout responsivo: empilhado em mobile, lado a lado em desktop.
+
+### 1.4 Atualizar PropertyForm Admin
+
+**Arquivo:** `src/pages/admin/PropertyForm.tsx`
+
+Nova secao "Informacoes Complementares":
+- Campo `highlight_tag` (texto, opcional)
+- Campo `investor_notes` (textarea, opcional)
+- Select `risk_level` (Baixo/Medio/Alto, default Medio)
+- Inputs `latitude` e `longitude` (numericos, lado a lado)
+- Checkboxes de documentacao (has_matricula, has_planta, has_iptu, has_certidoes)
+
+### 1.5 Atualizar Tipos TypeScript
+
+**Arquivo:** `src/types/database.ts`
+
+Adicionar novos campos na interface Property.
+
+---
+
+## Bloco 2 - Melhorias na Pagina de Detalhes
+
+### 2.1 Carrossel de Imagens
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+Substituir galeria empilhada por carrossel horizontal:
+- Navegacao por setas (esquerda/direita)
+- Indicadores de pagina (dots)
+- Suporte a swipe/touch em mobile
+- Aspect ratio 16:9 com object-fit cover
+- Usando Embla Carousel (ja instalado como dependencia)
+
+### 2.2 Secao de Riscos Melhorada
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+Adicionar badge visual de nivel de risco acima do texto:
+- Risco Baixo: fundo verde-claro, icone ShieldCheck
+- Risco Medio: fundo amarelo-claro, icone AlertTriangle
+- Risco Alto: fundo vermelho-claro, icone AlertOctagon
+
+### 2.3 Secao Documentacao Disponivel
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+Nova secao com grid 2x2:
+- Matricula (FileText)
+- Planta Aprovada (Map)
+- IPTU em Dia (Receipt)
+- Certidoes (FileCheck)
+
+Cada item mostra CheckCircle (verde) se true, XCircle (cinza) se false.
+
+### 2.4 Notas do Investidor
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+Se `investor_notes` preenchido:
+- Card com fundo primary/5%, borda dourada
+- Icone Info, titulo "Observacoes para o Investidor"
+- Posicionado acima do CTA fixo
+
+### 2.5 Mapa de Localizacao
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+Se latitude e longitude preenchidos:
+- Iframe do Google Maps abaixo do endereco
+- Altura 200px mobile, 250px desktop
+- Bordas arredondadas
+
+---
+
+## Bloco 3 - Rastreamento Avancado
+
+### 3.1 Migracao: scroll_depth na page_views
+
+```text
+ALTER TABLE page_views ADD COLUMN scroll_depth_percent integer DEFAULT 0;
+```
+
+### 3.2 Nova Tabela: cta_clicks
 
 ```text
 +------------------+-------------+----------------------------------+
 | Campo            | Tipo        | Descricao                        |
 +------------------+-------------+----------------------------------+
-| id               | uuid PK     | gen_random_uuid()                |
-| token            | text UNIQUE | Token secreto do link            |
-| label            | text        | Descricao do link (ex: "Geral") |
-| is_active        | boolean     | Default true                     |
-| created_at       | timestamptz | now()                            |
+| id               | uuid        | Chave primaria                   |
+| access_link_id   | uuid        | FK para access_links             |
+| property_id      | uuid        | FK para properties               |
+| clicked_at       | timestamptz | Timestamp do clique              |
 +------------------+-------------+----------------------------------+
 ```
 
-RLS: SELECT/INSERT/UPDATE/DELETE para authenticated. SELECT publico onde `is_active = true`.
+RLS: insert anonimo permitido, select apenas admin.
 
-### 1.3 Nova tabela `property_submissions` (dados do corretor + vinculo)
-
-```text
-+------------------------+-------------+----------------------------------------+
-| Campo                  | Tipo        | Descricao                              |
-+------------------------+-------------+----------------------------------------+
-| id                     | uuid PK     | gen_random_uuid()                      |
-| property_id            | uuid FK     | Referencia properties(id) ON DELETE CASCADE |
-| submission_link_id     | uuid FK     | Referencia submission_links(id)        |
-| broker_name            | text        | Nome do corretor                       |
-| broker_phone           | text        | WhatsApp do corretor                   |
-| broker_company         | text null   | Imobiliaria                            |
-| owner_name             | text null   | Nome do proprietario                   |
-| irregularity_notes     | text null   | O que esta irregular/faltando          |
-| matricula_status       | text        | 'sim', 'nao', 'parcial'               |
-| created_at             | timestamptz | now()                                  |
-+------------------------+-------------+----------------------------------------+
-```
-
-RLS: INSERT anonimo permitido. SELECT/UPDATE/DELETE apenas admin.
-
-### 1.4 Novos campos na tabela `properties`
-
-Adicionar coluna `submitted_by` (uuid, nullable, FK para property_submissions) para vincular a submissao.
-
-Nao necessario — o vinculo ja existe via property_submissions.property_id.
-
----
-
-## 2. Novos Arquivos
-
-### 2.1 `src/pages/PropertySubmission.tsx` — Formulario publico
-
-- Rota: `/submit/:token`
-- Valida token contra `submission_links` (is_active = true)
-- Formulario com:
-  - **Dados do imovel:** tipo (Select), endereco, bairro, cidade, valor aproximado (Input number), descricao (Textarea), upload de fotos (multiplo, para storage bucket `property-images`)
-  - **Checklist de documentacao:** matricula (Select: Sim/Nao/Parcial), planta (Sim/Nao), IPTU (Sim/Nao), certidoes (Sim/Nao), campo de observacao livre sobre irregularidades
-  - **Dados do corretor:** nome (required), telefone/WhatsApp (required), imobiliaria (opcional), nome do proprietario (opcional)
-- Ao submeter:
-  1. Insert em `properties` com status `pending_review`, dados do imovel, imagens
-  2. Insert em `property_submissions` com dados do corretor + property_id
-  3. Insert em `notifications` tipo `new_property_submission` com titulo e metadata
-  4. Tela de sucesso com mensagem de confirmacao
-- Design: usar paleta existente (primary/charcoal), Logo no header, responsivo
-
-### 2.2 `src/pages/admin/AdminSubmissions.tsx` — Fila de avaliacao
-
-- Nova aba no admin: "Submissoes" (icone Inbox)
-- Lista imoveis com status `pending_review`, join com `property_submissions`
-- Para cada item mostra: titulo, tipo, cidade, corretor, imobiliaria, data de submissao
-- Ao clicar, abre dialog/pagina com todos os detalhes:
-  - Fotos, endereco, valor, checklist de documentacao, observacoes de irregularidade
-  - Dados do corretor
-- Tres acoes:
-  - **Aprovar (Rascunho):** muda status para `draft` → Julie completa os dados antes de publicar
-  - **Arquivar:** muda status para `archived`
-  - **Contatar Corretor:** abre WhatsApp com numero do corretor
-
----
-
-## 3. Alteracoes em Arquivos Existentes
-
-### 3.1 `src/types/database.ts`
-
-- Adicionar `'pending_review'` ao type `PropertyStatus`
-- Adicionar interfaces `SubmissionLink` e `PropertySubmission`
-
-### 3.2 `src/App.tsx`
-
-- Adicionar rota `/submit/:token` → `PropertySubmission`
-- Adicionar rota admin `/admin/submissoes` → `AdminSubmissions`
-
-### 3.3 `src/pages/admin/AdminLayout.tsx`
-
-- Adicionar item "Submissoes" (icone Inbox) no `navItems`
-
-### 3.4 `src/pages/admin/AdminProperties.tsx`
-
-- Adicionar `pending_review: 'Aguardando Avaliação'` nos labels/cores de status
-- Adicionar filtro `pending_review` no Select de status
-
-### 3.5 `src/pages/admin/AdminDashboard.tsx`
-
-- Adicionar card "Aguardando Avaliação" com contagem de pending_review
-- Destacar visualmente se > 0
-
-### 3.6 `src/pages/admin/AdminLinks.tsx`
-
-- Adicionar secao/tab para gerenciar `submission_links` (links de corretores)
-- Gerar token, copiar link, ativar/desativar
-
-### 3.7 `src/components/NotificationBell.tsx`
-
-- Adicionar tipo `new_property_submission` com icone 📋 e navegacao para `/admin/submissoes`
-
----
-
-## 4. Fluxo Resumido
+### 3.3 Nova Tabela: notifications
 
 ```text
-Corretor → /submit/:token → Formulario → DB (pending_review) → Notificacao
-                                                                     ↓
-Julie abre admin → sino notifica → Submissoes → Avaliar → Aprovar/Arquivar/Contatar
++------------------+-------------+----------------------------------+
+| Campo            | Tipo        | Descricao                        |
++------------------+-------------+----------------------------------+
+| id               | uuid        | Chave primaria                   |
+| type             | text        | hot_lead, new_view, system       |
+| title            | text        | Titulo da notificacao            |
+| message          | text        | Corpo da mensagem                |
+| is_read          | boolean     | Lida ou nao                      |
+| metadata         | jsonb       | Dados extras                     |
+| created_at       | timestamptz | Timestamp de criacao             |
++------------------+-------------+----------------------------------+
 ```
+
+RLS: full access para admin, insert anonimo permitido.
+
+### 3.4 Rastreamento de Scroll Depth
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+- Listener de scroll calculando percentual maximo
+- Formula: (scrollTop + windowHeight) / documentHeight * 100
+- Salvar junto com time_spent_seconds no onUnmount
+
+### 3.5 Rastreamento de Cliques CTA
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+- Ao clicar no botao WhatsApp, inserir registro em cta_clicks
+- Insert assincrono (fire and forget)
+- Nao bloqueia abertura do WhatsApp
+
+### 3.6 Sistema de Score de Interesse
+
+**Nova Edge Function:** `supabase/functions/calculate-interest-score/index.ts`
+
+Calculo de pontuacao:
+- time_spent > 120s: +5 pontos
+- time_spent > 60s: +3 pontos
+- scroll_depth > 75%: +2 pontos
+- clique no CTA: +10 pontos
+
+Se score >= 10: criar notificacao "hot_lead" (sem duplicar).
+
+### 3.7 Icone de Notificacoes no Admin
+
+**Arquivo:** `src/pages/admin/AdminLayout.tsx`
+
+- Icone Bell no header ao lado do logout
+- Badge vermelho com contagem de nao lidas
+- Popover com lista das ultimas 20 notificacoes
+- Opcao "Marcar todas como lidas"
+- Poll automatico a cada 60 segundos
+
+### 3.8 Melhorias no Relatorio Admin
+
+**Arquivo:** `src/pages/admin/AdminReports.tsx`
+
+Novas colunas na tabela:
+- **Scroll:** progress bar colorida (vermelho < 25%, amarelo 25-75%, verde > 75%)
+- **CTA:** icone Check verde ou traco cinza
+- **Score:** pontuacao calculada com destaque visual
+
+Novos cards de metricas:
+- Leads Quentes (score >= 10)
+- Cliques no WhatsApp (total cta_clicks)
+
+Filtro por periodo: 7 dias, 30 dias, todos.
+Ordenacao por score DESC (padrao).
+
+---
+
+## Arquivos a Criar/Modificar
+
+| Arquivo | Acao |
+|---------|------|
+| Migration SQL | Criar novos campos e tabelas |
+| `src/types/database.ts` | Adicionar novos tipos |
+| `src/components/PropertyCard.tsx` | Badge highlight_tag |
+| `src/pages/Catalog.tsx` | Filtros e ordenacao |
+| `src/pages/admin/PropertyForm.tsx` | Novos campos |
+| `src/pages/PropertyDetails.tsx` | Carrossel, docs, mapa, scroll tracking |
+| `src/pages/admin/AdminLayout.tsx` | Sistema notificacoes |
+| `src/pages/admin/AdminReports.tsx` | Colunas score, CTA, scroll |
+| `supabase/functions/calculate-interest-score/` | Edge function score |
 
 ---
 
 ## Notas Tecnicas
 
-- Upload de fotos usa o bucket `property-images` ja existente (publico)
-- RLS em `property_submissions`: insert anonimo, select admin only
-- `submission_links` reutiliza o padrao de `access_links` (token + validacao)
-- Notificacao `new_property_submission` segue o mesmo padrao de `hot_lead`
-- Embla Carousel nao precisa de alteracao (ja funciona com fotos)
-- Nao alterar nenhuma funcionalidade existente do catalogo de investidores
-
+- **Embla Carousel:** Ja instalado (`embla-carousel-react ^8.6.0`)
+- **shadcn/ui:** Usar Select, Popover, Badge, Progress existentes
+- **TanStack Query:** Usar para todas queries e mutations
+- **RLS:** Tabelas publicas permitem insert anonimo; notifications requer admin
+- **Edge Function:** Chamar apos update page_view e insert cta_click (fire and forget)

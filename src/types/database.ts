@@ -1,4 +1,4 @@
-export type PropertyStatus = 'draft' | 'published' | 'sold' | 'archived';
+export type PropertyStatus = 'draft' | 'published' | 'sold' | 'archived' | 'pending_review';
 export type PropertyType = 'casa' | 'terreno' | 'apartamento' | 'comercial' | 'outro';
 export type RiskLevel = 'baixo' | 'medio' | 'alto';
 
@@ -74,4 +74,25 @@ export interface Setting {
   value: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface SubmissionLink {
+  id: string;
+  token: string;
+  label: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface PropertySubmission {
+  id: string;
+  property_id: string;
+  submission_link_id: string | null;
+  broker_name: string;
+  broker_phone: string;
+  broker_company: string | null;
+  owner_name: string | null;
+  irregularity_notes: string | null;
+  matricula_status: string;
+  created_at: string;
 }

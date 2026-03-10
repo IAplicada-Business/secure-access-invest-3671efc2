@@ -18,6 +18,7 @@ const typeIcons: Record<string, { icon: React.ElementType; emoji: string }> = {
   hot_lead: { icon: Flame, emoji: '🔥' },
   new_view: { icon: Eye, emoji: '👁️' },
   system: { icon: Settings, emoji: '⚙️' },
+  new_property_submission: { icon: Eye, emoji: '📋' },
 };
 
 export function NotificationBell() {
@@ -77,8 +78,12 @@ export function NotificationBell() {
       markAsReadMutation.mutate(notification.id);
     }
     
-    if (notification.type === 'hot_lead') {
+    const notifType = notification.type as string;
+    if (notifType === 'hot_lead') {
       navigate('/admin/relatorios');
+      setOpen(false);
+    } else if (notifType === 'new_property_submission') {
+      navigate('/admin/submissoes');
       setOpen(false);
     }
   }

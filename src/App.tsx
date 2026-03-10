@@ -16,6 +16,8 @@ import PropertyForm from "./pages/admin/PropertyForm";
 import AdminLinks from "./pages/admin/AdminLinks";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminSubmissions from "./pages/admin/AdminSubmissions";
+import PropertySubmission from "./pages/PropertySubmission";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +35,9 @@ const App = () => (
           <Route path="/catalogo/:token/imovel/:propertyId" element={<PropertyDetails />} />
           <Route path="/link-invalido" element={<InvalidLink />} />
           
+          {/* Broker Submission Route */}
+          <Route path="/submit/:token" element={<PropertySubmission />} />
+          
           {/* Admin Routes */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<AdminLayout />}>
@@ -42,6 +47,7 @@ const App = () => (
             <Route path="links" element={<AdminLinks />} />
             <Route path="relatorios" element={<AdminReports />} />
             <Route path="configuracoes" element={<AdminSettings />} />
+            <Route path="submissoes" element={<AdminSubmissions />} />
           </Route>
           
           <Route path="*" element={<NotFound />} />
