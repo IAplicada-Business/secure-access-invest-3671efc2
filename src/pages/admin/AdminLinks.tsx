@@ -42,7 +42,8 @@ export default function AdminLinks() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ investor_name: '', investor_email: '', investor_phone: '', expires_at: '' });
+  const [form, setForm] = useState({ investor_name: '', investor_email: '', investor_phone: '', expires_at: '', client_id: '' });
+  const [clients, setClients] = useState<Client[]>([]);
 
   const [subLinks, setSubLinks] = useState<SubmissionLink[]>([]);
   const [subLoading, setSubLoading] = useState(true);
