@@ -36,6 +36,7 @@ export default function AdminDashboard() {
     publishedProperties: 0,
     draftProperties: 0,
     soldProperties: 0,
+    pendingReview: 0,
     activeLinks: 0,
     recentViews: [],
   });
