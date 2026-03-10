@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Outlet, useNavigate, Link } from 'react-router-dom';
+import { Outlet, useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/NotificationBell';
-import { SlideTabs } from '@/components/ui/slide-tabs';
 import { 
   LayoutDashboard, 
   Building2, 
@@ -15,7 +14,8 @@ import {
   Menu,
   X,
   Inbox,
-  Users
+  Users,
+  ChevronDown
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -24,16 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
-const navItems = [
-  { path: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-  { path: '/admin/imoveis', icon: Building2, label: 'Imóveis', exact: false },
-  { path: '/admin/links', icon: LinkIcon, label: 'Links', exact: false },
-  { path: '/admin/relatorios', icon: BarChart3, label: 'Relatórios', exact: false },
-  { path: '/admin/configuracoes', icon: Settings, label: 'Configurações', exact: false },
-  { path: '/admin/submissoes', icon: Inbox, label: 'Submissões', exact: false },
-  { path: '/admin/clientes', icon: Users, label: 'Clientes', exact: false },
-];
+import { cn } from '@/lib/utils';
 
 export default function AdminLayout() {
   const navigate = useNavigate();
