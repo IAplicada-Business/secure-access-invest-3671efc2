@@ -106,7 +106,6 @@ export default function PropertyForm() {
       status: property.status,
       images: property.images || [],
       cover_image: property.cover_image || '',
-      // New fields
       highlight_tag: property.highlight_tag || '',
       investor_notes: property.investor_notes || '',
       latitude: property.latitude?.toString() || '',
@@ -117,6 +116,19 @@ export default function PropertyForm() {
       has_iptu: property.has_iptu || false,
       has_certidoes: property.has_certidoes || false,
     });
+
+    // Fetch linked submission data
+    const { data: submissionData } = await supabase
+      .from('property_submissions')
+      .select('*')
+      .eq('property_id', id!)
+      .limit(1)
+      .maybeSingle();
+
+    if (submissionData) {
+      setSubmission(submissionData as PropertySubmission);
+    }
+
     setLoading(false);
   }
 
