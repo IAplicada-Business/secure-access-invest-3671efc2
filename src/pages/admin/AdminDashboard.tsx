@@ -53,6 +53,7 @@ export default function AdminDashboard() {
       const published = properties?.filter(p => p.status === 'published').length || 0;
       const draft = properties?.filter(p => p.status === 'draft').length || 0;
       const sold = properties?.filter(p => p.status === 'sold').length || 0;
+      const pendingReview = properties?.filter(p => p.status === 'pending_review').length || 0;
 
       // Get active links count
       const { count: activeLinks } = await supabase
