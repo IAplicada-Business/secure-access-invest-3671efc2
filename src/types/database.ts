@@ -1,4 +1,4 @@
-export type PropertyStatus = 'draft' | 'published' | 'sold' | 'archived';
+export type PropertyStatus = 'draft' | 'published' | 'sold' | 'archived' | 'pending_review';
 export type PropertyType = 'casa' | 'terreno' | 'apartamento' | 'comercial' | 'outro';
 export type RiskLevel = 'baixo' | 'medio' | 'alto';
 
