@@ -13,7 +13,8 @@ import {
   Settings,
   LogOut,
   Menu,
-  X
+  X,
+  Inbox
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
