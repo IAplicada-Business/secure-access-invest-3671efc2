@@ -112,9 +112,71 @@ export default function AdminLayout() {
               <Logo className="h-8 w-32" />
             </Link>
 
-            {/* Desktop Navigation - Slide Tabs */}
+            {/* Desktop Navigation - Dropdowns */}
             <div className="hidden lg:flex flex-1 justify-center">
-              <SlideTabs tabs={navItems} />
+              <div className="flex items-center gap-1 rounded-full border border-border bg-card p-1">
+                {/* Dashboard dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className={cn(navLinkClasses(isGroupActive(['/admin/relatorios']) || isRouteActive('/admin', true)), "gap-1.5")}>
+                      <LayoutDashboard className="h-4 w-4" />
+                      Dashboard
+                      <ChevronDown className="h-3 w-3 opacity-60" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin" className="flex items-center gap-2">
+                        <LayoutDashboard className="h-4 w-4" />
+                        Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/relatorios" className="flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4" />
+                        Relatórios
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Imóveis dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className={cn(navLinkClasses(isGroupActive(['/admin/imoveis', '/admin/submissoes'])), "gap-1.5")}>
+                      <Building2 className="h-4 w-4" />
+                      Imóveis
+                      <ChevronDown className="h-3 w-3 opacity-60" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/imoveis" className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        Imóveis
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/submissoes" className="flex items-center gap-2">
+                        <Inbox className="h-4 w-4" />
+                        Submissões
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Links */}
+                <Link to="/admin/links" className={navLinkClasses(isRouteActive('/admin/links'))}>
+                  <LinkIcon className="h-4 w-4" />
+                  Links
+                </Link>
+
+                {/* Clientes */}
+                <Link to="/admin/clientes" className={navLinkClasses(isRouteActive('/admin/clientes'))}>
+                  <Users className="h-4 w-4" />
+                  Clientes
+                </Link>
+              </div>
             </div>
 
             {/* Mobile Menu Button */}
@@ -129,8 +191,14 @@ export default function AdminLayout() {
             </div>
 
             {/* Right side actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <NotificationBell />
+              
+              <Button variant="ghost" size="icon" asChild className="text-muted-foreground hover:text-foreground">
+                <Link to="/admin/configuracoes">
+                  <Settings className="h-5 w-5" />
+                </Link>
+              </Button>
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -153,17 +221,27 @@ export default function AdminLayout() {
         {mobileMenuOpen && (
           <div className="lg:hidden border-t border-border bg-card">
             <nav className="mx-auto max-w-7xl px-4 py-3 space-y-1">
-              {navItems.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                >
-                  <item.icon className="h-5 w-5" />
-                  {item.label}
-                </Link>
-              ))}
+              <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                <LayoutDashboard className="h-5 w-5" />Dashboard
+              </Link>
+              <Link to="/admin/relatorios" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 pl-12 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                <BarChart3 className="h-4 w-4" />Relatórios
+              </Link>
+              <Link to="/admin/imoveis" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                <Building2 className="h-5 w-5" />Imóveis
+              </Link>
+              <Link to="/admin/submissoes" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 pl-12 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                <Inbox className="h-4 w-4" />Submissões
+              </Link>
+              <Link to="/admin/links" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                <LinkIcon className="h-5 w-5" />Links
+              </Link>
+              <Link to="/admin/clientes" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                <Users className="h-5 w-5" />Clientes
+              </Link>
+              <Link to="/admin/configuracoes" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                <Settings className="h-5 w-5" />Configurações
+              </Link>
             </nav>
           </div>
         )}
