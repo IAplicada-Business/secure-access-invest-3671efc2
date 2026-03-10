@@ -78,10 +78,11 @@ export function NotificationBell() {
       markAsReadMutation.mutate(notification.id);
     }
     
-    if (notification.type === 'hot_lead') {
+    const notifType = notification.type as string;
+    if (notifType === 'hot_lead') {
       navigate('/admin/relatorios');
       setOpen(false);
-    } else if (notification.type === 'new_property_submission') {
+    } else if (notifType === 'new_property_submission') {
       navigate('/admin/submissoes');
       setOpen(false);
     }
