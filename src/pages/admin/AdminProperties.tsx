@@ -164,6 +164,7 @@ export default function AdminProperties() {
             <SelectItem value="published">Publicado</SelectItem>
             <SelectItem value="sold">Vendido</SelectItem>
             <SelectItem value="archived">Arquivado</SelectItem>
+            <SelectItem value="pending_review">Aguardando Avaliação</SelectItem>
           </SelectContent>
         </Select>
       </div>

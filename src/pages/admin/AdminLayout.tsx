@@ -30,6 +30,7 @@ const navItems = [
   { path: '/admin/links', icon: LinkIcon, label: 'Links', exact: false },
   { path: '/admin/relatorios', icon: BarChart3, label: 'Relatórios', exact: false },
   { path: '/admin/configuracoes', icon: Settings, label: 'Configurações', exact: false },
+  { path: '/admin/submissoes', icon: Inbox, label: 'Submissões', exact: false },
 ];
 
 export default function AdminLayout() {

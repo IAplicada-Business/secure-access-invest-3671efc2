@@ -81,6 +81,9 @@ export function NotificationBell() {
     if (notification.type === 'hot_lead') {
       navigate('/admin/relatorios');
       setOpen(false);
+    } else if (notification.type === 'new_property_submission') {
+      navigate('/admin/submissoes');
+      setOpen(false);
     }
   }
 

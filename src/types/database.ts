@@ -75,3 +75,24 @@ export interface Setting {
   created_at: string;
   updated_at: string;
 }
+
+export interface SubmissionLink {
+  id: string;
+  token: string;
+  label: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface PropertySubmission {
+  id: string;
+  property_id: string;
+  submission_link_id: string | null;
+  broker_name: string;
+  broker_phone: string;
+  broker_company: string | null;
+  owner_name: string | null;
+  irregularity_notes: string | null;
+  matricula_status: string;
+  created_at: string;
+}

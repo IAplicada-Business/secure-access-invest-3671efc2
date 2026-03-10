@@ -47,6 +47,7 @@ const App = () => (
             <Route path="links" element={<AdminLinks />} />
             <Route path="relatorios" element={<AdminReports />} />
             <Route path="configuracoes" element={<AdminSettings />} />
+            <Route path="submissoes" element={<AdminSubmissions />} />
           </Route>
           
           <Route path="*" element={<NotFound />} />
