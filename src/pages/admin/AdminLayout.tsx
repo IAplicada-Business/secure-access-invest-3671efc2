@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Outlet, useNavigate, Link } from 'react-router-dom';
+import { Outlet, useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/NotificationBell';
-import { SlideTabs } from '@/components/ui/slide-tabs';
 import { 
   LayoutDashboard, 
   Building2, 
@@ -15,7 +14,8 @@ import {
   Menu,
   X,
   Inbox,
-  Users
+  Users,
+  ChevronDown
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -24,21 +24,28 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
-const navItems = [
-  { path: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-  { path: '/admin/imoveis', icon: Building2, label: 'Imóveis', exact: false },
-  { path: '/admin/links', icon: LinkIcon, label: 'Links', exact: false },
-  { path: '/admin/relatorios', icon: BarChart3, label: 'Relatórios', exact: false },
-  { path: '/admin/configuracoes', icon: Settings, label: 'Configurações', exact: false },
-  { path: '/admin/submissoes', icon: Inbox, label: 'Submissões', exact: false },
-  { path: '/admin/clientes', icon: Users, label: 'Clientes', exact: false },
-];
+import { cn } from '@/lib/utils';
 
 export default function AdminLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const isRouteActive = (path: string, exact = false) => {
+    if (exact) return location.pathname === path;
+    return location.pathname.startsWith(path);
+  };
+
+  const isGroupActive = (paths: string[]) => paths.some(p => location.pathname.startsWith(p));
+
+  const navLinkClasses = (active: boolean) =>
+    cn(
+      "relative z-10 flex items-center gap-2 cursor-pointer px-4 py-1.5 text-sm font-medium rounded-full transition-colors",
+      active
+        ? "bg-primary text-primary-foreground"
+        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+    );
 
   useEffect(() => {
     async function checkAuth() {
@@ -105,9 +112,71 @@ export default function AdminLayout() {
               <Logo className="h-8 w-32" />
             </Link>
 
-            {/* Desktop Navigation - Slide Tabs */}
+            {/* Desktop Navigation - Dropdowns */}
             <div className="hidden lg:flex flex-1 justify-center">
-              <SlideTabs tabs={navItems} />
+              <div className="flex items-center gap-1 rounded-full border border-border bg-card p-1">
+                {/* Dashboard dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className={cn(navLinkClasses(isGroupActive(['/admin/relatorios']) || isRouteActive('/admin', true)), "gap-1.5")}>
+                      <LayoutDashboard className="h-4 w-4" />
+                      Dashboard
+                      <ChevronDown className="h-3 w-3 opacity-60" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin" className="flex items-center gap-2">
+                        <LayoutDashboard className="h-4 w-4" />
+                        Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/relatorios" className="flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4" />
+                        Relatórios
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Imóveis dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className={cn(navLinkClasses(isGroupActive(['/admin/imoveis', '/admin/submissoes'])), "gap-1.5")}>
+                      <Building2 className="h-4 w-4" />
+                      Imóveis
+                      <ChevronDown className="h-3 w-3 opacity-60" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/imoveis" className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        Imóveis
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/submissoes" className="flex items-center gap-2">
+                        <Inbox className="h-4 w-4" />
+                        Submissões
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Links */}
+                <Link to="/admin/links" className={navLinkClasses(isRouteActive('/admin/links'))}>
+                  <LinkIcon className="h-4 w-4" />
+                  Links
+                </Link>
+
+                {/* Clientes */}
+                <Link to="/admin/clientes" className={navLinkClasses(isRouteActive('/admin/clientes'))}>
+                  <Users className="h-4 w-4" />
+                  Clientes
+                </Link>
+              </div>
             </div>
 
             {/* Mobile Menu Button */}
@@ -122,8 +191,14 @@ export default function AdminLayout() {
             </div>
 
             {/* Right side actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <NotificationBell />
+              
+              <Button variant="ghost" size="icon" asChild className="text-muted-foreground hover:text-foreground">
+                <Link to="/admin/configuracoes">
+                  <Settings className="h-5 w-5" />
+                </Link>
+              </Button>
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -146,17 +221,27 @@ export default function AdminLayout() {
         {mobileMenuOpen && (
           <div className="lg:hidden border-t border-border bg-card">
             <nav className="mx-auto max-w-7xl px-4 py-3 space-y-1">
-              {navItems.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                >
-                  <item.icon className="h-5 w-5" />
-                  {item.label}
-                </Link>
-              ))}
+              <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                <LayoutDashboard className="h-5 w-5" />Dashboard
+              </Link>
+              <Link to="/admin/relatorios" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 pl-12 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                <BarChart3 className="h-4 w-4" />Relatórios
+              </Link>
+              <Link to="/admin/imoveis" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                <Building2 className="h-5 w-5" />Imóveis
+              </Link>
+              <Link to="/admin/submissoes" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 pl-12 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                <Inbox className="h-4 w-4" />Submissões
+              </Link>
+              <Link to="/admin/links" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                <LinkIcon className="h-5 w-5" />Links
+              </Link>
+              <Link to="/admin/clientes" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                <Users className="h-5 w-5" />Clientes
+              </Link>
+              <Link to="/admin/configuracoes" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                <Settings className="h-5 w-5" />Configurações
+              </Link>
             </nav>
           </div>
         )}
