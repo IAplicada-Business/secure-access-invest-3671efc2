@@ -196,6 +196,23 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
+        <Card className={stats.pendingReview > 0 ? 'border-amber-300 bg-amber-50/50' : ''}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Aguardando Avaliação
+            </CardTitle>
+            <Inbox className="h-4 w-4 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-3xl font-bold ${stats.pendingReview > 0 ? 'text-amber-600' : ''}`}>{stats.pendingReview}</div>
+            {stats.pendingReview > 0 && (
+              <Link to="/admin/submissoes" className="text-xs text-primary hover:underline mt-1 inline-block">
+                Ver submissões →
+              </Link>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
