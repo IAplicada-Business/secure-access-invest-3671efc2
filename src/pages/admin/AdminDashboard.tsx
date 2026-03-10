@@ -12,7 +12,8 @@ import {
   Clock,
   Plus,
   TrendingUp,
-  Inbox
+  Inbox,
+  Users
 } from 'lucide-react';
 
 interface DashboardStats {

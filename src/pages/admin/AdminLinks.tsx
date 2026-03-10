@@ -274,6 +274,16 @@ export default function AdminLinks() {
               <Label>Data de Expiração (opcional)</Label>
               <Input type="date" value={form.expires_at} onChange={(e) => setForm(p => ({ ...p, expires_at: e.target.value }))} />
             </div>
+            <div className="space-y-2">
+              <Label>Vincular a cliente (opcional)</Label>
+              <Select value={form.client_id} onValueChange={(v) => setForm(p => ({ ...p, client_id: v === 'none' ? '' : v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione um cliente..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
               <Button type="submit" disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Gerar Link</Button>
