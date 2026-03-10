@@ -242,6 +242,60 @@ export type Database = {
         }
         Relationships: []
       }
+      property_submissions: {
+        Row: {
+          broker_company: string | null
+          broker_name: string
+          broker_phone: string
+          created_at: string
+          id: string
+          irregularity_notes: string | null
+          matricula_status: string
+          owner_name: string | null
+          property_id: string
+          submission_link_id: string | null
+        }
+        Insert: {
+          broker_company?: string | null
+          broker_name: string
+          broker_phone: string
+          created_at?: string
+          id?: string
+          irregularity_notes?: string | null
+          matricula_status?: string
+          owner_name?: string | null
+          property_id: string
+          submission_link_id?: string | null
+        }
+        Update: {
+          broker_company?: string | null
+          broker_name?: string
+          broker_phone?: string
+          created_at?: string
+          id?: string
+          irregularity_notes?: string | null
+          matricula_status?: string
+          owner_name?: string | null
+          property_id?: string
+          submission_link_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_submissions_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_submissions_submission_link_id_fkey"
+            columns: ["submission_link_id"]
+            isOneToOne: false
+            referencedRelation: "submission_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       settings: {
         Row: {
           created_at: string | null
@@ -263,6 +317,30 @@ export type Database = {
           key?: string
           updated_at?: string | null
           value?: string
+        }
+        Relationships: []
+      }
+      submission_links: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          token: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          token?: string
         }
         Relationships: []
       }
