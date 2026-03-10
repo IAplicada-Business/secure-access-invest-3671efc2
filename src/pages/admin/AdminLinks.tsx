@@ -81,7 +81,8 @@ export default function AdminLinks() {
       investor_email: form.investor_email || null,
       investor_phone: form.investor_phone || null,
       expires_at: form.expires_at || null,
-    });
+      client_id: form.client_id || null,
+    } as any);
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
     toast.success('Link criado!');
     setDialogOpen(false);
