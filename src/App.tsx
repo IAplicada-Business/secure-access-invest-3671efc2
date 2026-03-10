@@ -16,6 +16,8 @@ import PropertyForm from "./pages/admin/PropertyForm";
 import AdminLinks from "./pages/admin/AdminLinks";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminSubmissions from "./pages/admin/AdminSubmissions";
+import PropertySubmission from "./pages/PropertySubmission";
 
 const queryClient = new QueryClient();
 
