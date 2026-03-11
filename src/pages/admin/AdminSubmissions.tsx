@@ -275,7 +275,7 @@ export default function AdminSubmissions() {
       )}
 
       {/* Detail Dialog */}
-      <Dialog open={!!selectedSubmission} onOpenChange={() => setSelectedSubmission(null)}>
+      <Dialog open={!!selectedSubmission} onOpenChange={() => { setSelectedSubmission(null); setSelectedPartnerId(null); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           {selectedSubmission && (
             <>
