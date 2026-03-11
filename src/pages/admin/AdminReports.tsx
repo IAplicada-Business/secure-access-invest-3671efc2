@@ -357,14 +357,15 @@ export default function AdminReports() {
                     <TableHead>Clientes Gerados</TableHead>
                     <TableHead className="hidden md:table-cell">Valor Total</TableHead>
                     <TableHead className="hidden md:table-cell">Comissão Paga</TableHead>
+                    <TableHead className="hidden md:table-cell">Comissão Pendente</TableHead>
                     <TableHead className="hidden lg:table-cell">Último Contato</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {partnerLoading ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-8">Carregando...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center py-8">Carregando...</TableCell></TableRow>
                   ) : partnerPerf.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum parceiro cadastrado</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum parceiro cadastrado</TableCell></TableRow>
                   ) : partnerPerf.map(p => (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium">{p.name}</TableCell>
@@ -374,8 +375,9 @@ export default function AdminReports() {
                           {p.clients_count}
                         </Badge>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell text-muted-foreground">{formatCurrency(p.total_generated)}</TableCell>
-                      <TableCell className="hidden md:table-cell text-muted-foreground">{formatCurrency(p.commission_paid)}</TableCell>
+                      <TableCell className="hidden md:table-cell">{formatCurrency(p.total_generated)}</TableCell>
+                      <TableCell className="hidden md:table-cell">{formatCurrency(p.commission_paid)}</TableCell>
+                      <TableCell className="hidden md:table-cell">{formatCurrency(p.commission_pending)}</TableCell>
                       <TableCell className="hidden lg:table-cell text-muted-foreground">
                         {p.last_contact ? new Date(p.last_contact).toLocaleDateString('pt-BR') : '-'}
                       </TableCell>
