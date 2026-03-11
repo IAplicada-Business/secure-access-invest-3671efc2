@@ -1,128 +1,200 @@
-import { Link } from 'react-router-dom';
-import { Logo } from '@/components/Logo';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Building2, Shield, TrendingUp, ArrowRight } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
+import { Loader2, Lock } from 'lucide-react';
+import { motion } from 'framer-motion';
+import ownerPhoto from '@/assets/owner-photo.jpg';
+import logoFull from '@/assets/logo-full.png';
+import logoIcon from '@/assets/logo-icon.png';
 
 export default function Index() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        navigate('/admin');
+      } else {
+        setChecking(false);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        navigate('/admin');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      toast.error('Credenciais inválidas. Tente novamente.');
+      setLoading(false);
+      return;
+    }
+
+    toast.success('Login realizado com sucesso!');
+    navigate('/admin');
+  }
+
+  if (checking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto flex items-center justify-between px-4 py-4">
-          <Logo className="h-12 w-48" />
-          <Button asChild className="bg-charcoal text-white hover:bg-charcoal-light">
-            <Link to="/admin/login">Acesso Admin</Link>
-          </Button>
-        </div>
-      </header>
+    <div className="flex min-h-screen">
+      {/* Left Panel — Photo + Branding */}
+      <div className="relative hidden lg:flex lg:w-1/2 items-end justify-start overflow-hidden">
+        {/* Background Photo */}
+        <img
+          src={ownerPhoto}
+          alt="J. Imobi Gestão e Negócios"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-charcoal/95 via-charcoal/60 to-charcoal/30" />
+        {/* Spotlight effect */}
+        <div
+          className="absolute inset-0 opacity-30"
+          style={{
+            background: 'radial-gradient(circle at 30% 70%, hsl(40 45% 58% / 0.4) 0%, transparent 60%)',
+          }}
+        />
 
-      {/* Hero */}
-      <section className="relative py-24 md:py-32 bg-gradient-to-b from-background via-secondary to-background">
-        <div className="container relative mx-auto px-4 text-center">
-          <span className="inline-block mb-4 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium animate-fade-in">
-            Regularização de Imóveis
-          </span>
-          <h1 className="mb-6 font-display text-4xl font-bold text-foreground md:text-5xl lg:text-6xl animate-slide-up">
-            Transforme <span className="text-primary">Irregularidades</span>
-            <br />em Oportunidades
-          </h1>
-          <p className="mx-auto max-w-2xl text-lg text-muted-foreground mb-8 animate-fade-in">
-            A JMob conecta investidores qualificados a imóveis irregulares com alto potencial de valorização. 
-            Nossa expertise em regularização garante segurança jurídica e retorno sobre o investimento.
+        {/* Content over photo */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="relative z-10 p-12 pb-16 max-w-lg"
+        >
+          <img
+            src={logoFull}
+            alt="J. Imobi Gestão e Negócios"
+            className="h-16 w-auto mb-8 brightness-0 invert"
+          />
+          <h2 className="font-display text-3xl font-bold text-primary-foreground mb-4 leading-tight">
+            Transformando irregularidades
+            <br />
+            <span className="text-primary">em oportunidades.</span>
+          </h2>
+          <p className="text-primary-foreground/70 text-base leading-relaxed">
+            Gestão inteligente de imóveis com expertise em regularização fundiária
+            e alto potencial de valorização.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up">
-            <Button size="lg" className="btn-gold text-lg px-8">
-              Quero Investir
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            <Button size="lg" variant="outline" className="border-charcoal text-charcoal hover:bg-charcoal hover:text-white">
-              Saiba Mais
-            </Button>
-          </div>
-        </div>
-      </section>
+        </motion.div>
+      </div>
 
-      {/* Features */}
-      <section className="py-20 bg-secondary">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="font-display text-3xl font-bold text-foreground mb-4">
-              Por que investir com a JMob?
-            </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Nossa metodologia combina expertise jurídica, análise de mercado e acompanhamento personalizado.
+      {/* Right Panel — Login Form */}
+      <div className="flex w-full lg:w-1/2 items-center justify-center bg-background px-6 py-12">
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="w-full max-w-sm"
+        >
+          {/* Logo icon */}
+          <div className="flex justify-center mb-10">
+            <img
+              src={logoIcon}
+              alt="J. Imobi"
+              className="h-20 w-auto"
+            />
+          </div>
+
+          {/* Mobile-only full logo */}
+          <div className="lg:hidden flex justify-center mb-4">
+            <img
+              src={logoFull}
+              alt="J. Imobi Gestão e Negócios"
+              className="h-10 w-auto"
+            />
+          </div>
+
+          <div className="text-center mb-8">
+            <h1 className="font-display text-2xl font-bold text-foreground">
+              Painel de Gestão
+            </h1>
+            <p className="text-muted-foreground mt-2 text-sm">
+              Entre com suas credenciais para acessar
             </p>
           </div>
 
-          <div className="grid gap-8 md:grid-cols-3">
-            <div className="card-premium p-8 text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 mb-6">
-                <Building2 className="h-7 w-7 text-primary" />
-              </div>
-              <h3 className="font-display text-xl font-semibold text-foreground mb-3">
-                Imóveis Selecionados
-              </h3>
-              <p className="text-muted-foreground">
-                Cada imóvel é cuidadosamente analisado para garantir viabilidade de regularização e potencial de valorização.
-              </p>
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-foreground font-medium text-sm">
+                Email
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="seu@email.com"
+                required
+                className="input-premium h-11"
+              />
             </div>
 
-            <div className="card-premium p-8 text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 mb-6">
-                <Shield className="h-7 w-7 text-primary" />
-              </div>
-              <h3 className="font-display text-xl font-semibold text-foreground mb-3">
-                Segurança Jurídica
-              </h3>
-              <p className="text-muted-foreground">
-                Equipe especializada em regularização fundiária com histórico comprovado de sucesso.
-              </p>
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-foreground font-medium text-sm">
+                Senha
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                className="input-premium h-11"
+              />
             </div>
 
-            <div className="card-premium p-8 text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 mb-6">
-                <TrendingUp className="h-7 w-7 text-primary" />
-              </div>
-              <h3 className="font-display text-xl font-semibold text-foreground mb-3">
-                Alta Valorização
-              </h3>
-              <p className="text-muted-foreground">
-                Imóveis regularizados podem valorizar de 30% a 100% após o processo de regularização.
-              </p>
-            </div>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full h-12 bg-charcoal text-primary-foreground hover:bg-charcoal-light font-medium text-base transition-all duration-200"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Entrando...
+                </>
+              ) : (
+                'Entrar'
+              )}
+            </Button>
+          </form>
+
+          <div className="flex items-center justify-center gap-2 mt-8 text-muted-foreground">
+            <Lock className="h-3.5 w-3.5" />
+            <span className="text-xs">Acesso restrito a usuários autorizados</span>
           </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="card-premium overflow-hidden">
-            <div className="bg-gradient-to-r from-primary/20 to-primary/5 p-8 md:p-12 text-center">
-              <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground mb-4">
-                Pronto para começar a investir?
-              </h2>
-              <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
-                Entre em contato para receber seu acesso exclusivo ao catálogo de oportunidades.
-              </p>
-              <Button size="lg" className="btn-gold">
-                Falar com a JMob
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-border py-8 bg-charcoal">
-        <div className="container mx-auto px-4 text-center">
-          <Logo className="mx-auto mb-4 h-16 w-64" />
-          <p className="text-sm text-white/70">
-            © {new Date().getFullYear()} JMob Gestão e Negócios. Todos os direitos reservados.
-          </p>
-        </div>
-      </footer>
+        </motion.div>
+      </div>
     </div>
   );
 }
