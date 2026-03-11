@@ -7,6 +7,9 @@ export type ClientStatus = 'prospect' | 'active' | 'completed';
 export type InteractionType = 'meeting' | 'whatsapp' | 'email' | 'call' | 'other';
 export type DocumentCategory = 'rg' | 'cpf' | 'matricula' | 'contract' | 'proposal' | 'other';
 
+export type PartnerType = 'imobiliaria' | 'corretor_autonomo' | 'assessor_investimento' | 'arquiteto' | 'engenheiro' | 'contador' | 'outro';
+export type PartnerStatus = 'active' | 'inactive';
+
 export interface Property {
   id: string;
   title: string;
@@ -89,11 +92,6 @@ export interface SubmissionLink {
   created_at: string;
 }
 
-/**
- * Nota de arquitetura: quando o módulo de parceiros for construído,
- * adicionar campo opcional `partner_id: string | null` para vincular
- * submissões a parceiros cadastrados (ligação retroativa).
- */
 export interface PropertySubmission {
   id: string;
   property_id: string;
@@ -105,6 +103,7 @@ export interface PropertySubmission {
   irregularity_notes: string | null;
   matricula_status: string;
   created_at: string;
+  partner_id: string | null;
 }
 
 export interface Client {
@@ -116,6 +115,7 @@ export interface Client {
   email: string | null;
   origin: string | null;
   partner_name: string | null;
+  partner_id: string | null;
   status: ClientStatus;
   notes: string | null;
   created_at: string;
@@ -133,6 +133,31 @@ export interface ClientDocument {
 export interface ClientInteraction {
   id: string;
   client_id: string;
+  type: InteractionType;
+  note: string;
+  interaction_date: string;
+  created_at: string;
+}
+
+export interface Partner {
+  id: string;
+  name: string;
+  type: PartnerType;
+  phone: string;
+  email: string | null;
+  affiliated_agency: string | null;
+  website: string | null;
+  creci: string | null;
+  commission_rate: number | null;
+  notes: string | null;
+  status: PartnerStatus;
+  parent_partner_id: string | null;
+  created_at: string;
+}
+
+export interface PartnerInteraction {
+  id: string;
+  partner_id: string;
   type: InteractionType;
   note: string;
   interaction_date: string;
