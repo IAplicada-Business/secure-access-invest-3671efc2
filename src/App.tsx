@@ -19,6 +19,8 @@ import AdminSettings from "./pages/admin/AdminSettings";
 import AdminSubmissions from "./pages/admin/AdminSubmissions";
 import AdminClients from "./pages/admin/AdminClients";
 import ClientDetails from "./pages/admin/ClientDetails";
+import AdminPartners from "./pages/admin/AdminPartners";
+import PartnerDetails from "./pages/admin/PartnerDetails";
 import PropertySubmission from "./pages/PropertySubmission";
 
 const queryClient = new QueryClient();
