@@ -181,6 +181,64 @@ export type Database = {
           },
         ]
       }
+      commissions: {
+        Row: {
+          amount: number
+          client_id: string | null
+          created_at: string
+          id: string
+          paid_at: string | null
+          partner_id: string
+          rate: number
+          revenue_id: string
+          status: Database["public"]["Enums"]["commission_status"]
+        }
+        Insert: {
+          amount: number
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          partner_id: string
+          rate: number
+          revenue_id: string
+          status?: Database["public"]["Enums"]["commission_status"]
+        }
+        Update: {
+          amount?: number
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          partner_id?: string
+          rate?: number
+          revenue_id?: string
+          status?: Database["public"]["Enums"]["commission_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commissions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_revenue_id_fkey"
+            columns: ["revenue_id"]
+            isOneToOne: false
+            referencedRelation: "revenues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cta_clicks: {
         Row: {
           access_link_id: string | null
@@ -213,6 +271,47 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category: Database["public"]["Enums"]["expense_category"]
+          created_at: string
+          description: string
+          expense_date: string
+          id: string
+          is_recurring: boolean
+          related_commission_id: string | null
+        }
+        Insert: {
+          amount: number
+          category?: Database["public"]["Enums"]["expense_category"]
+          created_at?: string
+          description: string
+          expense_date?: string
+          id?: string
+          is_recurring?: boolean
+          related_commission_id?: string | null
+        }
+        Update: {
+          amount?: number
+          category?: Database["public"]["Enums"]["expense_category"]
+          created_at?: string
+          description?: string
+          expense_date?: string
+          id?: string
+          is_recurring?: boolean
+          related_commission_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_related_commission_id_fkey"
+            columns: ["related_commission_id"]
+            isOneToOne: false
+            referencedRelation: "commissions"
             referencedColumns: ["id"]
           },
         ]
@@ -531,6 +630,54 @@ export type Database = {
           },
         ]
       }
+      revenues: {
+        Row: {
+          amount: number
+          client_id: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          partner_id: string | null
+          received_at: string
+          service_type: Database["public"]["Enums"]["service_type"]
+        }
+        Insert: {
+          amount: number
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          partner_id?: string | null
+          received_at?: string
+          service_type?: Database["public"]["Enums"]["service_type"]
+        }
+        Update: {
+          amount?: number
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          partner_id?: string | null
+          received_at?: string
+          service_type?: Database["public"]["Enums"]["service_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revenues_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenues_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       settings: {
         Row: {
           created_at: string | null
@@ -617,6 +764,14 @@ export type Database = {
       app_role: "admin" | "user"
       client_status: "prospect" | "active" | "completed"
       client_type: "investor" | "incorporator" | "individual"
+      commission_status: "pending" | "paid"
+      expense_category:
+        | "salario"
+        | "comissao_paga"
+        | "fornecedor"
+        | "escritorio"
+        | "marketing"
+        | "outro"
       partner_status: "active" | "inactive"
       partner_type:
         | "imobiliaria"
@@ -633,6 +788,11 @@ export type Database = {
         | "archived"
         | "pending_review"
       property_type: "casa" | "terreno" | "apartamento" | "comercial" | "outro"
+      service_type:
+        | "regularizacao"
+        | "venda_plataforma"
+        | "consultoria"
+        | "outro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -763,6 +923,15 @@ export const Constants = {
       app_role: ["admin", "user"],
       client_status: ["prospect", "active", "completed"],
       client_type: ["investor", "incorporator", "individual"],
+      commission_status: ["pending", "paid"],
+      expense_category: [
+        "salario",
+        "comissao_paga",
+        "fornecedor",
+        "escritorio",
+        "marketing",
+        "outro",
+      ],
       partner_status: ["active", "inactive"],
       partner_type: [
         "imobiliaria",
@@ -781,6 +950,12 @@ export const Constants = {
         "pending_review",
       ],
       property_type: ["casa", "terreno", "apartamento", "comercial", "outro"],
+      service_type: [
+        "regularizacao",
+        "venda_plataforma",
+        "consultoria",
+        "outro",
+      ],
     },
   },
 } as const
