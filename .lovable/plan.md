@@ -1,249 +1,149 @@
 
-# Sprint 1: Melhorias no Catalogo de Imoveis JMob
 
-Este plano abrange tres blocos principais de funcionalidades: novos campos e filtros, melhorias na pagina de detalhes, e rastreamento avancado de interesse.
+# Módulo Financeiro — Plano de Implementação
 
----
+## Visão geral
 
-## Bloco 1 - Novos Campos + Cards + Filtros
-
-### 1.1 Migracao do Banco de Dados
-
-Adicionar novos campos na tabela `properties`:
-
-```text
-+------------------------+-------------+----------------------------------+
-| Campo                  | Tipo        | Descricao                        |
-+------------------------+-------------+----------------------------------+
-| highlight_tag          | text        | Tag de destaque (OPORTUNIDADE)   |
-| investor_notes         | text        | Notas visiveis na ficha          |
-| latitude               | decimal     | Coordenada geografica            |
-| longitude              | decimal     | Coordenada geografica            |
-| risk_level             | text        | baixo, medio, alto (default)     |
-| has_matricula          | boolean     | Documentacao disponivel          |
-| has_planta             | boolean     | Documentacao disponivel          |
-| has_iptu               | boolean     | Documentacao disponivel          |
-| has_certidoes          | boolean     | Documentacao disponivel          |
-+------------------------+-------------+----------------------------------+
-```
-
-### 1.2 Atualizar PropertyCard
-
-**Arquivo:** `src/components/PropertyCard.tsx`
-
-- Adicionar badge de `highlight_tag` no canto superior esquerdo
-- Estilo: fundo dourado (primary), texto branco, fonte bold
-- Condicional: so exibe se highlight_tag nao for null/vazio
-
-### 1.3 Filtros e Ordenacao no Catalogo
-
-**Arquivo:** `src/pages/Catalog.tsx`
-
-Adicionar acima da grid:
-- **Select de Ordenacao:**
-  - Mais recentes (created_at DESC) - padrao
-  - Maior valorizacao (calculo percentual DESC)
-  - Menor investimento (acquisition_cost ASC)
-  - Maior investimento (acquisition_cost DESC)
-
-- **Select de Tipo de Imovel:**
-  - Todos, Casa, Terreno, Apartamento, Comercial
-
-- **Select de Cidade:**
-  - Dinamico baseado nas cidades distintas dos imoveis publicados
-
-Layout responsivo: empilhado em mobile, lado a lado em desktop.
-
-### 1.4 Atualizar PropertyForm Admin
-
-**Arquivo:** `src/pages/admin/PropertyForm.tsx`
-
-Nova secao "Informacoes Complementares":
-- Campo `highlight_tag` (texto, opcional)
-- Campo `investor_notes` (textarea, opcional)
-- Select `risk_level` (Baixo/Medio/Alto, default Medio)
-- Inputs `latitude` e `longitude` (numericos, lado a lado)
-- Checkboxes de documentacao (has_matricula, has_planta, has_iptu, has_certidoes)
-
-### 1.5 Atualizar Tipos TypeScript
-
-**Arquivo:** `src/types/database.ts`
-
-Adicionar novos campos na interface Property.
+Criar o módulo `/admin/financeiro` com 4 abas (Visão Geral, Receitas, Despesas, Comissões), 3 novas tabelas no banco, e integrar dados reais na Performance de Parceiros nos Relatórios.
 
 ---
 
-## Bloco 2 - Melhorias na Pagina de Detalhes
+## 1. Banco de dados — 3 tabelas + RLS
 
-### 2.1 Carrossel de Imagens
+### Migration SQL
 
-**Arquivo:** `src/pages/PropertyDetails.tsx`
+```sql
+-- Tipos
+CREATE TYPE public.service_type AS ENUM ('regularizacao', 'venda_plataforma', 'consultoria', 'outro');
+CREATE TYPE public.expense_category AS ENUM ('salario', 'comissao_paga', 'fornecedor', 'escritorio', 'marketing', 'outro');
+CREATE TYPE public.commission_status AS ENUM ('pending', 'paid');
 
-Substituir galeria empilhada por carrossel horizontal:
-- Navegacao por setas (esquerda/direita)
-- Indicadores de pagina (dots)
-- Suporte a swipe/touch em mobile
-- Aspect ratio 16:9 com object-fit cover
-- Usando Embla Carousel (ja instalado como dependencia)
+-- Receitas
+CREATE TABLE public.revenues (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id uuid REFERENCES public.clients(id) ON DELETE SET NULL,
+  partner_id uuid REFERENCES public.partners(id) ON DELETE SET NULL,
+  service_type service_type NOT NULL DEFAULT 'outro',
+  amount numeric NOT NULL,
+  received_at date NOT NULL DEFAULT CURRENT_DATE,
+  notes text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 
-### 2.2 Secao de Riscos Melhorada
+-- Comissões
+CREATE TABLE public.commissions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  partner_id uuid NOT NULL REFERENCES public.partners(id) ON DELETE CASCADE,
+  client_id uuid REFERENCES public.clients(id) ON DELETE SET NULL,
+  revenue_id uuid NOT NULL REFERENCES public.revenues(id) ON DELETE CASCADE,
+  rate numeric NOT NULL,
+  amount numeric NOT NULL,
+  status commission_status NOT NULL DEFAULT 'pending',
+  paid_at date,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 
-**Arquivo:** `src/pages/PropertyDetails.tsx`
+-- Despesas
+CREATE TABLE public.expenses (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  category expense_category NOT NULL DEFAULT 'outro',
+  description text NOT NULL,
+  amount numeric NOT NULL,
+  expense_date date NOT NULL DEFAULT CURRENT_DATE,
+  is_recurring boolean NOT NULL DEFAULT false,
+  related_commission_id uuid REFERENCES public.commissions(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 
-Adicionar badge visual de nivel de risco acima do texto:
-- Risco Baixo: fundo verde-claro, icone ShieldCheck
-- Risco Medio: fundo amarelo-claro, icone AlertTriangle
-- Risco Alto: fundo vermelho-claro, icone AlertOctagon
+-- RLS (admin only, mesmo padrão do resto)
+ALTER TABLE public.revenues ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.commissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 
-### 2.3 Secao Documentacao Disponivel
+CREATE POLICY "Admins can manage revenues" ON public.revenues FOR ALL TO authenticated
+  USING (has_role(auth.uid(), 'admin')) WITH CHECK (has_role(auth.uid(), 'admin'));
 
-**Arquivo:** `src/pages/PropertyDetails.tsx`
+CREATE POLICY "Admins can manage commissions" ON public.commissions FOR ALL TO authenticated
+  USING (has_role(auth.uid(), 'admin')) WITH CHECK (has_role(auth.uid(), 'admin'));
 
-Nova secao com grid 2x2:
-- Matricula (FileText)
-- Planta Aprovada (Map)
-- IPTU em Dia (Receipt)
-- Certidoes (FileCheck)
-
-Cada item mostra CheckCircle (verde) se true, XCircle (cinza) se false.
-
-### 2.4 Notas do Investidor
-
-**Arquivo:** `src/pages/PropertyDetails.tsx`
-
-Se `investor_notes` preenchido:
-- Card com fundo primary/5%, borda dourada
-- Icone Info, titulo "Observacoes para o Investidor"
-- Posicionado acima do CTA fixo
-
-### 2.5 Mapa de Localizacao
-
-**Arquivo:** `src/pages/PropertyDetails.tsx`
-
-Se latitude e longitude preenchidos:
-- Iframe do Google Maps abaixo do endereco
-- Altura 200px mobile, 250px desktop
-- Bordas arredondadas
+CREATE POLICY "Admins can manage expenses" ON public.expenses FOR ALL TO authenticated
+  USING (has_role(auth.uid(), 'admin')) WITH CHECK (has_role(auth.uid(), 'admin'));
+```
 
 ---
 
-## Bloco 3 - Rastreamento Avancado
+## 2. Navegação — novo link "Financeiro" no header
 
-### 3.1 Migracao: scroll_depth na page_views
+**`AdminLayout.tsx`**: Adicionar link direto (como "Links") no nav bar com ícone `DollarSign`, rota `/admin/financeiro`. Adicionar no mobile menu também.
 
-```text
-ALTER TABLE page_views ADD COLUMN scroll_depth_percent integer DEFAULT 0;
-```
-
-### 3.2 Nova Tabela: cta_clicks
-
-```text
-+------------------+-------------+----------------------------------+
-| Campo            | Tipo        | Descricao                        |
-+------------------+-------------+----------------------------------+
-| id               | uuid        | Chave primaria                   |
-| access_link_id   | uuid        | FK para access_links             |
-| property_id      | uuid        | FK para properties               |
-| clicked_at       | timestamptz | Timestamp do clique              |
-+------------------+-------------+----------------------------------+
-```
-
-RLS: insert anonimo permitido, select apenas admin.
-
-### 3.3 Nova Tabela: notifications
-
-```text
-+------------------+-------------+----------------------------------+
-| Campo            | Tipo        | Descricao                        |
-+------------------+-------------+----------------------------------+
-| id               | uuid        | Chave primaria                   |
-| type             | text        | hot_lead, new_view, system       |
-| title            | text        | Titulo da notificacao            |
-| message          | text        | Corpo da mensagem                |
-| is_read          | boolean     | Lida ou nao                      |
-| metadata         | jsonb       | Dados extras                     |
-| created_at       | timestamptz | Timestamp de criacao             |
-+------------------+-------------+----------------------------------+
-```
-
-RLS: full access para admin, insert anonimo permitido.
-
-### 3.4 Rastreamento de Scroll Depth
-
-**Arquivo:** `src/pages/PropertyDetails.tsx`
-
-- Listener de scroll calculando percentual maximo
-- Formula: (scrollTop + windowHeight) / documentHeight * 100
-- Salvar junto com time_spent_seconds no onUnmount
-
-### 3.5 Rastreamento de Cliques CTA
-
-**Arquivo:** `src/pages/PropertyDetails.tsx`
-
-- Ao clicar no botao WhatsApp, inserir registro em cta_clicks
-- Insert assincrono (fire and forget)
-- Nao bloqueia abertura do WhatsApp
-
-### 3.6 Sistema de Score de Interesse
-
-**Nova Edge Function:** `supabase/functions/calculate-interest-score/index.ts`
-
-Calculo de pontuacao:
-- time_spent > 120s: +5 pontos
-- time_spent > 60s: +3 pontos
-- scroll_depth > 75%: +2 pontos
-- clique no CTA: +10 pontos
-
-Se score >= 10: criar notificacao "hot_lead" (sem duplicar).
-
-### 3.7 Icone de Notificacoes no Admin
-
-**Arquivo:** `src/pages/admin/AdminLayout.tsx`
-
-- Icone Bell no header ao lado do logout
-- Badge vermelho com contagem de nao lidas
-- Popover com lista das ultimas 20 notificacoes
-- Opcao "Marcar todas como lidas"
-- Poll automatico a cada 60 segundos
-
-### 3.8 Melhorias no Relatorio Admin
-
-**Arquivo:** `src/pages/admin/AdminReports.tsx`
-
-Novas colunas na tabela:
-- **Scroll:** progress bar colorida (vermelho < 25%, amarelo 25-75%, verde > 75%)
-- **CTA:** icone Check verde ou traco cinza
-- **Score:** pontuacao calculada com destaque visual
-
-Novos cards de metricas:
-- Leads Quentes (score >= 10)
-- Cliques no WhatsApp (total cta_clicks)
-
-Filtro por periodo: 7 dias, 30 dias, todos.
-Ordenacao por score DESC (padrao).
+**`App.tsx`**: Adicionar rota `<Route path="financeiro" element={<AdminFinanceiro />} />` dentro do admin layout.
 
 ---
 
-## Arquivos a Criar/Modificar
+## 3. Página principal — `AdminFinanceiro.tsx`
 
-| Arquivo | Acao |
+Componente com `Tabs` (Visão Geral, Receitas, Despesas, Comissões). Cada aba será um componente separado para manter o código organizado:
+
+### 3a. Aba Visão Geral (`FinanceOverview.tsx`)
+- **5 cards no topo**: Faturamento mês atual, Despesas mês, Lucro líquido, Comissões a pagar, Faturamento mês anterior
+- **Gráfico de barras** (recharts, já instalado): receita vs despesa últimos 6 meses
+- **Gráfico pizza/barras**: receita por tipo de cliente (join revenues → clients → type)
+
+### 3b. Aba Receitas (`FinanceRevenues.tsx`)
+- Tabela com: data, cliente, tipo de serviço, valor, parceiro (auto do cliente), status comissão, observações
+- Dialog para criar/editar receita com select de clientes; ao selecionar cliente com parceiro, calcula comissão automaticamente e mostra preview
+- Ao salvar receita com parceiro → cria registro em `commissions` automaticamente
+- Filtros: período, tipo serviço, parceiro, status comissão
+
+### 3c. Aba Despesas (`FinancExpenses.tsx`)
+- Tabela com: data, categoria, descrição, valor, recorrente
+- Dialog para criar/editar
+- Despesas tipo "Comissão paga" são criadas automaticamente (readonly nesse caso)
+
+### 3d. Aba Comissões (`FinanceCommissions.tsx`)
+- Tabela: parceiro, cliente, receita vinculada, %, valor, status, data pagamento
+- **Totalizadores no topo**: total pendente, pago no mês, pago no ano
+- Ação "Marcar como paga": dialog com data de pagamento → atualiza commission.status='paid' + commission.paid_at + insere despesa categoria='comissao_paga' automaticamente
+- Filtros: parceiro, status, período
+
+---
+
+## 4. Atualizar Performance de Parceiros (`AdminReports.tsx`)
+
+Na função `loadPartnerPerformance`:
+- Buscar `revenues` agrupado por `partner_id` → somar `amount` → `total_generated`
+- Buscar `commissions` onde `status='paid'` agrupado por `partner_id` → somar `amount` → `commission_paid`
+- Adicionar coluna "Comissão Pendente" na tabela
+- Adicionar botão "Gerar Relatório" por parceiro → gera PDF simples (usando canvas/html ou biblioteca leve) com: nome parceiro, período, clientes gerados, receita total, comissão
+
+---
+
+## 5. Arquivos a criar/editar
+
+| Arquivo | Ação |
 |---------|------|
-| Migration SQL | Criar novos campos e tabelas |
-| `src/types/database.ts` | Adicionar novos tipos |
-| `src/components/PropertyCard.tsx` | Badge highlight_tag |
-| `src/pages/Catalog.tsx` | Filtros e ordenacao |
-| `src/pages/admin/PropertyForm.tsx` | Novos campos |
-| `src/pages/PropertyDetails.tsx` | Carrossel, docs, mapa, scroll tracking |
-| `src/pages/admin/AdminLayout.tsx` | Sistema notificacoes |
-| `src/pages/admin/AdminReports.tsx` | Colunas score, CTA, scroll |
-| `supabase/functions/calculate-interest-score/` | Edge function score |
+| `src/pages/admin/AdminFinanceiro.tsx` | Criar — página principal com tabs |
+| `src/components/finance/FinanceOverview.tsx` | Criar — visão geral com cards e gráficos |
+| `src/components/finance/FinanceRevenues.tsx` | Criar — listagem e CRUD de receitas |
+| `src/components/finance/FinanceExpenses.tsx` | Criar — listagem e CRUD de despesas |
+| `src/components/finance/FinanceCommissions.tsx` | Criar — listagem e ação de pagamento |
+| `src/pages/admin/AdminLayout.tsx` | Editar — adicionar nav "Financeiro" |
+| `src/App.tsx` | Editar — adicionar rota financeiro |
+| `src/pages/admin/AdminReports.tsx` | Editar — popular dados reais de parceiros |
+| `src/types/database.ts` | Editar — adicionar tipos Revenue, Expense, Commission |
 
 ---
 
-## Notas Tecnicas
+## Fluxo confirmado
 
-- **Embla Carousel:** Ja instalado (`embla-carousel-react ^8.6.0`)
-- **shadcn/ui:** Usar Select, Popover, Badge, Progress existentes
-- **TanStack Query:** Usar para todas queries e mutations
-- **RLS:** Tabelas publicas permitem insert anonimo; notifications requer admin
-- **Edge Function:** Chamar apos update page_view e insert cta_click (fire and forget)
+```text
+Julie fecha contrato
+  → Registra receita (seleciona cliente)
+  → Sistema detecta parceiro do cliente
+  → Calcula comissão (rate × valor) e mostra preview
+  → Salva receita + comissão pendente
+  → Julie marca comissão como paga
+  → Despesa "Comissão paga" gerada automaticamente
+  → Visão Geral e Relatórios atualizados em tempo real
+```
+
