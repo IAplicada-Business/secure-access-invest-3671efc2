@@ -90,11 +90,6 @@ export default function Index() {
           transition={{ duration: 0.8, delay: 0.2 }}
           className="relative z-10 p-12 pb-16 max-w-lg"
         >
-          <img
-            src={logoFull}
-            alt="J. Imobi Gestão e Negócios"
-            className="h-16 w-auto mb-8 brightness-0 invert"
-          />
           <h2 className="font-display text-3xl font-bold text-primary-foreground mb-4 leading-tight">
             Transformando irregularidades
             <br />
