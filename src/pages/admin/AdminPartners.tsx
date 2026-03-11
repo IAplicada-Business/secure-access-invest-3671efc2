@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Client, ClientType, ClientStatus, Partner } from '@/types/database';
+import { Partner, PartnerType, PartnerStatus } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,91 +19,87 @@ import {
 } from '@/components/ui/select';
 import { Plus, Loader2, MessageCircle, Search, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/lib/formatCurrency';
 
-const TYPE_LABELS: Record<ClientType, string> = {
-  investor: 'Investidor',
-  incorporator: 'Incorporador',
-  individual: 'Pessoa Física',
+const TYPE_LABELS: Record<PartnerType, string> = {
+  imobiliaria: 'Imobiliária',
+  corretor_autonomo: 'Corretor Autônomo',
+  assessor_investimento: 'Assessor de Investimento',
+  arquiteto: 'Arquiteto',
+  engenheiro: 'Engenheiro',
+  contador: 'Contador',
+  outro: 'Outro',
 };
 
-const STATUS_LABELS: Record<ClientStatus, string> = {
-  prospect: 'Prospect',
+const STATUS_LABELS: Record<PartnerStatus, string> = {
   active: 'Ativo',
-  completed: 'Concluído',
+  inactive: 'Inativo',
 };
 
-const STATUS_COLORS: Record<ClientStatus, string> = {
-  prospect: 'bg-muted text-muted-foreground',
+const STATUS_COLORS: Record<PartnerStatus, string> = {
   active: 'bg-primary/10 text-primary',
-  completed: 'bg-accent text-accent-foreground',
+  inactive: 'bg-muted text-muted-foreground',
 };
 
-const ORIGIN_OPTIONS = [
-  'Indicação de parceiro',
-  'Instagram',
-  'Evento',
-  'Outro',
-];
+const defaultForm = {
+  name: '', type: 'outro' as PartnerType, phone: '', email: '',
+  affiliated_agency: '', website: '', creci: '', commission_rate: '',
+  notes: '', status: 'active' as PartnerStatus, parent_partner_id: '',
+};
 
-export default function AdminClients() {
-  const [clients, setClients] = useState<Client[]>([]);
+export default function AdminPartners() {
   const [partners, setPartners] = useState<Partner[]>([]);
+  const [agencies, setAgencies] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [form, setForm] = useState({
-    name: '', type: 'investor' as ClientType, cpf_cnpj: '', phone: '',
-    email: '', origin: '', partner_id: '', partner_name: '', status: 'prospect' as ClientStatus, notes: '',
-  });
+  const [form, setForm] = useState(defaultForm);
 
-  async function loadClients() {
+  async function loadPartners() {
     const { data, error } = await supabase
-      .from('clients')
+      .from('partners')
       .select('*')
       .order('created_at', { ascending: false });
-    if (error) { toast.error('Erro ao carregar clientes'); return; }
-    setClients((data as unknown as Client[]) || []);
+    if (error) { toast.error('Erro ao carregar parceiros'); return; }
+    const list = (data || []) as unknown as Partner[];
+    setPartners(list);
+    setAgencies(list.filter(p => p.type === 'imobiliaria'));
     setLoading(false);
   }
 
-  async function loadPartners() {
-    const { data } = await supabase.from('partners').select('id, name').eq('status', 'active').order('name');
-    setPartners((data || []) as unknown as Partner[]);
-  }
-
-  useEffect(() => { loadClients(); loadPartners(); }, []);
+  useEffect(() => { loadPartners(); }, []);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    const selectedPartner = partners.find(p => p.id === form.partner_id);
-    const { error } = await supabase.from('clients').insert({
+    const { error } = await supabase.from('partners').insert({
       name: form.name,
       type: form.type,
-      cpf_cnpj: form.cpf_cnpj || null,
       phone: form.phone,
       email: form.email || null,
-      origin: form.origin || null,
-      partner_id: form.partner_id || null,
-      partner_name: selectedPartner ? selectedPartner.name : (form.partner_name || null),
-      status: form.status,
+      affiliated_agency: form.affiliated_agency || null,
+      website: form.website || null,
+      creci: form.creci || null,
+      commission_rate: form.commission_rate ? parseFloat(form.commission_rate) : null,
       notes: form.notes || null,
+      status: form.status,
+      parent_partner_id: form.parent_partner_id || null,
     } as any);
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
-    toast.success('Cliente cadastrado!');
+    toast.success('Parceiro cadastrado!');
     setDialogOpen(false);
-    setForm({ name: '', type: 'investor', cpf_cnpj: '', phone: '', email: '', origin: '', partner_id: '', partner_name: '', status: 'prospect', notes: '' });
+    setForm(defaultForm);
     setSaving(false);
-    loadClients();
+    loadPartners();
   }
 
-  const filtered = clients.filter(c => {
-    if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
-    if (filterType !== 'all' && c.type !== filterType) return false;
-    if (filterStatus !== 'all' && c.status !== filterStatus) return false;
+  const filtered = partners.filter(p => {
+    if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filterType !== 'all' && p.type !== filterType) return false;
+    if (filterStatus !== 'all' && p.status !== filterStatus) return false;
     return true;
   });
 
@@ -115,10 +111,10 @@ export default function AdminClients() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="font-display text-2xl font-bold">Clientes</h1>
+        <h1 className="font-display text-2xl font-bold">Parceiros</h1>
         <Button onClick={() => setDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Novo Cliente
+          Novo Parceiro
         </Button>
       </div>
 
@@ -126,22 +122,17 @@ export default function AdminClients() {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+          <Input placeholder="Buscar por nome..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
         </div>
         <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-full sm:w-40">
+          <SelectTrigger className="w-full sm:w-48">
             <SelectValue placeholder="Tipo" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os tipos</SelectItem>
-            <SelectItem value="investor">Investidor</SelectItem>
-            <SelectItem value="incorporator">Incorporador</SelectItem>
-            <SelectItem value="individual">Pessoa Física</SelectItem>
+            {Object.entries(TYPE_LABELS).map(([k, v]) => (
+              <SelectItem key={k} value={k}>{v}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -150,9 +141,8 @@ export default function AdminClients() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os status</SelectItem>
-            <SelectItem value="prospect">Prospect</SelectItem>
             <SelectItem value="active">Ativo</SelectItem>
-            <SelectItem value="completed">Concluído</SelectItem>
+            <SelectItem value="inactive">Inativo</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -165,9 +155,9 @@ export default function AdminClients() {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>Tipo</TableHead>
-                <TableHead className="hidden md:table-cell">Parceiro</TableHead>
+                <TableHead className="hidden md:table-cell">Comissão (%)</TableHead>
+                <TableHead className="hidden lg:table-cell">Total Gerado</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="hidden sm:table-cell">Cadastro</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -175,21 +165,21 @@ export default function AdminClients() {
               {loading ? (
                 <TableRow><TableCell colSpan={6} className="text-center py-8"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum cliente encontrado</TableCell></TableRow>
-              ) : filtered.map((client) => (
-                <TableRow key={client.id}>
-                  <TableCell className="font-medium">{client.name}</TableCell>
-                  <TableCell><Badge variant="outline">{TYPE_LABELS[client.type]}</Badge></TableCell>
-                  <TableCell className="hidden md:table-cell text-muted-foreground">{client.partner_name || '-'}</TableCell>
-                  <TableCell><Badge className={STATUS_COLORS[client.status]}>{STATUS_LABELS[client.status]}</Badge></TableCell>
-                  <TableCell className="hidden sm:table-cell text-muted-foreground">{new Date(client.created_at).toLocaleDateString('pt-BR')}</TableCell>
+                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum parceiro encontrado</TableCell></TableRow>
+              ) : filtered.map((partner) => (
+                <TableRow key={partner.id}>
+                  <TableCell className="font-medium">{partner.name}</TableCell>
+                  <TableCell><Badge variant="outline">{TYPE_LABELS[partner.type]}</Badge></TableCell>
+                  <TableCell className="hidden md:table-cell text-muted-foreground">{partner.commission_rate != null ? `${partner.commission_rate}%` : '-'}</TableCell>
+                  <TableCell className="hidden lg:table-cell text-muted-foreground">{formatCurrency(0)}</TableCell>
+                  <TableCell><Badge className={STATUS_COLORS[partner.status]}>{STATUS_LABELS[partner.status]}</Badge></TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => openWhatsApp(client.phone, client.name)} title="WhatsApp">
+                      <Button variant="ghost" size="icon" onClick={() => openWhatsApp(partner.phone, partner.name)} title="WhatsApp">
                         <MessageCircle className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" asChild title="Ver detalhes">
-                        <Link to={`/admin/clientes/${client.id}`}><Eye className="h-4 w-4" /></Link>
+                        <Link to={`/admin/parceiros/${partner.id}`}><Eye className="h-4 w-4" /></Link>
                       </Button>
                     </div>
                   </TableCell>
@@ -200,83 +190,87 @@ export default function AdminClients() {
         </CardContent>
       </Card>
 
-      {/* Create Client Dialog */}
+      {/* Create Partner Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Novo Cliente</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Novo Parceiro</DialogTitle></DialogHeader>
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="space-y-2">
-              <Label>Nome completo *</Label>
+              <Label>Nome completo / Razão social *</Label>
               <Input value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} required />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Tipo *</Label>
-                <Select value={form.type} onValueChange={(v) => setForm(p => ({ ...p, type: v as ClientType }))}>
+                <Select value={form.type} onValueChange={(v) => setForm(p => ({ ...p, type: v as PartnerType, parent_partner_id: '' }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="investor">Investidor</SelectItem>
-                    <SelectItem value="incorporator">Incorporador</SelectItem>
-                    <SelectItem value="individual">Pessoa Física</SelectItem>
+                    {Object.entries(TYPE_LABELS).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>CPF/CNPJ</Label>
-                <Input value={form.cpf_cnpj} onChange={(e) => setForm(p => ({ ...p, cpf_cnpj: e.target.value }))} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Telefone/WhatsApp *</Label>
                 <Input value={form.phone} onChange={(e) => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="5511999999999" required />
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>E-mail</Label>
                 <Input type="email" value={form.email} onChange={(e) => setForm(p => ({ ...p, email: e.target.value }))} />
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Origem</Label>
-                <Select value={form.origin} onValueChange={(v) => setForm(p => ({ ...p, origin: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>
-                    {ORIGIN_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Indicado por (parceiro)</Label>
-                <Select value={form.partner_id} onValueChange={(v) => setForm(p => ({ ...p, partner_id: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Selecione um parceiro..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Nenhum / Texto livre</SelectItem>
-                    {partners.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <Label>CRECI</Label>
+                <Input value={form.creci} onChange={(e) => setForm(p => ({ ...p, creci: e.target.value }))} />
               </div>
             </div>
-            {!form.partner_id && (
+
+            {form.type === 'corretor_autonomo' && (
               <div className="space-y-2">
-                <Label>Parceiro (texto livre)</Label>
-                <Input value={form.partner_name} onChange={(e) => setForm(p => ({ ...p, partner_name: e.target.value }))} placeholder="Nome de quem indicou (se não cadastrado)" />
+                <Label>Imobiliária vinculada</Label>
+                <Select value={form.parent_partner_id} onValueChange={(v) => setForm(p => ({ ...p, parent_partner_id: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecione uma imobiliária..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nenhuma</SelectItem>
+                    {agencies.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             )}
+
+            {form.type !== 'corretor_autonomo' && (
+              <div className="space-y-2">
+                <Label>Imobiliária vinculada (texto livre)</Label>
+                <Input value={form.affiliated_agency} onChange={(e) => setForm(p => ({ ...p, affiliated_agency: e.target.value }))} />
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Site / Portfólio</Label>
+                <Input value={form.website} onChange={(e) => setForm(p => ({ ...p, website: e.target.value }))} placeholder="https://..." />
+              </div>
+              <div className="space-y-2">
+                <Label>Comissão padrão (%)</Label>
+                <Input type="number" step="0.1" value={form.commission_rate} onChange={(e) => setForm(p => ({ ...p, commission_rate: e.target.value }))} placeholder="10" />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label>Status</Label>
-              <Select value={form.status} onValueChange={(v) => setForm(p => ({ ...p, status: v as ClientStatus }))}>
+              <Select value={form.status} onValueChange={(v) => setForm(p => ({ ...p, status: v as PartnerStatus }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="prospect">Prospect</SelectItem>
                   <SelectItem value="active">Ativo</SelectItem>
-                  <SelectItem value="completed">Concluído</SelectItem>
+                  <SelectItem value="inactive">Inativo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label>Observações</Label>
-              <Textarea value={form.notes} onChange={(e) => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="Contexto relevante sobre o cliente..." rows={3} />
+              <Textarea value={form.notes} onChange={(e) => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="Contexto do relacionamento, condições comerciais..." rows={3} />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>

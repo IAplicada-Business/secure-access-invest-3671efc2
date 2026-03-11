@@ -137,6 +137,7 @@ export type Database = {
           name: string
           notes: string | null
           origin: string | null
+          partner_id: string | null
           partner_name: string | null
           phone: string
           status: Database["public"]["Enums"]["client_status"]
@@ -150,6 +151,7 @@ export type Database = {
           name: string
           notes?: string | null
           origin?: string | null
+          partner_id?: string | null
           partner_name?: string | null
           phone: string
           status?: Database["public"]["Enums"]["client_status"]
@@ -163,12 +165,21 @@ export type Database = {
           name?: string
           notes?: string | null
           origin?: string | null
+          partner_id?: string | null
           partner_name?: string | null
           phone?: string
           status?: Database["public"]["Enums"]["client_status"]
           type?: Database["public"]["Enums"]["client_type"]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clients_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cta_clicks: {
         Row: {
@@ -278,6 +289,97 @@ export type Database = {
           },
         ]
       }
+      partner_interactions: {
+        Row: {
+          created_at: string
+          id: string
+          interaction_date: string
+          note: string
+          partner_id: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          interaction_date?: string
+          note: string
+          partner_id: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          interaction_date?: string
+          note?: string
+          partner_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_interactions_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partners: {
+        Row: {
+          affiliated_agency: string | null
+          commission_rate: number | null
+          created_at: string
+          creci: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          parent_partner_id: string | null
+          phone: string
+          status: Database["public"]["Enums"]["partner_status"]
+          type: Database["public"]["Enums"]["partner_type"]
+          website: string | null
+        }
+        Insert: {
+          affiliated_agency?: string | null
+          commission_rate?: number | null
+          created_at?: string
+          creci?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          parent_partner_id?: string | null
+          phone: string
+          status?: Database["public"]["Enums"]["partner_status"]
+          type?: Database["public"]["Enums"]["partner_type"]
+          website?: string | null
+        }
+        Update: {
+          affiliated_agency?: string | null
+          commission_rate?: number | null
+          created_at?: string
+          creci?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          parent_partner_id?: string | null
+          phone?: string
+          status?: Database["public"]["Enums"]["partner_status"]
+          type?: Database["public"]["Enums"]["partner_type"]
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partners_parent_partner_id_fkey"
+            columns: ["parent_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       properties: {
         Row: {
           acquisition_cost: number | null
@@ -375,6 +477,7 @@ export type Database = {
           irregularity_notes: string | null
           matricula_status: string
           owner_name: string | null
+          partner_id: string | null
           property_id: string
           submission_link_id: string | null
         }
@@ -387,6 +490,7 @@ export type Database = {
           irregularity_notes?: string | null
           matricula_status?: string
           owner_name?: string | null
+          partner_id?: string | null
           property_id: string
           submission_link_id?: string | null
         }
@@ -399,10 +503,18 @@ export type Database = {
           irregularity_notes?: string | null
           matricula_status?: string
           owner_name?: string | null
+          partner_id?: string | null
           property_id?: string
           submission_link_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "property_submissions_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "property_submissions_property_id_fkey"
             columns: ["property_id"]
@@ -505,6 +617,15 @@ export type Database = {
       app_role: "admin" | "user"
       client_status: "prospect" | "active" | "completed"
       client_type: "investor" | "incorporator" | "individual"
+      partner_status: "active" | "inactive"
+      partner_type:
+        | "imobiliaria"
+        | "corretor_autonomo"
+        | "assessor_investimento"
+        | "arquiteto"
+        | "engenheiro"
+        | "contador"
+        | "outro"
       property_status:
         | "draft"
         | "published"
@@ -642,6 +763,16 @@ export const Constants = {
       app_role: ["admin", "user"],
       client_status: ["prospect", "active", "completed"],
       client_type: ["investor", "incorporator", "individual"],
+      partner_status: ["active", "inactive"],
+      partner_type: [
+        "imobiliaria",
+        "corretor_autonomo",
+        "assessor_investimento",
+        "arquiteto",
+        "engenheiro",
+        "contador",
+        "outro",
+      ],
       property_status: [
         "draft",
         "published",

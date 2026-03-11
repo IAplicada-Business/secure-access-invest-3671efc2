@@ -1,0 +1,387 @@
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { Partner, PartnerInteraction, PartnerType, PartnerStatus, InteractionType, Client } from '@/types/database';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  ArrowLeft, MessageCircle, Pencil, Loader2, Clock, Plus, Eye, Users, DollarSign
+} from 'lucide-react';
+import { toast } from 'sonner';
+
+const TYPE_LABELS: Record<PartnerType, string> = {
+  imobiliaria: 'Imobiliária', corretor_autonomo: 'Corretor Autônomo',
+  assessor_investimento: 'Assessor de Investimento', arquiteto: 'Arquiteto',
+  engenheiro: 'Engenheiro', contador: 'Contador', outro: 'Outro',
+};
+const STATUS_LABELS: Record<PartnerStatus, string> = { active: 'Ativo', inactive: 'Inativo' };
+const INTERACTION_LABELS: Record<InteractionType, string> = { meeting: 'Reunião', whatsapp: 'WhatsApp', email: 'E-mail', call: 'Ligação', other: 'Outro' };
+
+export default function PartnerDetails() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [partner, setPartner] = useState<Partner | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<Partner>>({});
+  const [saving, setSaving] = useState(false);
+
+  // Sub-partners (corretores vinculados)
+  const [subPartners, setSubPartners] = useState<Partner[]>([]);
+  // Clients generated
+  const [clients, setClients] = useState<Client[]>([]);
+  // Interactions
+  const [interactions, setInteractions] = useState<PartnerInteraction[]>([]);
+  const [intForm, setIntForm] = useState({ type: 'whatsapp' as InteractionType, note: '', interaction_date: new Date().toISOString().slice(0, 16) });
+  const [intSaving, setIntSaving] = useState(false);
+  // Agencies for edit form
+  const [agencies, setAgencies] = useState<Partner[]>([]);
+
+  async function loadPartner() {
+    if (!id) return;
+    const { data, error } = await supabase.from('partners').select('*').eq('id', id).single();
+    if (error || !data) { toast.error('Parceiro não encontrado'); navigate('/admin/parceiros'); return; }
+    setPartner(data as unknown as Partner);
+    setEditForm(data as unknown as Partner);
+    setLoading(false);
+  }
+
+  async function loadSubPartners() {
+    if (!id) return;
+    const { data } = await supabase.from('partners').select('*').eq('parent_partner_id', id).order('name');
+    setSubPartners((data || []) as unknown as Partner[]);
+  }
+
+  async function loadClients() {
+    if (!id) return;
+    const { data } = await supabase.from('clients').select('*').eq('partner_id', id).order('created_at', { ascending: false });
+    setClients((data || []) as unknown as Client[]);
+  }
+
+  async function loadInteractions() {
+    if (!id) return;
+    const { data } = await supabase.from('partner_interactions').select('*').eq('partner_id', id).order('interaction_date', { ascending: false });
+    setInteractions((data || []) as unknown as PartnerInteraction[]);
+  }
+
+  async function loadAgencies() {
+    const { data } = await supabase.from('partners').select('id, name').eq('type', 'imobiliaria');
+    setAgencies((data || []) as unknown as Partner[]);
+  }
+
+  useEffect(() => {
+    loadPartner();
+    loadSubPartners();
+    loadClients();
+    loadInteractions();
+    loadAgencies();
+  }, [id]);
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    const { error } = await supabase.from('partners').update({
+      name: editForm.name,
+      type: editForm.type,
+      phone: editForm.phone,
+      email: editForm.email || null,
+      affiliated_agency: editForm.affiliated_agency || null,
+      website: editForm.website || null,
+      creci: editForm.creci || null,
+      commission_rate: editForm.commission_rate,
+      notes: editForm.notes || null,
+      status: editForm.status,
+      parent_partner_id: editForm.parent_partner_id || null,
+    } as any).eq('id', id!);
+    if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
+    toast.success('Parceiro atualizado!');
+    setEditOpen(false);
+    setSaving(false);
+    loadPartner();
+  }
+
+  async function handleAddInteraction(e: React.FormEvent) {
+    e.preventDefault();
+    if (!id || !intForm.note.trim()) return;
+    setIntSaving(true);
+    const { error } = await supabase.from('partner_interactions').insert({
+      partner_id: id,
+      type: intForm.type,
+      note: intForm.note,
+      interaction_date: intForm.interaction_date,
+    } as any);
+    if (error) { toast.error('Erro: ' + error.message); setIntSaving(false); return; }
+    toast.success('Interação registrada!');
+    setIntForm({ type: 'whatsapp', note: '', interaction_date: new Date().toISOString().slice(0, 16) });
+    setIntSaving(false);
+    loadInteractions();
+  }
+
+  if (loading) return <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+  if (!partner) return null;
+
+  const isAgency = partner.type === 'imobiliaria';
+
+  return (
+    <div className="space-y-6">
+      <Button variant="ghost" onClick={() => navigate('/admin/parceiros')} className="gap-2">
+        <ArrowLeft className="h-4 w-4" /> Voltar
+      </Button>
+
+      <Tabs defaultValue="summary">
+        <TabsList>
+          <TabsTrigger value="summary">Resumo</TabsTrigger>
+          {isAgency && <TabsTrigger value="brokers">Corretores Vinculados</TabsTrigger>}
+          <TabsTrigger value="clients">Clientes Gerados</TabsTrigger>
+          <TabsTrigger value="history">Histórico</TabsTrigger>
+        </TabsList>
+
+        {/* SUMMARY */}
+        <TabsContent value="summary" className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-xl">{partner.name}</CardTitle>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => { setEditForm(partner); setEditOpen(true); }}>
+                  <Pencil className="mr-1 h-3 w-3" /> Editar
+                </Button>
+                <Button size="sm" onClick={() => { const msg = encodeURIComponent(`Olá ${partner.name}!`); window.open(`https://wa.me/${partner.phone}?text=${msg}`, '_blank'); }}>
+                  <MessageCircle className="mr-1 h-3 w-3" /> WhatsApp
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><span className="text-sm text-muted-foreground">Tipo</span><p className="font-medium">{TYPE_LABELS[partner.type]}</p></div>
+                <div><span className="text-sm text-muted-foreground">Status</span><p><Badge className={partner.status === 'active' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}>{STATUS_LABELS[partner.status]}</Badge></p></div>
+                <div><span className="text-sm text-muted-foreground">Telefone</span><p className="font-medium">{partner.phone}</p></div>
+                <div><span className="text-sm text-muted-foreground">E-mail</span><p className="font-medium">{partner.email || '-'}</p></div>
+                {partner.creci && <div><span className="text-sm text-muted-foreground">CRECI</span><p className="font-medium">{partner.creci}</p></div>}
+                {partner.website && <div><span className="text-sm text-muted-foreground">Site</span><p className="font-medium"><a href={partner.website} target="_blank" rel="noopener noreferrer" className="text-primary underline">{partner.website}</a></p></div>}
+                {partner.affiliated_agency && <div><span className="text-sm text-muted-foreground">Imobiliária vinculada</span><p className="font-medium">{partner.affiliated_agency}</p></div>}
+              </div>
+
+              {/* Commission card */}
+              <Card className="mt-4 border-primary/20 bg-primary/5">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <DollarSign className="h-5 w-5 text-primary" />
+                  <div>
+                    <span className="text-sm text-muted-foreground">Comissão padrão</span>
+                    <p className="text-lg font-bold">{partner.commission_rate != null ? `${partner.commission_rate}%` : 'Não definida'}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {partner.notes && (
+                <div className="mt-4 p-3 rounded-lg bg-muted">
+                  <span className="text-sm text-muted-foreground">Observações</span>
+                  <p className="mt-1 whitespace-pre-wrap">{partner.notes}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* BROKERS (only for agencies) */}
+        {isAgency && (
+          <TabsContent value="brokers" className="space-y-4">
+            {subPartners.length === 0 ? (
+              <Card><CardContent className="p-6 text-center text-muted-foreground">Nenhum corretor vinculado a esta imobiliária. Cadastre corretores do tipo "Corretor Autônomo" vinculados a esta imobiliária.</CardContent></Card>
+            ) : subPartners.map(sp => (
+              <Card key={sp.id}>
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Users className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">{sp.name}</p>
+                      <p className="text-sm text-muted-foreground">{sp.phone} {sp.creci ? `• CRECI ${sp.creci}` : ''}</p>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="icon" asChild>
+                    <Link to={`/admin/parceiros/${sp.id}`}><Eye className="h-4 w-4" /></Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </TabsContent>
+        )}
+
+        {/* CLIENTS GENERATED */}
+        <TabsContent value="clients" className="space-y-4">
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-4 flex items-center gap-3">
+              <Users className="h-5 w-5 text-primary" />
+              <div>
+                <span className="text-sm text-muted-foreground">Total de clientes gerados</span>
+                <p className="text-lg font-bold">{clients.length}</p>
+              </div>
+            </CardContent>
+          </Card>
+          {clients.length === 0 ? (
+            <Card><CardContent className="p-6 text-center text-muted-foreground">Nenhum cliente vinculado a este parceiro</CardContent></Card>
+          ) : clients.map(c => (
+            <Card key={c.id}>
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="font-medium">{c.name}</p>
+                  <p className="text-sm text-muted-foreground">{c.phone} • {new Date(c.created_at).toLocaleDateString('pt-BR')}</p>
+                </div>
+                <Button variant="ghost" size="icon" asChild>
+                  <Link to={`/admin/clientes/${c.id}`}><Eye className="h-4 w-4" /></Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </TabsContent>
+
+        {/* HISTORY */}
+        <TabsContent value="history" className="space-y-4">
+          <Card>
+            <CardHeader><CardTitle className="text-lg">Nova Interação</CardTitle></CardHeader>
+            <CardContent>
+              <form onSubmit={handleAddInteraction} className="space-y-3">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="space-y-2 w-full sm:w-40">
+                    <Label>Tipo</Label>
+                    <Select value={intForm.type} onValueChange={(v) => setIntForm(p => ({ ...p, type: v as InteractionType }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(INTERACTION_LABELS).map(([k, v]) => (
+                          <SelectItem key={k} value={k}>{v}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 flex-1">
+                    <Label>Data/Hora</Label>
+                    <Input type="datetime-local" value={intForm.interaction_date} onChange={(e) => setIntForm(p => ({ ...p, interaction_date: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Nota</Label>
+                  <Textarea value={intForm.note} onChange={(e) => setIntForm(p => ({ ...p, note: e.target.value }))} placeholder="O que foi discutido..." rows={2} required />
+                </div>
+                <Button type="submit" disabled={intSaving} size="sm">
+                  {intSaving ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Plus className="mr-1 h-3 w-3" />}
+                  Registrar
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <div className="space-y-3">
+            {interactions.length === 0 ? (
+              <Card><CardContent className="p-6 text-center text-muted-foreground">Nenhuma interação registrada</CardContent></Card>
+            ) : interactions.map(int => (
+              <Card key={int.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <Badge variant="outline" className="mb-2">{INTERACTION_LABELS[int.type as InteractionType] || int.type}</Badge>
+                      <p className="whitespace-pre-wrap">{int.note}</p>
+                    </div>
+                    <div className="text-right text-xs text-muted-foreground flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {new Date(int.interaction_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Edit Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Editar Parceiro</DialogTitle></DialogHeader>
+          <form onSubmit={handleEdit} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nome *</Label>
+              <Input value={editForm.name || ''} onChange={(e) => setEditForm(p => ({ ...p, name: e.target.value }))} required />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Tipo</Label>
+                <Select value={editForm.type} onValueChange={(v) => setEditForm(p => ({ ...p, type: v as PartnerType }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(TYPE_LABELS).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={editForm.status} onValueChange={(v) => setEditForm(p => ({ ...p, status: v as PartnerStatus }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="inactive">Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Telefone *</Label>
+                <Input value={editForm.phone || ''} onChange={(e) => setEditForm(p => ({ ...p, phone: e.target.value }))} required />
+              </div>
+              <div className="space-y-2">
+                <Label>E-mail</Label>
+                <Input type="email" value={editForm.email || ''} onChange={(e) => setEditForm(p => ({ ...p, email: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>CRECI</Label>
+                <Input value={editForm.creci || ''} onChange={(e) => setEditForm(p => ({ ...p, creci: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>Comissão (%)</Label>
+                <Input type="number" step="0.1" value={editForm.commission_rate ?? ''} onChange={(e) => setEditForm(p => ({ ...p, commission_rate: e.target.value ? parseFloat(e.target.value) : null }))} />
+              </div>
+            </div>
+            {editForm.type === 'corretor_autonomo' && (
+              <div className="space-y-2">
+                <Label>Imobiliária vinculada</Label>
+                <Select value={editForm.parent_partner_id || ''} onValueChange={(v) => setEditForm(p => ({ ...p, parent_partner_id: v || null }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nenhuma</SelectItem>
+                    {agencies.filter(a => a.id !== id).map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Site / Portfólio</Label>
+              <Input value={editForm.website || ''} onChange={(e) => setEditForm(p => ({ ...p, website: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label>Observações</Label>
+              <Textarea value={editForm.notes || ''} onChange={(e) => setEditForm(p => ({ ...p, notes: e.target.value }))} rows={3} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

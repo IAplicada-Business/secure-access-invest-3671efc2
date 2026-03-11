@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Client, ClientDocument, ClientInteraction, ClientType, ClientStatus, InteractionType, DocumentCategory } from '@/types/database';
+import { Client, ClientDocument, ClientInteraction, ClientType, ClientStatus, InteractionType, DocumentCategory, Partner } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -47,6 +47,8 @@ export default function ClientDetails() {
 
   // Linked properties (for investors)
   const [linkedProperties, setLinkedProperties] = useState<Array<{ property_id: string; title: string; time_spent: number; views: number }>>([]);
+  // Partners for edit
+  const [partners, setPartners] = useState<Partner[]>([]);
 
   async function loadClient() {
     if (!id) return;
@@ -100,10 +102,16 @@ export default function ClientDetails() {
     })).sort((a, b) => b.time_spent - a.time_spent));
   }
 
+  async function loadPartners() {
+    const { data } = await supabase.from('partners').select('id, name').eq('status', 'active').order('name');
+    setPartners((data || []) as unknown as Partner[]);
+  }
+
   useEffect(() => {
     loadClient();
     loadDocs();
     loadInteractions();
+    loadPartners();
   }, [id]);
 
   useEffect(() => {
@@ -113,6 +121,7 @@ export default function ClientDetails() {
   async function handleEdit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
+    const selectedPartner = partners.find(p => p.id === editForm.partner_id);
     const { error } = await supabase.from('clients').update({
       name: editForm.name,
       type: editForm.type,
@@ -120,10 +129,11 @@ export default function ClientDetails() {
       phone: editForm.phone,
       email: editForm.email || null,
       origin: editForm.origin || null,
-      partner_name: editForm.partner_name || null,
+      partner_id: editForm.partner_id || null,
+      partner_name: selectedPartner ? selectedPartner.name : (editForm.partner_name || null),
       status: editForm.status,
       notes: editForm.notes || null,
-    }).eq('id', id!);
+    } as any).eq('id', id!);
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
     toast.success('Cliente atualizado!');
     setEditOpen(false);
@@ -234,11 +244,17 @@ export default function ClientDetails() {
                 <div><span className="text-sm text-muted-foreground">CPF/CNPJ</span><p className="font-medium">{client.cpf_cnpj || '-'}</p></div>
                 <div><span className="text-sm text-muted-foreground">Origem</span><p className="font-medium">{client.origin || '-'}</p></div>
               </div>
-              {client.partner_name && (
+              {(client.partner_name || client.partner_id) && (
                 <Card className="mt-4 border-primary/20 bg-primary/5">
                   <CardContent className="p-4">
                     <span className="text-sm text-muted-foreground">Indicado por</span>
-                    <p className="font-medium">{client.partner_name}</p>
+                    <p className="font-medium">
+                      {client.partner_id ? (
+                        <RouterLink to={`/admin/parceiros/${client.partner_id}`} className="text-primary underline">
+                          {client.partner_name}
+                        </RouterLink>
+                      ) : client.partner_name}
+                    </p>
                   </CardContent>
                 </Card>
               )}
@@ -447,10 +463,22 @@ export default function ClientDetails() {
                 <Input value={editForm.origin || ''} onChange={(e) => setEditForm(p => ({ ...p, origin: e.target.value }))} />
               </div>
               <div className="space-y-2">
-                <Label>Parceiro</Label>
-                <Input value={editForm.partner_name || ''} onChange={(e) => setEditForm(p => ({ ...p, partner_name: e.target.value }))} />
+                <Label>Indicado por (parceiro)</Label>
+                <Select value={editForm.partner_id || ''} onValueChange={(v) => setEditForm(p => ({ ...p, partner_id: v || null }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nenhum / Texto livre</SelectItem>
+                    {partners.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
+            {!editForm.partner_id && (
+              <div className="space-y-2">
+                <Label>Parceiro (texto livre)</Label>
+                <Input value={editForm.partner_name || ''} onChange={(e) => setEditForm(p => ({ ...p, partner_name: e.target.value }))} />
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Observações</Label>
               <Textarea value={editForm.notes || ''} onChange={(e) => setEditForm(p => ({ ...p, notes: e.target.value }))} rows={3} />

@@ -1,123 +1,249 @@
 
+# Sprint 1: Melhorias no Catalogo de Imoveis JMob
 
-# Gestão de Parceiros e Comissões
+Este plano abrange tres blocos principais de funcionalidades: novos campos e filtros, melhorias na pagina de detalhes, e rastreamento avancado de interesse.
 
-## Resumo
+---
 
-Criar o módulo completo de parceiros: tabelas no banco, páginas de listagem e detalhe com abas, navegação no admin, vínculo hierárquico imobiliária→corretor, migração do campo texto livre `partner_name` para FK, e relatório de performance.
+## Bloco 1 - Novos Campos + Cards + Filtros
 
-## Banco de Dados (Migrações)
+### 1.1 Migracao do Banco de Dados
 
-### 1. Tabela `partners`
-```sql
-CREATE TYPE partner_type AS ENUM (
-  'imobiliaria','corretor_autonomo','assessor_investimento',
-  'arquiteto','engenheiro','contador','outro'
-);
-CREATE TYPE partner_status AS ENUM ('active','inactive');
+Adicionar novos campos na tabela `properties`:
 
-CREATE TABLE partners (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name text NOT NULL,
-  type partner_type NOT NULL DEFAULT 'outro',
-  phone text NOT NULL,
-  email text,
-  affiliated_agency text,    -- imobiliária vinculada (texto livre)
-  website text,
-  creci text,
-  commission_rate numeric,   -- percentual ex: 10
-  notes text,
-  status partner_status NOT NULL DEFAULT 'active',
-  parent_partner_id uuid REFERENCES partners(id) ON DELETE SET NULL,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-ALTER TABLE partners ENABLE ROW LEVEL SECURITY;
--- RLS: somente admins
+```text
++------------------------+-------------+----------------------------------+
+| Campo                  | Tipo        | Descricao                        |
++------------------------+-------------+----------------------------------+
+| highlight_tag          | text        | Tag de destaque (OPORTUNIDADE)   |
+| investor_notes         | text        | Notas visiveis na ficha          |
+| latitude               | decimal     | Coordenada geografica            |
+| longitude              | decimal     | Coordenada geografica            |
+| risk_level             | text        | baixo, medio, alto (default)     |
+| has_matricula          | boolean     | Documentacao disponivel          |
+| has_planta             | boolean     | Documentacao disponivel          |
+| has_iptu               | boolean     | Documentacao disponivel          |
+| has_certidoes          | boolean     | Documentacao disponivel          |
++------------------------+-------------+----------------------------------+
 ```
 
-### 2. Tabela `partner_interactions`
-```sql
-CREATE TABLE partner_interactions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  partner_id uuid NOT NULL REFERENCES partners(id) ON DELETE CASCADE,
-  type text NOT NULL DEFAULT 'other',
-  note text NOT NULL,
-  interaction_date timestamptz NOT NULL DEFAULT now(),
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-ALTER TABLE partner_interactions ENABLE ROW LEVEL SECURITY;
+### 1.2 Atualizar PropertyCard
+
+**Arquivo:** `src/components/PropertyCard.tsx`
+
+- Adicionar badge de `highlight_tag` no canto superior esquerdo
+- Estilo: fundo dourado (primary), texto branco, fonte bold
+- Condicional: so exibe se highlight_tag nao for null/vazio
+
+### 1.3 Filtros e Ordenacao no Catalogo
+
+**Arquivo:** `src/pages/Catalog.tsx`
+
+Adicionar acima da grid:
+- **Select de Ordenacao:**
+  - Mais recentes (created_at DESC) - padrao
+  - Maior valorizacao (calculo percentual DESC)
+  - Menor investimento (acquisition_cost ASC)
+  - Maior investimento (acquisition_cost DESC)
+
+- **Select de Tipo de Imovel:**
+  - Todos, Casa, Terreno, Apartamento, Comercial
+
+- **Select de Cidade:**
+  - Dinamico baseado nas cidades distintas dos imoveis publicados
+
+Layout responsivo: empilhado em mobile, lado a lado em desktop.
+
+### 1.4 Atualizar PropertyForm Admin
+
+**Arquivo:** `src/pages/admin/PropertyForm.tsx`
+
+Nova secao "Informacoes Complementares":
+- Campo `highlight_tag` (texto, opcional)
+- Campo `investor_notes` (textarea, opcional)
+- Select `risk_level` (Baixo/Medio/Alto, default Medio)
+- Inputs `latitude` e `longitude` (numericos, lado a lado)
+- Checkboxes de documentacao (has_matricula, has_planta, has_iptu, has_certidoes)
+
+### 1.5 Atualizar Tipos TypeScript
+
+**Arquivo:** `src/types/database.ts`
+
+Adicionar novos campos na interface Property.
+
+---
+
+## Bloco 2 - Melhorias na Pagina de Detalhes
+
+### 2.1 Carrossel de Imagens
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+Substituir galeria empilhada por carrossel horizontal:
+- Navegacao por setas (esquerda/direita)
+- Indicadores de pagina (dots)
+- Suporte a swipe/touch em mobile
+- Aspect ratio 16:9 com object-fit cover
+- Usando Embla Carousel (ja instalado como dependencia)
+
+### 2.2 Secao de Riscos Melhorada
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+Adicionar badge visual de nivel de risco acima do texto:
+- Risco Baixo: fundo verde-claro, icone ShieldCheck
+- Risco Medio: fundo amarelo-claro, icone AlertTriangle
+- Risco Alto: fundo vermelho-claro, icone AlertOctagon
+
+### 2.3 Secao Documentacao Disponivel
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+Nova secao com grid 2x2:
+- Matricula (FileText)
+- Planta Aprovada (Map)
+- IPTU em Dia (Receipt)
+- Certidoes (FileCheck)
+
+Cada item mostra CheckCircle (verde) se true, XCircle (cinza) se false.
+
+### 2.4 Notas do Investidor
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+Se `investor_notes` preenchido:
+- Card com fundo primary/5%, borda dourada
+- Icone Info, titulo "Observacoes para o Investidor"
+- Posicionado acima do CTA fixo
+
+### 2.5 Mapa de Localizacao
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+Se latitude e longitude preenchidos:
+- Iframe do Google Maps abaixo do endereco
+- Altura 200px mobile, 250px desktop
+- Bordas arredondadas
+
+---
+
+## Bloco 3 - Rastreamento Avancado
+
+### 3.1 Migracao: scroll_depth na page_views
+
+```text
+ALTER TABLE page_views ADD COLUMN scroll_depth_percent integer DEFAULT 0;
 ```
 
-### 3. Ajustes em tabelas existentes
-```sql
-ALTER TABLE clients ADD COLUMN partner_id uuid REFERENCES partners(id) ON DELETE SET NULL;
-ALTER TABLE property_submissions ADD COLUMN partner_id uuid REFERENCES partners(id) ON DELETE SET NULL;
+### 3.2 Nova Tabela: cta_clicks
+
+```text
++------------------+-------------+----------------------------------+
+| Campo            | Tipo        | Descricao                        |
++------------------+-------------+----------------------------------+
+| id               | uuid        | Chave primaria                   |
+| access_link_id   | uuid        | FK para access_links             |
+| property_id      | uuid        | FK para properties               |
+| clicked_at       | timestamptz | Timestamp do clique              |
++------------------+-------------+----------------------------------+
 ```
 
-RLS em `partners` e `partner_interactions`: policy ALL para `authenticated` com `has_role(auth.uid(), 'admin')`.
+RLS: insert anonimo permitido, select apenas admin.
 
-## Tipos TypeScript
+### 3.3 Nova Tabela: notifications
 
-Arquivo `src/types/database.ts` — adicionar:
-- `PartnerType` (enum string union)
-- `PartnerStatus` ('active' | 'inactive')
-- `Partner` interface
-- `PartnerInteraction` interface
-- Atualizar `Client` com `partner_id?: string | null`
-- Atualizar `PropertySubmission` com `partner_id?: string | null`
-
-## Navegação
-
-Em `AdminLayout.tsx`: transformar "Clientes" em dropdown (como Dashboard/Imóveis) contendo:
-- Clientes → `/admin/clientes`
-- Parceiros → `/admin/parceiros`
-
-Mesma lógica no menu mobile.
-
-## Páginas Novas
-
-### `src/pages/admin/AdminPartners.tsx` — Listagem
-- Tabela com colunas: Nome, Tipo, Comissão (%), Total Gerado (R$ 0,00 por ora), Status, Ação WhatsApp
-- Filtros: busca por nome, tipo, status
-- Botão "Novo Parceiro" abre dialog com formulário completo:
-  - Nome, Tipo (select 7 opções), Telefone, E-mail, Imobiliária vinculada, Site, CRECI, Comissão (%), Observações condições, Status, Observações livres
-  - Se tipo = `corretor_autonomo`: campo extra "Imobiliária vinculada" como select buscando parceiros tipo `imobiliaria`
-
-### `src/pages/admin/PartnerDetails.tsx` — Página individual com abas
-- **Resumo**: dados completos, botão WhatsApp, editar, card comissão em destaque
-- **Corretores Vinculados** (só se tipo = `imobiliaria`): lista parceiros onde `parent_partner_id` = este parceiro
-- **Clientes Gerados**: lista clientes onde `partner_id` = este parceiro
-- **Histórico**: mesma lógica de `ClientDetails` — timeline de interações com formulário inline
-
-## Rotas (App.tsx)
-
-```
-<Route path="parceiros" element={<AdminPartners />} />
-<Route path="parceiros/:id" element={<PartnerDetails />} />
+```text
++------------------+-------------+----------------------------------+
+| Campo            | Tipo        | Descricao                        |
++------------------+-------------+----------------------------------+
+| id               | uuid        | Chave primaria                   |
+| type             | text        | hot_lead, new_view, system       |
+| title            | text        | Titulo da notificacao            |
+| message          | text        | Corpo da mensagem                |
+| is_read          | boolean     | Lida ou nao                      |
+| metadata         | jsonb       | Dados extras                     |
+| created_at       | timestamptz | Timestamp de criacao             |
++------------------+-------------+----------------------------------+
 ```
 
-## Migração do campo `partner_name` em Clientes
+RLS: full access para admin, insert anonimo permitido.
 
-- Em `AdminClients.tsx` e `ClientDetails.tsx`: campo "Parceiro que indicou" muda de texto livre para **combobox** que busca parceiros cadastrados, com fallback para texto livre (mantém `partner_name` como backup para indicações informais)
-- Quando um parceiro é selecionado, salva `partner_id`; o `partner_name` é preenchido automaticamente com o nome do parceiro
+### 3.4 Rastreamento de Scroll Depth
 
-## Relatório de Performance
+**Arquivo:** `src/pages/PropertyDetails.tsx`
 
-Em `AdminReports.tsx` (ou sub-seção): adicionar tabela "Performance de Parceiros":
-- Parceiro, Tipo, Qtd Clientes Gerados (count de `clients.partner_id`), Valor Total (R$ 0,00), Comissão Paga (R$ 0,00), Último Contato (última interação)
-- Colunas de valor ficam zeradas — estrutura pronta para módulo financeiro
+- Listener de scroll calculando percentual maximo
+- Formula: (scrollTop + windowHeight) / documentHeight * 100
+- Salvar junto com time_spent_seconds no onUnmount
 
-## Arquivos impactados
+### 3.5 Rastreamento de Cliques CTA
 
-| Arquivo | Ação |
-|---|---|
-| migração SQL | criar tabelas + alterar clients/property_submissions |
-| `src/types/database.ts` | novos tipos |
-| `src/pages/admin/AdminPartners.tsx` | **novo** |
-| `src/pages/admin/PartnerDetails.tsx` | **novo** |
-| `src/pages/admin/AdminLayout.tsx` | dropdown CRM |
-| `src/pages/admin/AdminClients.tsx` | campo partner_id |
-| `src/pages/admin/ClientDetails.tsx` | campo partner_id |
-| `src/pages/admin/AdminReports.tsx` | seção performance |
-| `src/App.tsx` | rotas |
+**Arquivo:** `src/pages/PropertyDetails.tsx`
 
+- Ao clicar no botao WhatsApp, inserir registro em cta_clicks
+- Insert assincrono (fire and forget)
+- Nao bloqueia abertura do WhatsApp
+
+### 3.6 Sistema de Score de Interesse
+
+**Nova Edge Function:** `supabase/functions/calculate-interest-score/index.ts`
+
+Calculo de pontuacao:
+- time_spent > 120s: +5 pontos
+- time_spent > 60s: +3 pontos
+- scroll_depth > 75%: +2 pontos
+- clique no CTA: +10 pontos
+
+Se score >= 10: criar notificacao "hot_lead" (sem duplicar).
+
+### 3.7 Icone de Notificacoes no Admin
+
+**Arquivo:** `src/pages/admin/AdminLayout.tsx`
+
+- Icone Bell no header ao lado do logout
+- Badge vermelho com contagem de nao lidas
+- Popover com lista das ultimas 20 notificacoes
+- Opcao "Marcar todas como lidas"
+- Poll automatico a cada 60 segundos
+
+### 3.8 Melhorias no Relatorio Admin
+
+**Arquivo:** `src/pages/admin/AdminReports.tsx`
+
+Novas colunas na tabela:
+- **Scroll:** progress bar colorida (vermelho < 25%, amarelo 25-75%, verde > 75%)
+- **CTA:** icone Check verde ou traco cinza
+- **Score:** pontuacao calculada com destaque visual
+
+Novos cards de metricas:
+- Leads Quentes (score >= 10)
+- Cliques no WhatsApp (total cta_clicks)
+
+Filtro por periodo: 7 dias, 30 dias, todos.
+Ordenacao por score DESC (padrao).
+
+---
+
+## Arquivos a Criar/Modificar
+
+| Arquivo | Acao |
+|---------|------|
+| Migration SQL | Criar novos campos e tabelas |
+| `src/types/database.ts` | Adicionar novos tipos |
+| `src/components/PropertyCard.tsx` | Badge highlight_tag |
+| `src/pages/Catalog.tsx` | Filtros e ordenacao |
+| `src/pages/admin/PropertyForm.tsx` | Novos campos |
+| `src/pages/PropertyDetails.tsx` | Carrossel, docs, mapa, scroll tracking |
+| `src/pages/admin/AdminLayout.tsx` | Sistema notificacoes |
+| `src/pages/admin/AdminReports.tsx` | Colunas score, CTA, scroll |
+| `supabase/functions/calculate-interest-score/` | Edge function score |
+
+---
+
+## Notas Tecnicas
+
+- **Embla Carousel:** Ja instalado (`embla-carousel-react ^8.6.0`)
+- **shadcn/ui:** Usar Select, Popover, Badge, Progress existentes
+- **TanStack Query:** Usar para todas queries e mutations
+- **RLS:** Tabelas publicas permitem insert anonimo; notifications requer admin
+- **Edge Function:** Chamar apos update page_view e insert cta_click (fire and forget)
