@@ -258,6 +258,9 @@ export default function AdminLayout() {
               <Link to="/admin/clientes" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
                 <Users className="h-5 w-5" />Clientes
               </Link>
+              <Link to="/admin/parceiros" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 pl-12 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                <Users className="h-4 w-4" />Parceiros
+              </Link>
               <Link to="/admin/configuracoes" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
                 <Settings className="h-5 w-5" />Configurações
               </Link>
