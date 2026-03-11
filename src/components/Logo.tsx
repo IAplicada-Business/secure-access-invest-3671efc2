@@ -1,20 +1,14 @@
 import logoFull from '@/assets/logo-full.png';
+import { cn } from '@/lib/utils';
 
 interface LogoProps {
   className?: string;
   alt?: string;
 }
 
-/**
- * A imagem enviada tem bastante “área vazia” ao redor.
- * Este componente aplica um recorte visual (object-cover + scale) dentro de um container com overflow-hidden,
- * permitindo uma logo maior sem aumentar o layout.
- */
 export function Logo({ className = '', alt = 'JMobi' }: LogoProps) {
-  const base = 'h-16 w-44';
-
   return (
-    <span className={`relative inline-block overflow-hidden ${base} ${className}`.trim()} aria-label={alt}>
+    <span className={cn('relative inline-block overflow-hidden h-16 w-44', className)} aria-label={alt}>
       <img
         src={logoFull}
         alt={alt}
