@@ -21,6 +21,13 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Loader2,
   CheckCircle,
   XCircle,
@@ -32,6 +39,7 @@ import {
   Receipt,
   FileCheck,
   Inbox,
+  Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -81,7 +89,7 @@ const matriculaLabels: Record<string, string> = {
 export default function AdminSubmissions() {
   const queryClient = useQueryClient();
   const [selectedSubmission, setSelectedSubmission] = useState<SubmissionWithProperty | null>(null);
-
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
   const { data: submissions = [], isLoading } = useQuery({
     queryKey: ['admin-submissions'],
     queryFn: async () => {
@@ -105,18 +113,40 @@ export default function AdminSubmissions() {
     },
   });
 
+  const { data: partners = [] } = useQuery({
+    queryKey: ['partners-active'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('partners')
+        .select('id, name, type')
+        .eq('status', 'active')
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const approveMutation = useMutation({
-    mutationFn: async (propertyId: string) => {
-      const { error } = await supabase
+    mutationFn: async ({ propertyId, submissionId }: { propertyId: string; submissionId: string }) => {
+      const { error: propError } = await supabase
         .from('properties')
         .update({ status: 'draft' })
         .eq('id', propertyId);
-      if (error) throw error;
+      if (propError) throw propError;
+
+      if (selectedPartnerId) {
+        const { error: subError } = await supabase
+          .from('property_submissions')
+          .update({ partner_id: selectedPartnerId })
+          .eq('id', submissionId);
+        if (subError) throw subError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
       toast.success('Imóvel aprovado como rascunho!');
       setSelectedSubmission(null);
+      setSelectedPartnerId(null);
     },
     onError: () => toast.error('Erro ao aprovar'),
   });
@@ -228,7 +258,7 @@ export default function AdminSubmissions() {
                         <Button variant="ghost" size="icon" onClick={() => setSelectedSubmission(sub)} title="Ver detalhes">
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => approveMutation.mutate(sub.property_id)} title="Aprovar" className="text-primary hover:text-primary">
+                        <Button variant="ghost" size="icon" onClick={() => approveMutation.mutate({ propertyId: sub.property_id, submissionId: sub.id })} title="Aprovar" className="text-primary hover:text-primary">
                           <CheckCircle className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => archiveMutation.mutate(sub.property_id)} title="Arquivar" className="text-muted-foreground">
@@ -245,7 +275,7 @@ export default function AdminSubmissions() {
       )}
 
       {/* Detail Dialog */}
-      <Dialog open={!!selectedSubmission} onOpenChange={() => setSelectedSubmission(null)}>
+      <Dialog open={!!selectedSubmission} onOpenChange={() => { setSelectedSubmission(null); setSelectedPartnerId(null); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           {selectedSubmission && (
             <>
@@ -328,6 +358,27 @@ export default function AdminSubmissions() {
                     )}
                   </div>
                 </div>
+
+                {/* Partner Link */}
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Vincular Parceiro
+                  </h4>
+                  <Select value={selectedPartnerId || ''} onValueChange={(v) => setSelectedPartnerId(v || null)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um parceiro (opcional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {partners.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">Opcional — vincule o parceiro que originou esta submissão.</p>
+                </div>
               </div>
 
               <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -339,7 +390,7 @@ export default function AdminSubmissions() {
                   <Archive className="mr-2 h-4 w-4" />
                   Arquivar
                 </Button>
-                <Button onClick={() => approveMutation.mutate(selectedSubmission.property_id)} disabled={approveMutation.isPending}>
+                <Button onClick={() => approveMutation.mutate({ propertyId: selectedSubmission.property_id, submissionId: selectedSubmission.id })} disabled={approveMutation.isPending}>
                   {approveMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
                   Aprovar (Rascunho)
                 </Button>
