@@ -244,11 +244,17 @@ export default function ClientDetails() {
                 <div><span className="text-sm text-muted-foreground">CPF/CNPJ</span><p className="font-medium">{client.cpf_cnpj || '-'}</p></div>
                 <div><span className="text-sm text-muted-foreground">Origem</span><p className="font-medium">{client.origin || '-'}</p></div>
               </div>
-              {client.partner_name && (
+              {(client.partner_name || client.partner_id) && (
                 <Card className="mt-4 border-primary/20 bg-primary/5">
                   <CardContent className="p-4">
                     <span className="text-sm text-muted-foreground">Indicado por</span>
-                    <p className="font-medium">{client.partner_name}</p>
+                    <p className="font-medium">
+                      {client.partner_id ? (
+                        <RouterLink to={`/admin/parceiros/${client.partner_id}`} className="text-primary underline">
+                          {client.partner_name}
+                        </RouterLink>
+                      ) : client.partner_name}
+                    </p>
                   </CardContent>
                 </Card>
               )}
