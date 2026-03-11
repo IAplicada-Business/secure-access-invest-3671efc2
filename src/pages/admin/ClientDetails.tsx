@@ -121,6 +121,7 @@ export default function ClientDetails() {
   async function handleEdit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
+    const selectedPartner = partners.find(p => p.id === editForm.partner_id);
     const { error } = await supabase.from('clients').update({
       name: editForm.name,
       type: editForm.type,
@@ -128,10 +129,11 @@ export default function ClientDetails() {
       phone: editForm.phone,
       email: editForm.email || null,
       origin: editForm.origin || null,
-      partner_name: editForm.partner_name || null,
+      partner_id: editForm.partner_id || null,
+      partner_name: selectedPartner ? selectedPartner.name : (editForm.partner_name || null),
       status: editForm.status,
       notes: editForm.notes || null,
-    }).eq('id', id!);
+    } as any).eq('id', id!);
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
     toast.success('Cliente atualizado!');
     setEditOpen(false);
