@@ -17,11 +17,11 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 8%;
 
-    /* Gold as primary */
-    --primary: 40 45% 58%;
+    /* Gold as primary — #C9A961 */
+    --primary: 41 46% 59%;
     --primary-foreground: 0 0% 100%;
 
-    /* Light gray secondary */
+    /* Light gray secondary — #F5F5F5 */
     --secondary: 0 0% 96%;
     --secondary-foreground: 0 0% 8%;
 
