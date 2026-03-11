@@ -1,4 +1,4 @@
-import logoJmobi from '@/assets/logo-jmobi.png';
+import logoFull from '@/assets/logo-full.png';
 
 interface LogoProps {
   className?: string;
@@ -16,9 +16,9 @@ export function Logo({ className = '', alt = 'JMobi' }: LogoProps) {
   return (
     <span className={`relative inline-block overflow-hidden ${base} ${className}`.trim()} aria-label={alt}>
       <img
-        src={logoJmobi}
+        src={logoFull}
         alt={alt}
-        className="h-full w-full object-cover object-center scale-[1.35]"
+        className="h-full w-full object-contain object-center"
       />
     </span>
   );
