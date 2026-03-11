@@ -89,7 +89,7 @@ const matriculaLabels: Record<string, string> = {
 export default function AdminSubmissions() {
   const queryClient = useQueryClient();
   const [selectedSubmission, setSelectedSubmission] = useState<SubmissionWithProperty | null>(null);
-
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
   const { data: submissions = [], isLoading } = useQuery({
     queryKey: ['admin-submissions'],
     queryFn: async () => {
