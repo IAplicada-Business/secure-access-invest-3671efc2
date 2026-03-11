@@ -47,6 +47,8 @@ export default function ClientDetails() {
 
   // Linked properties (for investors)
   const [linkedProperties, setLinkedProperties] = useState<Array<{ property_id: string; title: string; time_spent: number; views: number }>>([]);
+  // Partners for edit
+  const [partners, setPartners] = useState<Partner[]>([]);
 
   async function loadClient() {
     if (!id) return;
