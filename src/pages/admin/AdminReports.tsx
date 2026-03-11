@@ -19,7 +19,16 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Clock, Search, TrendingUp, Flame, MessageCircle, Check, Minus } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Clock, Search, TrendingUp, Flame, MessageCircle, Check, Minus, Users } from 'lucide-react';
+import { Partner, PartnerType, PartnerInteraction } from '@/types/database';
+import { formatCurrency } from '@/lib/formatCurrency';
+
+const PARTNER_TYPE_LABELS: Record<PartnerType, string> = {
+  imobiliaria: 'Imobiliária', corretor_autonomo: 'Corretor Autônomo',
+  assessor_investimento: 'Assessor', arquiteto: 'Arquiteto',
+  engenheiro: 'Engenheiro', contador: 'Contador', outro: 'Outro',
+};
 
 interface ViewReport {
   investor_name: string;
@@ -33,25 +42,24 @@ interface ViewReport {
   score: number;
 }
 
+interface PartnerPerformance {
+  id: string;
+  name: string;
+  type: PartnerType;
+  clients_count: number;
+  total_generated: number;
+  commission_paid: number;
+  last_contact: string | null;
+}
+
 type PeriodFilter = '7d' | '30d' | 'all';
 
 function calculateScore(timeSpent: number, scrollDepth: number, hasCtaClick: boolean): number {
   let score = 0;
-  
-  if (timeSpent > 120) {
-    score += 5;
-  } else if (timeSpent > 60) {
-    score += 3;
-  }
-  
-  if (scrollDepth > 75) {
-    score += 2;
-  }
-  
-  if (hasCtaClick) {
-    score += 10;
-  }
-  
+  if (timeSpent > 120) score += 5;
+  else if (timeSpent > 60) score += 3;
+  if (scrollDepth > 75) score += 2;
+  if (hasCtaClick) score += 10;
   return score;
 }
 
@@ -62,12 +70,51 @@ export default function AdminReports() {
   const [searchProperty, setSearchProperty] = useState('');
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('30d');
 
+  // Partner performance
+  const [partnerPerf, setPartnerPerf] = useState<PartnerPerformance[]>([]);
+  const [partnerLoading, setPartnerLoading] = useState(true);
+
   useEffect(() => {
     loadViews();
+    loadPartnerPerformance();
   }, []);
 
+  async function loadPartnerPerformance() {
+    const { data: partnersData } = await supabase.from('partners').select('*').order('name');
+    if (!partnersData || partnersData.length === 0) { setPartnerLoading(false); return; }
+
+    const partnerIds = partnersData.map(p => p.id);
+
+    // Count clients per partner
+    const { data: clientsData } = await supabase.from('clients').select('partner_id').in('partner_id', partnerIds);
+    const clientCounts = new Map<string, number>();
+    clientsData?.forEach(c => {
+      if (c.partner_id) clientCounts.set(c.partner_id, (clientCounts.get(c.partner_id) || 0) + 1);
+    });
+
+    // Last interaction per partner
+    const { data: interactionsData } = await supabase.from('partner_interactions').select('partner_id, interaction_date').in('partner_id', partnerIds).order('interaction_date', { ascending: false });
+    const lastContact = new Map<string, string>();
+    interactionsData?.forEach(i => {
+      if (!lastContact.has(i.partner_id)) lastContact.set(i.partner_id, i.interaction_date);
+    });
+
+    const perf: PartnerPerformance[] = partnersData.map(p => ({
+      id: p.id,
+      name: p.name,
+      type: p.type as PartnerType,
+      clients_count: clientCounts.get(p.id) || 0,
+      total_generated: 0,
+      commission_paid: 0,
+      last_contact: lastContact.get(p.id) || null,
+    }));
+
+    perf.sort((a, b) => b.clients_count - a.clients_count);
+    setPartnerPerf(perf);
+    setPartnerLoading(false);
+  }
+
   async function loadViews() {
-    // Load page views
     const { data: viewsData } = await supabase
       .from('page_views')
       .select('*')
@@ -78,11 +125,7 @@ export default function AdminReports() {
       return;
     }
 
-    // Load CTA clicks
-    const { data: ctaClicks } = await supabase
-      .from('cta_clicks')
-      .select('*');
-
+    const { data: ctaClicks } = await supabase.from('cta_clicks').select('*');
     const ctaClicksMap = new Map<string, boolean>();
     ctaClicks?.forEach(click => {
       const key = `${click.access_link_id}_${click.property_id}`;
@@ -92,15 +135,8 @@ export default function AdminReports() {
     const linkIds = [...new Set(viewsData.map(v => v.access_link_id).filter(Boolean))];
     const propertyIds = [...new Set(viewsData.map(v => v.property_id).filter(Boolean))];
 
-    const { data: links } = await supabase
-      .from('access_links')
-      .select('id, investor_name')
-      .in('id', linkIds as string[]);
-
-    const { data: properties } = await supabase
-      .from('properties')
-      .select('id, title')
-      .in('id', propertyIds as string[]);
+    const { data: links } = await supabase.from('access_links').select('id, investor_name').in('id', linkIds as string[]);
+    const { data: properties } = await supabase.from('properties').select('id, title').in('id', propertyIds as string[]);
 
     const linksMap = new Map(links?.map(l => [l.id, l.investor_name]) || []);
     const propertiesMap = new Map(properties?.map(p => [p.id, p.title]) || []);
@@ -108,7 +144,6 @@ export default function AdminReports() {
     const reports: ViewReport[] = viewsData.map(v => {
       const hasCtaClick = ctaClicksMap.get(`${v.access_link_id}_${v.property_id}`) || false;
       const scrollDepth = v.scroll_depth_percent || 0;
-      
       return {
         investor_name: linksMap.get(v.access_link_id || '') || 'Desconhecido',
         investor_id: v.access_link_id || '',
@@ -122,9 +157,7 @@ export default function AdminReports() {
       };
     });
 
-    // Sort by score DESC by default
     reports.sort((a, b) => b.score - a.score);
-
     setViews(reports);
     setLoading(false);
   }
@@ -138,11 +171,7 @@ export default function AdminReports() {
 
   function formatDate(date: string): string {
     return new Date(date).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
     });
   }
 
@@ -153,19 +182,16 @@ export default function AdminReports() {
   }
 
   const filteredViews = useMemo(() => {
-    let result = views.filter(v => 
+    let result = views.filter(v =>
       v.investor_name.toLowerCase().includes(searchInvestor.toLowerCase()) &&
       v.property_title.toLowerCase().includes(searchProperty.toLowerCase())
     );
-
-    // Apply period filter
     if (periodFilter !== 'all') {
       const now = new Date();
       const days = periodFilter === '7d' ? 7 : 30;
       const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
       result = result.filter(v => new Date(v.viewed_at) >= cutoff);
     }
-
     return result;
   }, [views, searchInvestor, searchProperty, periodFilter]);
 
@@ -175,180 +201,171 @@ export default function AdminReports() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-2xl font-bold">Relatório de Interesse</h1>
+      <h1 className="font-display text-2xl font-bold">Relatórios</h1>
 
-      {/* Summary Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total de Visualizações
-            </CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{filteredViews.length}</div>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="interest">
+        <TabsList>
+          <TabsTrigger value="interest">Interesse de Investidores</TabsTrigger>
+          <TabsTrigger value="partners">Performance de Parceiros</TabsTrigger>
+        </TabsList>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Alto Interesse (+60s)
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-primary">{highInterestCount}</div>
-          </CardContent>
-        </Card>
+        {/* INTEREST TAB */}
+        <TabsContent value="interest" className="space-y-6">
+          {/* Summary Cards */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total de Visualizações</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent><div className="text-3xl font-bold">{filteredViews.length}</div></CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Alto Interesse (+60s)</CardTitle>
+                <TrendingUp className="h-4 w-4 text-primary" />
+              </CardHeader>
+              <CardContent><div className="text-3xl font-bold text-primary">{highInterestCount}</div></CardContent>
+            </Card>
+            <Card className="border-destructive/30 bg-destructive/5">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-destructive">Leads Quentes 🔥</CardTitle>
+                <Flame className="h-4 w-4 text-destructive" />
+              </CardHeader>
+              <CardContent><div className="text-3xl font-bold text-destructive">{hotLeadsCount}</div></CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Cliques no WhatsApp</CardTitle>
+                <MessageCircle className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent><div className="text-3xl font-bold text-green-600">{totalCtaClicks}</div></CardContent>
+            </Card>
+          </div>
 
-        <Card className="border-destructive/30 bg-destructive/5">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-destructive">
-              Leads Quentes 🔥
-            </CardTitle>
-            <Flame className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-destructive">{hotLeadsCount}</div>
-          </CardContent>
-        </Card>
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input placeholder="Filtrar por investidor..." value={searchInvestor} onChange={(e) => setSearchInvestor(e.target.value)} className="pl-9" />
+            </div>
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input placeholder="Filtrar por imóvel..." value={searchProperty} onChange={(e) => setSearchProperty(e.target.value)} className="pl-9" />
+            </div>
+            <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as PeriodFilter)}>
+              <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Período" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7d">Últimos 7 dias</SelectItem>
+                <SelectItem value="30d">Últimos 30 dias</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Cliques no WhatsApp
-            </CardTitle>
-            <MessageCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-600">{totalCtaClicks}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Filtrar por investidor..."
-            value={searchInvestor}
-            onChange={(e) => setSearchInvestor(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Filtrar por imóvel..."
-            value={searchProperty}
-            onChange={(e) => setSearchProperty(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as PeriodFilter)}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Período" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="7d">Últimos 7 dias</SelectItem>
-            <SelectItem value="30d">Últimos 30 dias</SelectItem>
-            <SelectItem value="all">Todos</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Investidor</TableHead>
-                <TableHead>Imóvel</TableHead>
-                <TableHead>Tempo</TableHead>
-                <TableHead className="hidden md:table-cell">Scroll</TableHead>
-                <TableHead className="hidden sm:table-cell">CTA</TableHead>
-                <TableHead>Score</TableHead>
-                <TableHead className="hidden lg:table-cell">Data</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    Carregando...
-                  </TableCell>
-                </TableRow>
-              ) : filteredViews.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    Nenhuma visualização encontrada
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredViews.map((view, idx) => (
-                  <TableRow 
-                    key={idx}
-                    className={view.score >= 10 ? 'bg-destructive/5' : view.time_spent_seconds > 60 ? 'bg-primary/5' : ''}
-                  >
-                    <TableCell className="font-medium">{view.investor_name}</TableCell>
-                    <TableCell className="text-muted-foreground max-w-[200px] truncate">
-                      {view.property_title}
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={view.time_spent_seconds > 60 ? 'default' : 'secondary'}
-                        className={view.time_spent_seconds > 60 ? 'bg-primary' : ''}
-                      >
-                        <Clock className="mr-1 h-3 w-3" />
-                        {formatTime(view.time_spent_seconds)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <div className="flex items-center gap-2">
-                        <Progress 
-                          value={view.scroll_depth_percent} 
-                          className={`h-2 w-16 ${getScrollColor(view.scroll_depth_percent)}`}
-                        />
-                        <span className="text-xs text-muted-foreground">
-                          {view.scroll_depth_percent}%
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      {view.has_cta_click ? (
-                        <Check className="h-5 w-5 text-green-600" />
-                      ) : (
-                        <Minus className="h-5 w-5 text-muted-foreground/40" />
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {view.score >= 10 ? (
-                        <Badge variant="destructive" className="gap-1">
-                          <Flame className="h-3 w-3" />
-                          {view.score}
-                        </Badge>
-                      ) : view.score >= 5 ? (
-                        <Badge className="bg-yellow-500 hover:bg-yellow-500/80 text-white">
-                          {view.score}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">{view.score}</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell text-muted-foreground">
-                      {formatDate(view.viewed_at)}
-                    </TableCell>
+          {/* Table */}
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Investidor</TableHead>
+                    <TableHead>Imóvel</TableHead>
+                    <TableHead>Tempo</TableHead>
+                    <TableHead className="hidden md:table-cell">Scroll</TableHead>
+                    <TableHead className="hidden sm:table-cell">CTA</TableHead>
+                    <TableHead>Score</TableHead>
+                    <TableHead className="hidden lg:table-cell">Data</TableHead>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow><TableCell colSpan={7} className="text-center py-8">Carregando...</TableCell></TableRow>
+                  ) : filteredViews.length === 0 ? (
+                    <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma visualização encontrada</TableCell></TableRow>
+                  ) : (
+                    filteredViews.map((view, idx) => (
+                      <TableRow key={idx} className={view.score >= 10 ? 'bg-destructive/5' : view.time_spent_seconds > 60 ? 'bg-primary/5' : ''}>
+                        <TableCell className="font-medium">{view.investor_name}</TableCell>
+                        <TableCell className="text-muted-foreground max-w-[200px] truncate">{view.property_title}</TableCell>
+                        <TableCell>
+                          <Badge variant={view.time_spent_seconds > 60 ? 'default' : 'secondary'} className={view.time_spent_seconds > 60 ? 'bg-primary' : ''}>
+                            <Clock className="mr-1 h-3 w-3" />{formatTime(view.time_spent_seconds)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <div className="flex items-center gap-2">
+                            <Progress value={view.scroll_depth_percent} className={`h-2 w-16 ${getScrollColor(view.scroll_depth_percent)}`} />
+                            <span className="text-xs text-muted-foreground">{view.scroll_depth_percent}%</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          {view.has_cta_click ? <Check className="h-5 w-5 text-green-600" /> : <Minus className="h-5 w-5 text-muted-foreground/40" />}
+                        </TableCell>
+                        <TableCell>
+                          {view.score >= 10 ? (
+                            <Badge variant="destructive" className="gap-1"><Flame className="h-3 w-3" />{view.score}</Badge>
+                          ) : view.score >= 5 ? (
+                            <Badge className="bg-yellow-500 hover:bg-yellow-500/80 text-white">{view.score}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">{view.score}</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-muted-foreground">{formatDate(view.viewed_at)}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* PARTNER PERFORMANCE TAB */}
+        <TabsContent value="partners" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" /> Performance de Parceiros</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Parceiro</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Clientes Gerados</TableHead>
+                    <TableHead className="hidden md:table-cell">Valor Total</TableHead>
+                    <TableHead className="hidden md:table-cell">Comissão Paga</TableHead>
+                    <TableHead className="hidden lg:table-cell">Último Contato</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {partnerLoading ? (
+                    <TableRow><TableCell colSpan={6} className="text-center py-8">Carregando...</TableCell></TableRow>
+                  ) : partnerPerf.length === 0 ? (
+                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum parceiro cadastrado</TableCell></TableRow>
+                  ) : partnerPerf.map(p => (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-medium">{p.name}</TableCell>
+                      <TableCell><Badge variant="outline">{PARTNER_TYPE_LABELS[p.type]}</Badge></TableCell>
+                      <TableCell>
+                        <Badge className={p.clients_count > 0 ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}>
+                          {p.clients_count}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-muted-foreground">{formatCurrency(p.total_generated)}</TableCell>
+                      <TableCell className="hidden md:table-cell text-muted-foreground">{formatCurrency(p.commission_paid)}</TableCell>
+                      <TableCell className="hidden lg:table-cell text-muted-foreground">
+                        {p.last_contact ? new Date(p.last_contact).toLocaleDateString('pt-BR') : '-'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Client, ClientType, ClientStatus } from '@/types/database';
+import { Client, ClientType, ClientStatus, Partner } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -47,6 +47,7 @@ const ORIGIN_OPTIONS = [
 
 export default function AdminClients() {
   const [clients, setClients] = useState<Client[]>([]);
+  const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -55,7 +56,7 @@ export default function AdminClients() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [form, setForm] = useState({
     name: '', type: 'investor' as ClientType, cpf_cnpj: '', phone: '',
-    email: '', origin: '', partner_name: '', status: 'prospect' as ClientStatus, notes: '',
+    email: '', origin: '', partner_id: '', partner_name: '', status: 'prospect' as ClientStatus, notes: '',
   });
 
   async function loadClients() {
@@ -64,15 +65,21 @@ export default function AdminClients() {
       .select('*')
       .order('created_at', { ascending: false });
     if (error) { toast.error('Erro ao carregar clientes'); return; }
-    setClients((data as Client[]) || []);
+    setClients((data as unknown as Client[]) || []);
     setLoading(false);
   }
 
-  useEffect(() => { loadClients(); }, []);
+  async function loadPartners() {
+    const { data } = await supabase.from('partners').select('id, name').eq('status', 'active').order('name');
+    setPartners((data || []) as unknown as Partner[]);
+  }
+
+  useEffect(() => { loadClients(); loadPartners(); }, []);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
+    const selectedPartner = partners.find(p => p.id === form.partner_id);
     const { error } = await supabase.from('clients').insert({
       name: form.name,
       type: form.type,
@@ -80,14 +87,15 @@ export default function AdminClients() {
       phone: form.phone,
       email: form.email || null,
       origin: form.origin || null,
-      partner_name: form.partner_name || null,
+      partner_id: form.partner_id || null,
+      partner_name: selectedPartner ? selectedPartner.name : (form.partner_name || null),
       status: form.status,
       notes: form.notes || null,
-    });
+    } as any);
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
     toast.success('Cliente cadastrado!');
     setDialogOpen(false);
-    setForm({ name: '', type: 'investor', cpf_cnpj: '', phone: '', email: '', origin: '', partner_name: '', status: 'prospect', notes: '' });
+    setForm({ name: '', type: 'investor', cpf_cnpj: '', phone: '', email: '', origin: '', partner_id: '', partner_name: '', status: 'prospect', notes: '' });
     setSaving(false);
     loadClients();
   }
@@ -239,10 +247,22 @@ export default function AdminClients() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Parceiro que indicou</Label>
-                <Input value={form.partner_name} onChange={(e) => setForm(p => ({ ...p, partner_name: e.target.value }))} placeholder="Nome do parceiro" />
+                <Label>Indicado por (parceiro)</Label>
+                <Select value={form.partner_id} onValueChange={(v) => setForm(p => ({ ...p, partner_id: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecione um parceiro..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nenhum / Texto livre</SelectItem>
+                    {partners.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
+            {!form.partner_id && (
+              <div className="space-y-2">
+                <Label>Parceiro (texto livre)</Label>
+                <Input value={form.partner_name} onChange={(e) => setForm(p => ({ ...p, partner_name: e.target.value }))} placeholder="Nome de quem indicou (se não cadastrado)" />
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Status</Label>
               <Select value={form.status} onValueChange={(v) => setForm(p => ({ ...p, status: v as ClientStatus }))}>

@@ -463,10 +463,22 @@ export default function ClientDetails() {
                 <Input value={editForm.origin || ''} onChange={(e) => setEditForm(p => ({ ...p, origin: e.target.value }))} />
               </div>
               <div className="space-y-2">
-                <Label>Parceiro</Label>
-                <Input value={editForm.partner_name || ''} onChange={(e) => setEditForm(p => ({ ...p, partner_name: e.target.value }))} />
+                <Label>Indicado por (parceiro)</Label>
+                <Select value={editForm.partner_id || ''} onValueChange={(v) => setEditForm(p => ({ ...p, partner_id: v || null }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nenhum / Texto livre</SelectItem>
+                    {partners.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
+            {!editForm.partner_id && (
+              <div className="space-y-2">
+                <Label>Parceiro (texto livre)</Label>
+                <Input value={editForm.partner_name || ''} onChange={(e) => setEditForm(p => ({ ...p, partner_name: e.target.value }))} />
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Observações</Label>
               <Textarea value={editForm.notes || ''} onChange={(e) => setEditForm(p => ({ ...p, notes: e.target.value }))} rows={3} />
