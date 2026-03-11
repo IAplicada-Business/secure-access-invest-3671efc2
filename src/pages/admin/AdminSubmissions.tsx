@@ -113,18 +113,40 @@ export default function AdminSubmissions() {
     },
   });
 
+  const { data: partners = [] } = useQuery({
+    queryKey: ['partners-active'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('partners')
+        .select('id, name, type')
+        .eq('status', 'active')
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const approveMutation = useMutation({
-    mutationFn: async (propertyId: string) => {
-      const { error } = await supabase
+    mutationFn: async ({ propertyId, submissionId }: { propertyId: string; submissionId: string }) => {
+      const { error: propError } = await supabase
         .from('properties')
         .update({ status: 'draft' })
         .eq('id', propertyId);
-      if (error) throw error;
+      if (propError) throw propError;
+
+      if (selectedPartnerId) {
+        const { error: subError } = await supabase
+          .from('property_submissions')
+          .update({ partner_id: selectedPartnerId })
+          .eq('id', submissionId);
+        if (subError) throw subError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
       toast.success('Imóvel aprovado como rascunho!');
       setSelectedSubmission(null);
+      setSelectedPartnerId(null);
     },
     onError: () => toast.error('Erro ao aprovar'),
   });
