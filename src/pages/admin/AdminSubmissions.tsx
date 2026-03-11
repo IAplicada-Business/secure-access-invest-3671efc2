@@ -258,7 +258,7 @@ export default function AdminSubmissions() {
                         <Button variant="ghost" size="icon" onClick={() => setSelectedSubmission(sub)} title="Ver detalhes">
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => approveMutation.mutate(sub.property_id)} title="Aprovar" className="text-primary hover:text-primary">
+                        <Button variant="ghost" size="icon" onClick={() => approveMutation.mutate({ propertyId: sub.property_id, submissionId: sub.id })} title="Aprovar" className="text-primary hover:text-primary">
                           <CheckCircle className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => archiveMutation.mutate(sub.property_id)} title="Arquivar" className="text-muted-foreground">
