@@ -102,10 +102,16 @@ export default function ClientDetails() {
     })).sort((a, b) => b.time_spent - a.time_spent));
   }
 
+  async function loadPartners() {
+    const { data } = await supabase.from('partners').select('id, name').eq('status', 'active').order('name');
+    setPartners((data || []) as unknown as Partner[]);
+  }
+
   useEffect(() => {
     loadClient();
     loadDocs();
     loadInteractions();
+    loadPartners();
   }, [id]);
 
   useEffect(() => {
