@@ -172,6 +172,12 @@ export default function AdminLayout() {
                   Links
                 </Link>
 
+                {/* Financeiro */}
+                <Link to="/admin/financeiro" className={navLinkClasses(isRouteActive('/admin/financeiro'))}>
+                  <DollarSign className="h-4 w-4" />
+                  Financeiro
+                </Link>
+
                 {/* CRM dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
