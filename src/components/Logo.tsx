@@ -1,4 +1,4 @@
-import logoJmobi from '@/assets/logo-jmobi.png';
+import logoFull from '@/assets/logo-full.png';
 
 interface LogoProps {
   className?: string;
