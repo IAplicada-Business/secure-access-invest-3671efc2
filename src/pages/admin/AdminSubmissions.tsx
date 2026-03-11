@@ -358,6 +358,27 @@ export default function AdminSubmissions() {
                     )}
                   </div>
                 </div>
+
+                {/* Partner Link */}
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Vincular Parceiro
+                  </h4>
+                  <Select value={selectedPartnerId || ''} onValueChange={(v) => setSelectedPartnerId(v || null)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um parceiro (opcional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {partners.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">Opcional — vincule o parceiro que originou esta submissão.</p>
+                </div>
               </div>
 
               <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -369,7 +390,7 @@ export default function AdminSubmissions() {
                   <Archive className="mr-2 h-4 w-4" />
                   Arquivar
                 </Button>
-                <Button onClick={() => approveMutation.mutate(selectedSubmission.property_id)} disabled={approveMutation.isPending}>
+                <Button onClick={() => approveMutation.mutate({ propertyId: selectedSubmission.property_id, submissionId: selectedSubmission.id })} disabled={approveMutation.isPending}>
                   {approveMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
                   Aprovar (Rascunho)
                 </Button>
