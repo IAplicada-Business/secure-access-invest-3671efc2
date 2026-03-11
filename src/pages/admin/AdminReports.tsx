@@ -49,6 +49,7 @@ interface PartnerPerformance {
   clients_count: number;
   total_generated: number;
   commission_paid: number;
+  commission_pending: number;
   last_contact: string | null;
 }
 
