@@ -171,11 +171,30 @@ export default function AdminLayout() {
                   Links
                 </Link>
 
-                {/* Clientes */}
-                <Link to="/admin/clientes" className={navLinkClasses(isRouteActive('/admin/clientes'))}>
-                  <Users className="h-4 w-4" />
-                  Clientes
-                </Link>
+                {/* CRM dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className={cn(navLinkClasses(isGroupActive(['/admin/clientes', '/admin/parceiros'])), "gap-1.5")}>
+                      <Users className="h-4 w-4" />
+                      CRM
+                      <ChevronDown className="h-3 w-3 opacity-60" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/clientes" className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Clientes
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/parceiros" className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Parceiros
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 
