@@ -22,6 +22,7 @@ import ClientDetails from "./pages/admin/ClientDetails";
 import AdminPartners from "./pages/admin/AdminPartners";
 import PartnerDetails from "./pages/admin/PartnerDetails";
 import PropertySubmission from "./pages/PropertySubmission";
+import AdminFinanceiro from "./pages/admin/AdminFinanceiro";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,7 @@ const App = () => (
             <Route path="relatorios" element={<AdminReports />} />
             <Route path="configuracoes" element={<AdminSettings />} />
             <Route path="submissoes" element={<AdminSubmissions />} />
+            <Route path="financeiro" element={<AdminFinanceiro />} />
             <Route path="clientes" element={<AdminClients />} />
             <Route path="clientes/:id" element={<ClientDetails />} />
             <Route path="parceiros" element={<AdminPartners />} />

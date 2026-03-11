@@ -163,3 +163,41 @@ export interface PartnerInteraction {
   interaction_date: string;
   created_at: string;
 }
+
+export type ServiceType = 'regularizacao' | 'venda_plataforma' | 'consultoria' | 'outro';
+export type ExpenseCategory = 'salario' | 'comissao_paga' | 'fornecedor' | 'escritorio' | 'marketing' | 'outro';
+export type CommissionStatus = 'pending' | 'paid';
+
+export interface Revenue {
+  id: string;
+  client_id: string | null;
+  partner_id: string | null;
+  service_type: ServiceType;
+  amount: number;
+  received_at: string;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface Commission {
+  id: string;
+  partner_id: string;
+  client_id: string | null;
+  revenue_id: string;
+  rate: number;
+  amount: number;
+  status: CommissionStatus;
+  paid_at: string | null;
+  created_at: string;
+}
+
+export interface Expense {
+  id: string;
+  category: ExpenseCategory;
+  description: string;
+  amount: number;
+  expense_date: string;
+  is_recurring: boolean;
+  related_commission_id: string | null;
+  created_at: string;
+}

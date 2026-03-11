@@ -49,6 +49,7 @@ interface PartnerPerformance {
   clients_count: number;
   total_generated: number;
   commission_paid: number;
+  commission_pending: number;
   last_contact: string | null;
 }
 
@@ -99,13 +100,33 @@ export default function AdminReports() {
       if (!lastContact.has(i.partner_id)) lastContact.set(i.partner_id, i.interaction_date);
     });
 
+    // Real revenue data
+    const { data: revenuesData } = await supabase.from('revenues').select('partner_id, amount').in('partner_id', partnerIds);
+    const revenueTotals = new Map<string, number>();
+    revenuesData?.forEach(r => {
+      if (r.partner_id) revenueTotals.set(r.partner_id, (revenueTotals.get(r.partner_id) || 0) + Number(r.amount));
+    });
+
+    // Real commission data
+    const { data: commissionsData } = await supabase.from('commissions').select('partner_id, amount, status').in('partner_id', partnerIds);
+    const commissionPaid = new Map<string, number>();
+    const commissionPending = new Map<string, number>();
+    commissionsData?.forEach(c => {
+      if (c.status === 'paid') {
+        commissionPaid.set(c.partner_id, (commissionPaid.get(c.partner_id) || 0) + Number(c.amount));
+      } else {
+        commissionPending.set(c.partner_id, (commissionPending.get(c.partner_id) || 0) + Number(c.amount));
+      }
+    });
+
     const perf: PartnerPerformance[] = partnersData.map(p => ({
       id: p.id,
       name: p.name,
       type: p.type as PartnerType,
       clients_count: clientCounts.get(p.id) || 0,
-      total_generated: 0,
-      commission_paid: 0,
+      total_generated: revenueTotals.get(p.id) || 0,
+      commission_paid: commissionPaid.get(p.id) || 0,
+      commission_pending: commissionPending.get(p.id) || 0,
       last_contact: lastContact.get(p.id) || null,
     }));
 
@@ -336,14 +357,15 @@ export default function AdminReports() {
                     <TableHead>Clientes Gerados</TableHead>
                     <TableHead className="hidden md:table-cell">Valor Total</TableHead>
                     <TableHead className="hidden md:table-cell">Comissão Paga</TableHead>
+                    <TableHead className="hidden md:table-cell">Comissão Pendente</TableHead>
                     <TableHead className="hidden lg:table-cell">Último Contato</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {partnerLoading ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-8">Carregando...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center py-8">Carregando...</TableCell></TableRow>
                   ) : partnerPerf.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum parceiro cadastrado</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum parceiro cadastrado</TableCell></TableRow>
                   ) : partnerPerf.map(p => (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium">{p.name}</TableCell>
@@ -353,8 +375,9 @@ export default function AdminReports() {
                           {p.clients_count}
                         </Badge>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell text-muted-foreground">{formatCurrency(p.total_generated)}</TableCell>
-                      <TableCell className="hidden md:table-cell text-muted-foreground">{formatCurrency(p.commission_paid)}</TableCell>
+                      <TableCell className="hidden md:table-cell">{formatCurrency(p.total_generated)}</TableCell>
+                      <TableCell className="hidden md:table-cell">{formatCurrency(p.commission_paid)}</TableCell>
+                      <TableCell className="hidden md:table-cell">{formatCurrency(p.commission_pending)}</TableCell>
                       <TableCell className="hidden lg:table-cell text-muted-foreground">
                         {p.last_contact ? new Date(p.last_contact).toLocaleDateString('pt-BR') : '-'}
                       </TableCell>
