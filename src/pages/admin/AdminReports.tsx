@@ -99,13 +99,33 @@ export default function AdminReports() {
       if (!lastContact.has(i.partner_id)) lastContact.set(i.partner_id, i.interaction_date);
     });
 
+    // Real revenue data
+    const { data: revenuesData } = await supabase.from('revenues').select('partner_id, amount').in('partner_id', partnerIds);
+    const revenueTotals = new Map<string, number>();
+    revenuesData?.forEach(r => {
+      if (r.partner_id) revenueTotals.set(r.partner_id, (revenueTotals.get(r.partner_id) || 0) + Number(r.amount));
+    });
+
+    // Real commission data
+    const { data: commissionsData } = await supabase.from('commissions').select('partner_id, amount, status').in('partner_id', partnerIds);
+    const commissionPaid = new Map<string, number>();
+    const commissionPending = new Map<string, number>();
+    commissionsData?.forEach(c => {
+      if (c.status === 'paid') {
+        commissionPaid.set(c.partner_id, (commissionPaid.get(c.partner_id) || 0) + Number(c.amount));
+      } else {
+        commissionPending.set(c.partner_id, (commissionPending.get(c.partner_id) || 0) + Number(c.amount));
+      }
+    });
+
     const perf: PartnerPerformance[] = partnersData.map(p => ({
       id: p.id,
       name: p.name,
       type: p.type as PartnerType,
       clients_count: clientCounts.get(p.id) || 0,
-      total_generated: 0,
-      commission_paid: 0,
+      total_generated: revenueTotals.get(p.id) || 0,
+      commission_paid: commissionPaid.get(p.id) || 0,
+      commission_pending: commissionPending.get(p.id) || 0,
       last_contact: lastContact.get(p.id) || null,
     }));
 
