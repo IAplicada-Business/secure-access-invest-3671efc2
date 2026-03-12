@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatCurrency';
+import DocumentWizard from '@/components/documents/DocumentWizard';
 
 type RegStatus = 'nova' | 'em_analise' | 'proposta_enviada' | 'em_execucao' | 'concluida' | 'arquivada';
 type ChecklistStatus = 'pendente' | 'recebido' | 'nao_se_aplica';
@@ -70,6 +71,9 @@ export default function RegularizationDetails() {
   const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [intForm, setIntForm] = useState({ type: 'other', note: '', interaction_date: new Date().toISOString().slice(0, 16) });
   const [intSaving, setIntSaving] = useState(false);
+
+  // Generate proposal wizard
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   async function loadAll() {
     if (!id) return;
@@ -232,6 +236,11 @@ export default function RegularizationDetails() {
 
         {/* OVERVIEW */}
         <TabsContent value="overview" className="space-y-4">
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" onClick={() => setWizardOpen(true)}>
+              <FileText className="mr-1 h-3 w-3" /> Gerar Proposta
+            </Button>
+          </div>
           <Card>
             <CardHeader><CardTitle className="text-lg">Status do Processo</CardTitle></CardHeader>
             <CardContent>
@@ -452,6 +461,20 @@ export default function RegularizationDetails() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Generate Proposal Wizard */}
+      <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DocumentWizard
+            type="proposta"
+            preselectedClientId={process.client_id || undefined}
+            preselectedProcessId={process.id}
+            preselectedScope={`Regularização: ${process.title}${process.address ? ` — ${process.address}` : ''}${typeName ? ` (${typeName})` : ''}`}
+            onComplete={() => setWizardOpen(false)}
+            onCancel={() => setWizardOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

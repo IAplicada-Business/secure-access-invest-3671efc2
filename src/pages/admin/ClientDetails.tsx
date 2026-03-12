@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Client, ClientDocument, ClientInteraction, ClientType, ClientStatus, InteractionType, DocumentCategory, Partner } from '@/types/database';
+import { GeneratedDocument } from '@/types/database';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import {
   ArrowLeft, MessageCircle, Pencil, Loader2, Upload, Download, Trash2,
-  Clock, Plus, Building2, Eye, ClipboardList
+  Clock, Plus, Building2, Eye, ClipboardList, FileText
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -57,6 +58,9 @@ export default function ClientDetails() {
   const [newRegOpen, setNewRegOpen] = useState(false);
   const [regForm, setRegForm] = useState({ title: '', type_id: '', address: '', property_type: '', estimated_value: '', estimated_completion: '', notes: '' });
   const [regSaving, setRegSaving] = useState(false);
+
+  // Generated documents
+  const [genDocs, setGenDocs] = useState<any[]>([]);
 
   const REG_STATUS_LABELS: Record<string, string> = {
     nova: 'Nova', em_analise: 'Em Análise', proposta_enviada: 'Proposta Enviada',
@@ -136,6 +140,12 @@ export default function ClientDetails() {
     setRegTypes(data || []);
   }
 
+  async function loadGenDocs() {
+    if (!id) return;
+    const { data } = await supabase.from('generated_documents').select('*').eq('client_id', id).order('created_at', { ascending: false });
+    setGenDocs(data || []);
+  }
+
   useEffect(() => {
     loadClient();
     loadDocs();
@@ -143,6 +153,7 @@ export default function ClientDetails() {
     loadPartners();
     loadRegularizations();
     loadRegTypes();
+    loadGenDocs();
   }, [id]);
 
   useEffect(() => {
@@ -284,6 +295,7 @@ export default function ClientDetails() {
           <TabsTrigger value="history">Histórico</TabsTrigger>
           {client.type === 'investor' && <TabsTrigger value="properties">Imóveis Vinculados</TabsTrigger>}
           <TabsTrigger value="regularizations">Regularizações</TabsTrigger>
+          <TabsTrigger value="generated_docs">Documentos Gerados</TabsTrigger>
         </TabsList>
 
         {/* SUMMARY TAB */}
@@ -494,6 +506,47 @@ export default function ClientDetails() {
                 <div className="flex items-center gap-2">
                   <Badge className={REG_STATUS_COLORS[proc.status] || 'bg-muted'}>{REG_STATUS_LABELS[proc.status] || proc.status}</Badge>
                   <Eye className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </TabsContent>
+
+        {/* GENERATED DOCUMENTS TAB */}
+        <TabsContent value="generated_docs" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold flex items-center gap-2"><FileText className="h-4 w-4" /> Documentos Gerados</h3>
+          </div>
+          {genDocs.length === 0 ? (
+            <Card><CardContent className="p-6 text-center text-muted-foreground">Nenhum documento gerado para este cliente</CardContent></Card>
+          ) : genDocs.map((doc: any) => (
+            <Card key={doc.id}>
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="font-medium">{doc.title}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {doc.type === 'proposta' ? 'Proposta' : doc.type === 'contrato' ? 'Contrato' : 'Relatório'} • {new Date(doc.created_at).toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className={
+                    doc.status === 'assinado' ? 'bg-green-100 text-green-800' :
+                    doc.status === 'enviado' ? 'bg-blue-100 text-blue-800' :
+                    'bg-muted text-muted-foreground'
+                  }>
+                    {doc.status === 'rascunho' ? 'Rascunho' : doc.status === 'enviado' ? 'Enviado' : doc.status === 'assinado' ? 'Assinado' : 'Arquivado'}
+                  </Badge>
+                  {doc.file_url && (
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={async () => {
+                      const { data, error } = await supabase.storage.from('generated-documents').download(doc.file_url);
+                      if (error || !data) { toast.error('Erro ao baixar'); return; }
+                      const url = URL.createObjectURL(data);
+                      const a = document.createElement('a'); a.href = url; a.download = `${doc.title}.pdf`; a.click();
+                      URL.revokeObjectURL(url);
+                    }}>
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
