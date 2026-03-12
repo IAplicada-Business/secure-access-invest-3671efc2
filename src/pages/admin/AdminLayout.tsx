@@ -272,6 +272,9 @@ export default function AdminLayout() {
               <Link to="/admin/financeiro" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
                 <DollarSign className="h-5 w-5" />Financeiro
               </Link>
+              <Link to="/admin/documentos" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                <FileText className="h-5 w-5" />Documentos
+              </Link>
               <Link to="/admin/clientes" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
                 <Users className="h-5 w-5" />Clientes
               </Link>
