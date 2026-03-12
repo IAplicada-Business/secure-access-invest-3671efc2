@@ -181,7 +181,7 @@ export default function AdminDocuments() {
                     {new Date(doc.created_at).toLocaleDateString('pt-BR')}
                   </TableCell>
                   <TableCell>
-                    <Select value={doc.status} onValueChange={v => handleStatusChange(doc.id, v)}>
+                    <Select value={doc.status} onValueChange={(v: string) => handleStatusChange(doc.id, v as 'rascunho' | 'enviado' | 'assinado' | 'arquivado')}>
                       <SelectTrigger className="h-7 w-28 text-xs">
                         <Badge className={`${STATUS_COLORS[doc.status]} text-xs`}>{STATUS_LABELS[doc.status]}</Badge>
                       </SelectTrigger>
