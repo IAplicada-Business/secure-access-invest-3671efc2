@@ -236,6 +236,11 @@ export default function RegularizationDetails() {
 
         {/* OVERVIEW */}
         <TabsContent value="overview" className="space-y-4">
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" onClick={() => setWizardOpen(true)}>
+              <FileText className="mr-1 h-3 w-3" /> Gerar Proposta
+            </Button>
+          </div>
           <Card>
             <CardHeader><CardTitle className="text-lg">Status do Processo</CardTitle></CardHeader>
             <CardContent>
