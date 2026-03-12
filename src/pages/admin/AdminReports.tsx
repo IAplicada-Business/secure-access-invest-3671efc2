@@ -20,7 +20,12 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Clock, Search, TrendingUp, Flame, MessageCircle, Check, Minus, Users } from 'lucide-react';
+import { Clock, Search, TrendingUp, Flame, MessageCircle, Check, Minus, Users, FileText, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { Partner, PartnerType, PartnerInteraction } from '@/types/database';
 import { formatCurrency } from '@/lib/formatCurrency';
 
