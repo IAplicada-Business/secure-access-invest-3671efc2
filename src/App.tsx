@@ -23,6 +23,7 @@ import AdminPartners from "./pages/admin/AdminPartners";
 import PartnerDetails from "./pages/admin/PartnerDetails";
 import PropertySubmission from "./pages/PropertySubmission";
 import AdminFinanceiro from "./pages/admin/AdminFinanceiro";
+import RegularizationDetails from "./pages/admin/RegularizationDetails";
 
 const queryClient = new QueryClient();
 
