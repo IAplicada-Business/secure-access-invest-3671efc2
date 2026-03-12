@@ -474,7 +474,86 @@ export default function ClientDetails() {
             ))}
           </TabsContent>
         )}
+
+        {/* REGULARIZATIONS TAB */}
+        <TabsContent value="regularizations" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold flex items-center gap-2"><ClipboardList className="h-4 w-4" /> Processos de Regularização</h3>
+            <Button size="sm" onClick={() => setNewRegOpen(true)}><Plus className="mr-1 h-3 w-3" /> Novo Processo</Button>
+          </div>
+          {regProcesses.length === 0 ? (
+            <Card><CardContent className="p-6 text-center text-muted-foreground">Nenhum processo de regularização</CardContent></Card>
+          ) : regProcesses.map((proc: any) => (
+            <Card key={proc.id} className="cursor-pointer hover:border-primary/30 transition-colors" onClick={() => navigate(`/admin/regularizacoes/${proc.id}`)}>
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="font-medium">{proc.title}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {proc.regularization_types?.name || 'Tipo não definido'} • {new Date(proc.created_at).toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className={REG_STATUS_COLORS[proc.status] || 'bg-muted'}>{REG_STATUS_LABELS[proc.status] || proc.status}</Badge>
+                  <Eye className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </TabsContent>
       </Tabs>
+
+      {/* New Regularization Dialog */}
+      <Dialog open={newRegOpen} onOpenChange={setNewRegOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Novo Processo de Regularização</DialogTitle></DialogHeader>
+          <form onSubmit={handleCreateRegularization} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Título *</Label>
+              <Input value={regForm.title} onChange={(e) => setRegForm(p => ({ ...p, title: e.target.value }))} required placeholder="Ex: Regularização Lote 42" />
+            </div>
+            <div className="space-y-2">
+              <Label>Tipo de Regularização *</Label>
+              <Select value={regForm.type_id} onValueChange={(v) => setRegForm(p => ({ ...p, type_id: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  {regTypes.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {regTypes.length === 0 && <p className="text-xs text-destructive">Cadastre tipos em Configurações primeiro</p>}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Endereço</Label>
+                <Input value={regForm.address} onChange={(e) => setRegForm(p => ({ ...p, address: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>Tipo do Imóvel</Label>
+                <Input value={regForm.property_type} onChange={(e) => setRegForm(p => ({ ...p, property_type: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Valor Estimado</Label>
+                <Input type="number" value={regForm.estimated_value} onChange={(e) => setRegForm(p => ({ ...p, estimated_value: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>Prazo Estimado</Label>
+                <Input type="date" value={regForm.estimated_completion} onChange={(e) => setRegForm(p => ({ ...p, estimated_completion: e.target.value }))} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Observações</Label>
+              <Textarea value={regForm.notes} onChange={(e) => setRegForm(p => ({ ...p, notes: e.target.value }))} rows={2} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setNewRegOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={regSaving || !regForm.type_id}>
+                {regSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Criar
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
