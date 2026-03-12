@@ -178,7 +178,54 @@ export default function AdminSubmissions() {
     onError: () => toast.error('Erro ao arquivar'),
   });
 
-  function contactBroker(sub: SubmissionWithProperty) {
+  async function openRegDialog(sub: SubmissionWithProperty) {
+    setRegSubmission(sub);
+    setRegForm({
+      client_id: '', type_id: '',
+      title: `Regularização - ${sub.properties.title}`,
+    });
+    // Load types and clients
+    const [{ data: types }, { data: clients }] = await Promise.all([
+      supabase.from('regularization_types').select('id, name, checklist_template').eq('is_active', true).order('name'),
+      supabase.from('clients').select('id, name').order('name'),
+    ]);
+    setRegTypes(types || []);
+    setRegClients(clients || []);
+    setRegDialogOpen(true);
+  }
+
+  async function handleCreateReg(e: React.FormEvent) {
+    e.preventDefault();
+    if (!regSubmission || !regForm.client_id || !regForm.type_id) return;
+    setRegSaving(true);
+    const prop = regSubmission.properties;
+    const { data: proc, error } = await supabase.from('regularization_processes').insert({
+      client_id: regForm.client_id, title: regForm.title,
+      type_id: regForm.type_id, property_submission_id: regSubmission.id,
+      address: [prop.address, prop.neighborhood, prop.city].filter(Boolean).join(', ') || null,
+      property_type: prop.property_type, estimated_value: prop.acquisition_cost,
+    }).select().single();
+    if (error || !proc) { toast.error('Erro ao criar processo'); setRegSaving(false); return; }
+
+    // Pre-fill checklist
+    const selectedType = regTypes.find((t: any) => t.id === regForm.type_id);
+    if (selectedType?.checklist_template?.length > 0) {
+      await supabase.from('regularization_checklist_items').insert(
+        selectedType.checklist_template.map((desc: string) => ({ process_id: proc.id, description: desc }))
+      );
+    }
+    // Auto interaction
+    await supabase.from('regularization_interactions').insert({
+      process_id: proc.id, type: 'status_change',
+      note: `Processo criado a partir da submissão do corretor ${regSubmission.broker_name}`, is_automatic: true,
+    });
+
+    toast.success('Processo de regularização criado!');
+    setRegSaving(false);
+    setRegDialogOpen(false);
+    navigate(`/admin/regularizacoes/${proc.id}`);
+  }
+
     const phone = sub.broker_phone.replace(/\D/g, '');
     const message = encodeURIComponent(
       `Olá ${sub.broker_name}! Estamos analisando o imóvel "${sub.properties.title}" que você enviou. Podemos conversar?`
