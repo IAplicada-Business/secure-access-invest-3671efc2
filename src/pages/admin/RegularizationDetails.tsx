@@ -72,6 +72,9 @@ export default function RegularizationDetails() {
   const [intForm, setIntForm] = useState({ type: 'other', note: '', interaction_date: new Date().toISOString().slice(0, 16) });
   const [intSaving, setIntSaving] = useState(false);
 
+  // Generate proposal wizard
+  const [wizardOpen, setWizardOpen] = useState(false);
+
   async function loadAll() {
     if (!id) return;
     const { data: proc } = await supabase.from('regularization_processes').select('*').eq('id', id).single();
