@@ -41,6 +41,7 @@ import {
   FileCheck,
   Inbox,
   Users,
+  ClipboardList,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
