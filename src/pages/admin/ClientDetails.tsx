@@ -125,11 +125,24 @@ export default function ClientDetails() {
     setPartners((data || []) as unknown as Partner[]);
   }
 
+  async function loadRegularizations() {
+    if (!id) return;
+    const { data } = await supabase.from('regularization_processes').select('*, regularization_types(name)').eq('client_id', id).order('created_at', { ascending: false });
+    setRegProcesses(data || []);
+  }
+
+  async function loadRegTypes() {
+    const { data } = await supabase.from('regularization_types').select('id, name, checklist_template').eq('is_active', true).order('name');
+    setRegTypes(data || []);
+  }
+
   useEffect(() => {
     loadClient();
     loadDocs();
     loadInteractions();
     loadPartners();
+    loadRegularizations();
+    loadRegTypes();
   }, [id]);
 
   useEffect(() => {
