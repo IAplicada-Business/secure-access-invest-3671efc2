@@ -31,6 +31,8 @@ interface DashboardStats {
     viewed_at: string;
   }>;
   unregisteredOwners: number;
+  activeRegularizations: number;
+  stagnantRegularizations: number;
 }
 
 export default function AdminDashboard() {
