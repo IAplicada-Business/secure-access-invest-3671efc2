@@ -17,7 +17,8 @@ import {
   Users,
   ChevronDown,
   DollarSign,
-  FileText
+  FileText,
+  MessageSquare
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -185,6 +186,12 @@ export default function AdminLayout() {
                   Documentos
                 </Link>
 
+                {/* Comunicações */}
+                <Link to="/admin/comunicacoes" className={navLinkClasses(isRouteActive('/admin/comunicacoes'))}>
+                  <MessageSquare className="h-4 w-4" />
+                  Comunicações
+                </Link>
+
                 {/* CRM dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -274,6 +281,9 @@ export default function AdminLayout() {
               </Link>
               <Link to="/admin/documentos" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
                 <FileText className="h-5 w-5" />Documentos
+              </Link>
+              <Link to="/admin/comunicacoes" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                <MessageSquare className="h-5 w-5" />Comunicações
               </Link>
               <Link to="/admin/clientes" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
                 <Users className="h-5 w-5" />Clientes
