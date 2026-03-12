@@ -251,7 +251,7 @@ export default function AdminClients() {
                 <Select value={form.partner_id} onValueChange={(v) => setForm(p => ({ ...p, partner_id: v }))}>
                   <SelectTrigger><SelectValue placeholder="Selecione um parceiro..." /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum / Texto livre</SelectItem>
+                    <SelectItem value="none">Nenhum / Texto livre</SelectItem>
                     {partners.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
