@@ -511,6 +511,47 @@ export default function ClientDetails() {
             </Card>
           ))}
         </TabsContent>
+
+        {/* GENERATED DOCUMENTS TAB */}
+        <TabsContent value="generated_docs" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold flex items-center gap-2"><FileText className="h-4 w-4" /> Documentos Gerados</h3>
+          </div>
+          {genDocs.length === 0 ? (
+            <Card><CardContent className="p-6 text-center text-muted-foreground">Nenhum documento gerado para este cliente</CardContent></Card>
+          ) : genDocs.map((doc: any) => (
+            <Card key={doc.id}>
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="font-medium">{doc.title}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {doc.type === 'proposta' ? 'Proposta' : doc.type === 'contrato' ? 'Contrato' : 'Relatório'} • {new Date(doc.created_at).toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className={
+                    doc.status === 'assinado' ? 'bg-green-100 text-green-800' :
+                    doc.status === 'enviado' ? 'bg-blue-100 text-blue-800' :
+                    'bg-muted text-muted-foreground'
+                  }>
+                    {doc.status === 'rascunho' ? 'Rascunho' : doc.status === 'enviado' ? 'Enviado' : doc.status === 'assinado' ? 'Assinado' : 'Arquivado'}
+                  </Badge>
+                  {doc.file_url && (
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={async () => {
+                      const { data, error } = await supabase.storage.from('generated-documents').download(doc.file_url);
+                      if (error || !data) { toast.error('Erro ao baixar'); return; }
+                      const url = URL.createObjectURL(data);
+                      const a = document.createElement('a'); a.href = url; a.download = `${doc.title}.pdf`; a.click();
+                      URL.revokeObjectURL(url);
+                    }}>
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </TabsContent>
       </Tabs>
 
       {/* New Regularization Dialog */}
