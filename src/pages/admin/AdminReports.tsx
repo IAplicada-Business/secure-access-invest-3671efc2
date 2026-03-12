@@ -59,6 +59,7 @@ interface PartnerPerformance {
 }
 
 type PeriodFilter = '7d' | '30d' | 'all';
+type ReportPeriod = 'month' | 'quarter' | 'custom';
 
 function calculateScore(timeSpent: number, scrollDepth: number, hasCtaClick: boolean): number {
   let score = 0;
