@@ -40,6 +40,71 @@ const STATUS_COLORS: Record<string, string> = {
   arquivado: 'bg-muted text-muted-foreground',
 };
 
+function PreviewContent({ doc }: { doc: GeneratedDoc }) {
+  const [content, setContent] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      if (!doc.template_id) {
+        setContent(null);
+        setLoading(false);
+        return;
+      }
+      const { data } = await supabase
+        .from('document_templates')
+        .select('content')
+        .eq('id', doc.template_id)
+        .single();
+      if (data?.content) {
+        let processed = data.content;
+        const vars = doc.variables_data || {};
+        for (const [key, value] of Object.entries(vars)) {
+          processed = processed.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value || '');
+        }
+        setContent(processed);
+      }
+      setLoading(false);
+    }
+    load();
+  }, [doc]);
+
+  if (loading) return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin" /></div>;
+
+  if (!content) {
+    return (
+      <div className="space-y-4">
+        <h2 className="font-display text-xl font-bold">{doc.title}</h2>
+        <div className="prose prose-sm max-w-none">
+          {Object.entries(doc.variables_data).map(([key, value]) => (
+            <div key={key} className="mb-2">
+              <span className="font-semibold text-muted-foreground">{key}: </span>
+              <span className="whitespace-pre-wrap">{value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <h2 className="font-display text-xl font-bold">{doc.title}</h2>
+      <div className="border rounded-lg p-6 bg-white">
+        <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+          {content.split('\n').map((line, i) => {
+            const isBold = line.startsWith('**') && line.endsWith('**');
+            const text = isBold ? line.slice(2, -2) : line;
+            if (isBold) return <p key={i} className="font-bold text-base mt-4 mb-1 border-b border-[hsl(var(--primary))] pb-1">{text}</p>;
+            if (!line.trim()) return <br key={i} />;
+            return <p key={i} className="mb-1">{text}</p>;
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDocuments() {
   const [docs, setDocs] = useState<GeneratedDoc[]>([]);
   const [loading, setLoading] = useState(true);
