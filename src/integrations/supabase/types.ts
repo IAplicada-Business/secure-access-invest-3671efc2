@@ -275,6 +275,36 @@ export type Database = {
           },
         ]
       }
+      document_templates: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["document_template_status"]
+          type: Database["public"]["Enums"]["document_template_type"]
+          variables: Json | null
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          id?: string
+          name: string
+          status?: Database["public"]["Enums"]["document_template_status"]
+          type: Database["public"]["Enums"]["document_template_type"]
+          variables?: Json | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          name?: string
+          status?: Database["public"]["Enums"]["document_template_status"]
+          type?: Database["public"]["Enums"]["document_template_type"]
+          variables?: Json | null
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number
@@ -312,6 +342,67 @@ export type Database = {
             columns: ["related_commission_id"]
             isOneToOne: false
             referencedRelation: "commissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      generated_documents: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          file_url: string | null
+          id: string
+          process_id: string | null
+          status: Database["public"]["Enums"]["generated_document_status"]
+          template_id: string | null
+          title: string
+          type: Database["public"]["Enums"]["document_template_type"]
+          variables_data: Json | null
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          process_id?: string | null
+          status?: Database["public"]["Enums"]["generated_document_status"]
+          template_id?: string | null
+          title: string
+          type: Database["public"]["Enums"]["document_template_type"]
+          variables_data?: Json | null
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          process_id?: string | null
+          status?: Database["public"]["Enums"]["generated_document_status"]
+          template_id?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["document_template_type"]
+          variables_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_documents_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_documents_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "regularization_processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_documents_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "document_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -968,6 +1059,8 @@ export type Database = {
       client_status: "prospect" | "active" | "completed"
       client_type: "investor" | "incorporator" | "individual"
       commission_status: "pending" | "paid"
+      document_template_status: "ativo" | "rascunho"
+      document_template_type: "proposta" | "contrato" | "relatorio"
       expense_category:
         | "salario"
         | "comissao_paga"
@@ -975,6 +1068,11 @@ export type Database = {
         | "escritorio"
         | "marketing"
         | "outro"
+      generated_document_status:
+        | "rascunho"
+        | "enviado"
+        | "assinado"
+        | "arquivado"
       partner_status: "active" | "inactive"
       partner_type:
         | "imobiliaria"
@@ -1135,6 +1233,8 @@ export const Constants = {
       client_status: ["prospect", "active", "completed"],
       client_type: ["investor", "incorporator", "individual"],
       commission_status: ["pending", "paid"],
+      document_template_status: ["ativo", "rascunho"],
+      document_template_type: ["proposta", "contrato", "relatorio"],
       expense_category: [
         "salario",
         "comissao_paga",
@@ -1142,6 +1242,12 @@ export const Constants = {
         "escritorio",
         "marketing",
         "outro",
+      ],
+      generated_document_status: [
+        "rascunho",
+        "enviado",
+        "assinado",
+        "arquivado",
       ],
       partner_status: ["active", "inactive"],
       partner_type: [
