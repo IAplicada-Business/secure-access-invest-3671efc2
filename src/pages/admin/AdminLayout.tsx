@@ -179,6 +179,12 @@ export default function AdminLayout() {
                   Financeiro
                 </Link>
 
+                {/* Documentos */}
+                <Link to="/admin/documentos" className={navLinkClasses(isRouteActive('/admin/documentos'))}>
+                  <FileText className="h-4 w-4" />
+                  Documentos
+                </Link>
+
                 {/* CRM dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
