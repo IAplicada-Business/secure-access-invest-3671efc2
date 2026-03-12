@@ -283,6 +283,8 @@ export default function ClientDetails() {
           <TabsTrigger value="documents">Documentos</TabsTrigger>
           <TabsTrigger value="history">Histórico</TabsTrigger>
           {client.type === 'investor' && <TabsTrigger value="properties">Imóveis Vinculados</TabsTrigger>}
+          <TabsTrigger value="regularizations">Regularizações</TabsTrigger>
+        </TabsList>
         </TabsList>
 
         {/* SUMMARY TAB */}
