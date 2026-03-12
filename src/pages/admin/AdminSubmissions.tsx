@@ -444,6 +444,10 @@ export default function AdminSubmissions() {
                   <MessageCircle className="h-4 w-4" />
                   Contatar Corretor
                 </Button>
+                <Button variant="outline" onClick={() => { setSelectedSubmission(null); openRegDialog(selectedSubmission); }} className="flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4" />
+                  Criar Regularização
+                </Button>
                 <Button variant="outline" onClick={() => archiveMutation.mutate(selectedSubmission.property_id)} disabled={archiveMutation.isPending}>
                   <Archive className="mr-2 h-4 w-4" />
                   Arquivar
@@ -455,6 +459,45 @@ export default function AdminSubmissions() {
               </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Regularization Dialog */}
+      <Dialog open={regDialogOpen} onOpenChange={setRegDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Criar Processo de Regularização</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateReg} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Título</Label>
+              <Input value={regForm.title} onChange={(e) => setRegForm(p => ({ ...p, title: e.target.value }))} required />
+            </div>
+            <div className="space-y-2">
+              <Label>Cliente *</Label>
+              <Select value={regForm.client_id} onValueChange={(v) => setRegForm(p => ({ ...p, client_id: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  {regClients.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Tipo de Regularização *</Label>
+              <Select value={regForm.type_id} onValueChange={(v) => setRegForm(p => ({ ...p, type_id: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  {regTypes.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setRegDialogOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={regSaving || !regForm.client_id || !regForm.type_id}>
+                {regSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Criar
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
