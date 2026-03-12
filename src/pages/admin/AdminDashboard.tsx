@@ -303,7 +303,7 @@ export default function AdminDashboard() {
 
       {/* Recent Views */}
       <Card>
-          <CardTitle className="flex items-center gap-2">
+        <CardHeader>
             <Eye className="h-5 w-5" />
             Visualizações Recentes
           </CardTitle>
