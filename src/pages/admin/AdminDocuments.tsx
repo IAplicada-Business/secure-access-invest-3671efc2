@@ -76,7 +76,7 @@ export default function AdminDocuments() {
 
   useEffect(() => { loadDocs(); }, []);
 
-  async function handleStatusChange(docId: string, newStatus: string) {
+  async function handleStatusChange(docId: string, newStatus: 'rascunho' | 'enviado' | 'assinado' | 'arquivado') {
     const { error } = await supabase.from('generated_documents').update({ status: newStatus }).eq('id', docId);
     if (error) { toast.error('Erro ao atualizar'); return; }
     toast.success('Status atualizado');
