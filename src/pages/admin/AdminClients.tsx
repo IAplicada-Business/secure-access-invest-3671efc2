@@ -248,16 +248,16 @@ export default function AdminClients() {
               </div>
               <div className="space-y-2">
                 <Label>Indicado por (parceiro)</Label>
-                <Select value={form.partner_id} onValueChange={(v) => setForm(p => ({ ...p, partner_id: v }))}>
+                <Select value={form.partner_id || 'none'} onValueChange={(v) => setForm(p => ({ ...p, partner_id: v === 'none' ? '' : v }))}>
                   <SelectTrigger><SelectValue placeholder="Selecione um parceiro..." /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum / Texto livre</SelectItem>
+                    <SelectItem value="none">Nenhum / Texto livre</SelectItem>
                     {partners.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            {!form.partner_id && (
+            {(!form.partner_id || form.partner_id === 'none') && (
               <div className="space-y-2">
                 <Label>Parceiro (texto livre)</Label>
                 <Input value={form.partner_name} onChange={(e) => setForm(p => ({ ...p, partner_name: e.target.value }))} placeholder="Nome de quem indicou (se não cadastrado)" />
