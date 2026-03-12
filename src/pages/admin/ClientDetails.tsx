@@ -59,6 +59,9 @@ export default function ClientDetails() {
   const [regForm, setRegForm] = useState({ title: '', type_id: '', address: '', property_type: '', estimated_value: '', estimated_completion: '', notes: '' });
   const [regSaving, setRegSaving] = useState(false);
 
+  // Generated documents
+  const [genDocs, setGenDocs] = useState<any[]>([]);
+
   const REG_STATUS_LABELS: Record<string, string> = {
     nova: 'Nova', em_analise: 'Em Análise', proposta_enviada: 'Proposta Enviada',
     em_execucao: 'Em Execução', concluida: 'Concluída', arquivada: 'Arquivada',
