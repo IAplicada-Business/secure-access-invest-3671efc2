@@ -229,6 +229,39 @@ export default function ClientDetails() {
     loadInteractions();
   }
 
+  async function handleCreateRegularization(e: React.FormEvent) {
+    e.preventDefault();
+    if (!id || !regForm.title.trim() || !regForm.type_id) return;
+    setRegSaving(true);
+    const { data: proc, error } = await supabase.from('regularization_processes').insert({
+      client_id: id, title: regForm.title.trim(), type_id: regForm.type_id,
+      address: regForm.address || null, property_type: regForm.property_type || null,
+      estimated_value: regForm.estimated_value ? Number(regForm.estimated_value) : null,
+      estimated_completion: regForm.estimated_completion || null, notes: regForm.notes || null,
+    }).select().single();
+    if (error || !proc) { toast.error('Erro ao criar processo'); setRegSaving(false); return; }
+
+    // Pre-fill checklist from template
+    const selectedType = regTypes.find((t: any) => t.id === regForm.type_id);
+    if (selectedType?.checklist_template && Array.isArray(selectedType.checklist_template) && selectedType.checklist_template.length > 0) {
+      const checklistItems = selectedType.checklist_template.map((desc: string) => ({
+        process_id: proc.id, description: desc,
+      }));
+      await supabase.from('regularization_checklist_items').insert(checklistItems);
+    }
+
+    // Auto interaction
+    await supabase.from('regularization_interactions').insert({
+      process_id: proc.id, type: 'status_change', note: 'Processo criado com status "Nova"', is_automatic: true,
+    });
+
+    toast.success('Processo criado!');
+    setRegSaving(false);
+    setNewRegOpen(false);
+    setRegForm({ title: '', type_id: '', address: '', property_type: '', estimated_value: '', estimated_completion: '', notes: '' });
+    loadRegularizations();
+  }
+
   function formatTime(seconds: number): string {
     if (seconds < 60) return `${seconds}s`;
     const mins = Math.floor(seconds / 60);
