@@ -228,6 +228,7 @@ export default function AdminSubmissions() {
     navigate(`/admin/regularizacoes/${proc.id}`);
   }
 
+  function contactBroker(sub: SubmissionWithProperty) {
     const phone = sub.broker_phone.replace(/\D/g, '');
     const message = encodeURIComponent(
       `Olá ${sub.broker_name}! Estamos analisando o imóvel "${sub.properties.title}" que você enviou. Podemos conversar?`
