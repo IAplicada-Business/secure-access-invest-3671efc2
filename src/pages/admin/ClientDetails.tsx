@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Client, ClientDocument, ClientInteraction, ClientType, ClientStatus, InteractionType, DocumentCategory, Partner } from '@/types/database';
+import { GeneratedDocument } from '@/types/database';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
