@@ -205,7 +205,7 @@ export default function AdminDocuments() {
                         </Button>
                       )}
                       {doc.status !== 'arquivado' && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleStatusChange(doc.id, 'arquivado')}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleStatusChange(doc.id, 'arquivado' as const)}>
                           <Archive className="h-4 w-4 text-muted-foreground" />
                         </Button>
                       )}
