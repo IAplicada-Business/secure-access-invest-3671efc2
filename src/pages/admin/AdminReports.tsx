@@ -81,6 +81,12 @@ export default function AdminReports() {
   const [partnerPerf, setPartnerPerf] = useState<PartnerPerformance[]>([]);
   const [partnerLoading, setPartnerLoading] = useState(true);
 
+  // Partner report generation
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [reportPartner, setReportPartner] = useState<PartnerPerformance | null>(null);
+  const [reportPeriod, setReportPeriod] = useState<ReportPeriod>('month');
+  const [reportGenerating, setReportGenerating] = useState(false);
+
   useEffect(() => {
     loadViews();
     loadPartnerPerformance();
