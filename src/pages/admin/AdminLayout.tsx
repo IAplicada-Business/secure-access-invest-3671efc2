@@ -186,6 +186,12 @@ export default function AdminLayout() {
                   Documentos
                 </Link>
 
+                {/* Comunicações */}
+                <Link to="/admin/comunicacoes" className={navLinkClasses(isRouteActive('/admin/comunicacoes'))}>
+                  <MessageSquare className="h-4 w-4" />
+                  Comunicações
+                </Link>
+
                 {/* CRM dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
