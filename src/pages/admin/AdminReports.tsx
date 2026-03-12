@@ -28,6 +28,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Partner, PartnerType, PartnerInteraction } from '@/types/database';
 import { formatCurrency } from '@/lib/formatCurrency';
+import { toast } from 'sonner';
 
 const PARTNER_TYPE_LABELS: Record<PartnerType, string> = {
   imobiliaria: 'Imobiliária', corretor_autonomo: 'Corretor Autônomo',
