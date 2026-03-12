@@ -1,249 +1,137 @@
 
-# Sprint 1: Melhorias no Catalogo de Imoveis JMob
 
-Este plano abrange tres blocos principais de funcionalidades: novos campos e filtros, melhorias na pagina de detalhes, e rastreamento avancado de interesse.
+# Módulo de Documentos — Plano de Implementação
 
----
+## 1. Banco de Dados
 
-## Bloco 1 - Novos Campos + Cards + Filtros
+```sql
+CREATE TYPE public.document_template_type AS ENUM ('proposta', 'contrato', 'relatorio');
+CREATE TYPE public.document_template_status AS ENUM ('ativo', 'rascunho');
+CREATE TYPE public.generated_document_status AS ENUM ('rascunho', 'enviado', 'assinado', 'arquivado');
 
-### 1.1 Migracao do Banco de Dados
+CREATE TABLE public.document_templates (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  type document_template_type NOT NULL,
+  content text NOT NULL DEFAULT '',
+  variables jsonb DEFAULT '[]',
+  status document_template_status NOT NULL DEFAULT 'rascunho',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 
-Adicionar novos campos na tabela `properties`:
-
-```text
-+------------------------+-------------+----------------------------------+
-| Campo                  | Tipo        | Descricao                        |
-+------------------------+-------------+----------------------------------+
-| highlight_tag          | text        | Tag de destaque (OPORTUNIDADE)   |
-| investor_notes         | text        | Notas visiveis na ficha          |
-| latitude               | decimal     | Coordenada geografica            |
-| longitude              | decimal     | Coordenada geografica            |
-| risk_level             | text        | baixo, medio, alto (default)     |
-| has_matricula          | boolean     | Documentacao disponivel          |
-| has_planta             | boolean     | Documentacao disponivel          |
-| has_iptu               | boolean     | Documentacao disponivel          |
-| has_certidoes          | boolean     | Documentacao disponivel          |
-+------------------------+-------------+----------------------------------+
+CREATE TABLE public.generated_documents (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  template_id uuid REFERENCES public.document_templates(id) ON DELETE SET NULL,
+  client_id uuid REFERENCES public.clients(id) ON DELETE SET NULL,
+  type document_template_type NOT NULL,
+  title text NOT NULL,
+  variables_data jsonb DEFAULT '{}',
+  file_url text,
+  status generated_document_status NOT NULL DEFAULT 'rascunho',
+  process_id uuid REFERENCES public.regularization_processes(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 ```
 
-### 1.2 Atualizar PropertyCard
+RLS admin-only em ambas, mesmo padrão existente. Storage bucket `generated-documents` (privado).
 
-**Arquivo:** `src/components/PropertyCard.tsx`
+## 2. Edge Function: `generate-pdf`
 
-- Adicionar badge de `highlight_tag` no canto superior esquerdo
-- Estilo: fundo dourado (primary), texto branco, fonte bold
-- Condicional: so exibe se highlight_tag nao for null/vazio
+Uma backend function que:
+- Recebe `template_id` + `variables_data` (ou recebe o content HTML diretamente)
+- Substitui variáveis `{{nome_cliente}}` pelos valores
+- Gera PDF via HTML/CSS (usando biblioteca Deno-compatible como `jspdf` ou renderização HTML)
+- Salva no bucket `generated-documents`
+- Retorna a URL do arquivo
 
-### 1.3 Filtros e Ordenacao no Catalogo
+Configuração em `config.toml`: `verify_jwt = false` com validação de auth no código.
 
-**Arquivo:** `src/pages/Catalog.tsx`
+**Nota**: Para a geração de PDF no Deno runtime, a abordagem mais confiável é construir o HTML com as variáveis substituídas e usar uma lib como `pdf-lib` para gerar o documento. O template HTML é armazenado no campo `content` da tabela `document_templates`.
 
-Adicionar acima da grid:
-- **Select de Ordenacao:**
-  - Mais recentes (created_at DESC) - padrao
-  - Maior valorizacao (calculo percentual DESC)
-  - Menor investimento (acquisition_cost ASC)
-  - Maior investimento (acquisition_cost DESC)
+## 3. Configurações — Templates de Documentos
 
-- **Select de Tipo de Imovel:**
-  - Todos, Casa, Terreno, Apartamento, Comercial
+Em `AdminSettings.tsx`, nova seção abaixo de "Tipos de Regularização":
+- Lista de templates com nome, tipo (badge), status, quantidade de variáveis
+- Dialog para criar/editar com: nome, tipo (select), status (ativo/rascunho), conteúdo (textarea com suporte a variáveis `{{...}}`), lista de variáveis (nome + obrigatória sim/não)
+- Preview das variáveis detectadas automaticamente no conteúdo
 
-- **Select de Cidade:**
-  - Dinamico baseado nas cidades distintas dos imoveis publicados
+## 4. Nova Rota `/admin/documentos`
 
-Layout responsivo: empilhado em mobile, lado a lado em desktop.
+Nova página `AdminDocuments.tsx`:
+- Listagem de todos os documentos gerados com: título, tipo (badge), cliente vinculado, data, status, ações (visualizar, exportar PDF, arquivar)
+- Filtros por tipo, status, cliente
+- Botões "Nova Proposta" e "Novo Contrato" que abrem o wizard
 
-### 1.4 Atualizar PropertyForm Admin
+## 5. Wizard de Geração (Proposta e Contrato)
 
-**Arquivo:** `src/pages/admin/PropertyForm.tsx`
+Componente `DocumentWizard.tsx` com 4 etapas:
 
-Nova secao "Informacoes Complementares":
-- Campo `highlight_tag` (texto, opcional)
-- Campo `investor_notes` (textarea, opcional)
-- Select `risk_level` (Baixo/Medio/Alto, default Medio)
-- Inputs `latitude` e `longitude` (numericos, lado a lado)
-- Checkboxes de documentacao (has_matricula, has_planta, has_iptu, has_certidoes)
+**Etapa 1 — Contexto**: select de cliente (busca), tipo de serviço, template a usar (filtrado por tipo)
 
-### 1.5 Atualizar Tipos TypeScript
+**Etapa 2 — Campos variáveis**: renderizados dinamicamente a partir das variáveis do template selecionado. Campos especiais:
+- `narrativa_caso`: textarea
+- `escopo_servico`: textarea (pré-preenchido se vier de processo de regularização)
+- `valor_servico`: input numérico
+- `condicoes_pagamento`: select
+- `prazo_entrega`: input data
+- `validade_proposta`: input data
+- Para contratos: objeto, cláusulas variáveis, dados do cliente (auto-preenchidos)
 
-**Arquivo:** `src/types/database.ts`
+**Etapa 3 — Preview**: HTML renderizado com variáveis substituídas
 
-Adicionar novos campos na interface Property.
+**Etapa 4 — Geração**: chama a edge function, salva registro em `generated_documents`, toast de sucesso
 
----
+## 6. Relatório por Parceiro (PDF)
 
-## Bloco 2 - Melhorias na Pagina de Detalhes
+Em `AdminReports.tsx`, na aba "Performance de Parceiros":
+- Adicionar botão "Gerar Relatório" em cada linha da tabela
+- Dialog para selecionar período (mês/trimestre/personalizado)
+- Usa a mesma edge function `generate-pdf` com template tipo `relatorio`
+- PDF inclui: nome do parceiro, período, clientes gerados, receita total, comissão paga/pendente
 
-### 2.1 Carrossel de Imagens
+## 7. Integração com Regularizações
 
-**Arquivo:** `src/pages/PropertyDetails.tsx`
+Em `RegularizationDetails.tsx`:
+- Botão "Gerar Proposta" na aba Visão Geral
+- Abre o wizard pré-preenchido com: cliente do processo, tipo "regularizacao", escopo do processo
 
-Substituir galeria empilhada por carrossel horizontal:
-- Navegacao por setas (esquerda/direita)
-- Indicadores de pagina (dots)
-- Suporte a swipe/touch em mobile
-- Aspect ratio 16:9 com object-fit cover
-- Usando Embla Carousel (ja instalado como dependencia)
+## 8. Integração com Cliente
 
-### 2.2 Secao de Riscos Melhorada
+Em `ClientDetails.tsx`:
+- Nova aba "Documentos Gerados" (ou incluir na aba Documentos existente)
+- Lista documentos de `generated_documents` filtrados por `client_id`
 
-**Arquivo:** `src/pages/PropertyDetails.tsx`
+## 9. Navegação
 
-Adicionar badge visual de nivel de risco acima do texto:
-- Risco Baixo: fundo verde-claro, icone ShieldCheck
-- Risco Medio: fundo amarelo-claro, icone AlertTriangle
-- Risco Alto: fundo vermelho-claro, icone AlertOctagon
+Em `AdminLayout.tsx`:
+- Adicionar "Documentos" no header entre "Financeiro" e o dropdown "Dashboard" (que contém Relatórios)
+- Ícone `FileText`
+- Mobile menu atualizado
 
-### 2.3 Secao Documentacao Disponivel
+## 10. Arquivos a criar/editar
 
-**Arquivo:** `src/pages/PropertyDetails.tsx`
-
-Nova secao com grid 2x2:
-- Matricula (FileText)
-- Planta Aprovada (Map)
-- IPTU em Dia (Receipt)
-- Certidoes (FileCheck)
-
-Cada item mostra CheckCircle (verde) se true, XCircle (cinza) se false.
-
-### 2.4 Notas do Investidor
-
-**Arquivo:** `src/pages/PropertyDetails.tsx`
-
-Se `investor_notes` preenchido:
-- Card com fundo primary/5%, borda dourada
-- Icone Info, titulo "Observacoes para o Investidor"
-- Posicionado acima do CTA fixo
-
-### 2.5 Mapa de Localizacao
-
-**Arquivo:** `src/pages/PropertyDetails.tsx`
-
-Se latitude e longitude preenchidos:
-- Iframe do Google Maps abaixo do endereco
-- Altura 200px mobile, 250px desktop
-- Bordas arredondadas
-
----
-
-## Bloco 3 - Rastreamento Avancado
-
-### 3.1 Migracao: scroll_depth na page_views
-
-```text
-ALTER TABLE page_views ADD COLUMN scroll_depth_percent integer DEFAULT 0;
-```
-
-### 3.2 Nova Tabela: cta_clicks
-
-```text
-+------------------+-------------+----------------------------------+
-| Campo            | Tipo        | Descricao                        |
-+------------------+-------------+----------------------------------+
-| id               | uuid        | Chave primaria                   |
-| access_link_id   | uuid        | FK para access_links             |
-| property_id      | uuid        | FK para properties               |
-| clicked_at       | timestamptz | Timestamp do clique              |
-+------------------+-------------+----------------------------------+
-```
-
-RLS: insert anonimo permitido, select apenas admin.
-
-### 3.3 Nova Tabela: notifications
-
-```text
-+------------------+-------------+----------------------------------+
-| Campo            | Tipo        | Descricao                        |
-+------------------+-------------+----------------------------------+
-| id               | uuid        | Chave primaria                   |
-| type             | text        | hot_lead, new_view, system       |
-| title            | text        | Titulo da notificacao            |
-| message          | text        | Corpo da mensagem                |
-| is_read          | boolean     | Lida ou nao                      |
-| metadata         | jsonb       | Dados extras                     |
-| created_at       | timestamptz | Timestamp de criacao             |
-+------------------+-------------+----------------------------------+
-```
-
-RLS: full access para admin, insert anonimo permitido.
-
-### 3.4 Rastreamento de Scroll Depth
-
-**Arquivo:** `src/pages/PropertyDetails.tsx`
-
-- Listener de scroll calculando percentual maximo
-- Formula: (scrollTop + windowHeight) / documentHeight * 100
-- Salvar junto com time_spent_seconds no onUnmount
-
-### 3.5 Rastreamento de Cliques CTA
-
-**Arquivo:** `src/pages/PropertyDetails.tsx`
-
-- Ao clicar no botao WhatsApp, inserir registro em cta_clicks
-- Insert assincrono (fire and forget)
-- Nao bloqueia abertura do WhatsApp
-
-### 3.6 Sistema de Score de Interesse
-
-**Nova Edge Function:** `supabase/functions/calculate-interest-score/index.ts`
-
-Calculo de pontuacao:
-- time_spent > 120s: +5 pontos
-- time_spent > 60s: +3 pontos
-- scroll_depth > 75%: +2 pontos
-- clique no CTA: +10 pontos
-
-Se score >= 10: criar notificacao "hot_lead" (sem duplicar).
-
-### 3.7 Icone de Notificacoes no Admin
-
-**Arquivo:** `src/pages/admin/AdminLayout.tsx`
-
-- Icone Bell no header ao lado do logout
-- Badge vermelho com contagem de nao lidas
-- Popover com lista das ultimas 20 notificacoes
-- Opcao "Marcar todas como lidas"
-- Poll automatico a cada 60 segundos
-
-### 3.8 Melhorias no Relatorio Admin
-
-**Arquivo:** `src/pages/admin/AdminReports.tsx`
-
-Novas colunas na tabela:
-- **Scroll:** progress bar colorida (vermelho < 25%, amarelo 25-75%, verde > 75%)
-- **CTA:** icone Check verde ou traco cinza
-- **Score:** pontuacao calculada com destaque visual
-
-Novos cards de metricas:
-- Leads Quentes (score >= 10)
-- Cliques no WhatsApp (total cta_clicks)
-
-Filtro por periodo: 7 dias, 30 dias, todos.
-Ordenacao por score DESC (padrao).
-
----
-
-## Arquivos a Criar/Modificar
-
-| Arquivo | Acao |
+| Arquivo | Ação |
 |---------|------|
-| Migration SQL | Criar novos campos e tabelas |
-| `src/types/database.ts` | Adicionar novos tipos |
-| `src/components/PropertyCard.tsx` | Badge highlight_tag |
-| `src/pages/Catalog.tsx` | Filtros e ordenacao |
-| `src/pages/admin/PropertyForm.tsx` | Novos campos |
-| `src/pages/PropertyDetails.tsx` | Carrossel, docs, mapa, scroll tracking |
-| `src/pages/admin/AdminLayout.tsx` | Sistema notificacoes |
-| `src/pages/admin/AdminReports.tsx` | Colunas score, CTA, scroll |
-| `supabase/functions/calculate-interest-score/` | Edge function score |
+| Migration SQL | 2 tabelas + enums + bucket + RLS |
+| `supabase/functions/generate-pdf/index.ts` | Criar — edge function |
+| `supabase/config.toml` | Adicionar config da function |
+| `src/pages/admin/AdminDocuments.tsx` | Criar — hub de documentos |
+| `src/components/documents/DocumentWizard.tsx` | Criar — wizard de geração |
+| `src/pages/admin/AdminSettings.tsx` | Editar — seção templates |
+| `src/pages/admin/AdminReports.tsx` | Editar — botão gerar relatório |
+| `src/pages/admin/RegularizationDetails.tsx` | Editar — botão gerar proposta |
+| `src/pages/admin/ClientDetails.tsx` | Editar — aba documentos gerados |
+| `src/pages/admin/AdminLayout.tsx` | Editar — link Documentos no nav |
+| `src/App.tsx` | Editar — rota `/admin/documentos` |
+| `src/types/database.ts` | Editar — tipos novos |
 
----
+## Ordem de implementação
 
-## Notas Tecnicas
+1. Database (migration)
+2. Edge function `generate-pdf`
+3. Settings (templates)
+4. `AdminDocuments.tsx` + `DocumentWizard.tsx`
+5. Navegação + rotas
+6. Integração com regularizações e relatórios
+7. Integração com clientes
 
-- **Embla Carousel:** Ja instalado (`embla-carousel-react ^8.6.0`)
-- **shadcn/ui:** Usar Select, Popover, Badge, Progress existentes
-- **TanStack Query:** Usar para todas queries e mutations
-- **RLS:** Tabelas publicas permitem insert anonimo; notifications requer admin
-- **Edge Function:** Chamar apos update page_view e insert cta_click (fire and forget)
