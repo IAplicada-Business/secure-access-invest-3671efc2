@@ -461,6 +461,20 @@ export default function RegularizationDetails() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Generate Proposal Wizard */}
+      <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DocumentWizard
+            type="proposta"
+            preselectedClientId={process.client_id || undefined}
+            preselectedProcessId={process.id}
+            preselectedScope={`Regularização: ${process.title}${process.address ? ` — ${process.address}` : ''}${typeName ? ` (${typeName})` : ''}`}
+            onComplete={() => setWizardOpen(false)}
+            onCancel={() => setWizardOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
