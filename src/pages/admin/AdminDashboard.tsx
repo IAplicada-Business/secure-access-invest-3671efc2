@@ -281,8 +281,27 @@ export default function AdminDashboard() {
         </Card>
       )}
 
+      {/* Regularizations Card */}
+      {stats.activeRegularizations > 0 && (
+        <Card className={stats.stagnantRegularizations > 0 ? 'border-amber-300 bg-amber-50/50' : ''}>
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <ClipboardList className={`h-5 w-5 ${stats.stagnantRegularizations > 0 ? 'text-amber-500' : 'text-primary'}`} />
+              <div>
+                <p className="font-medium">{stats.activeRegularizations} regularização{stats.activeRegularizations > 1 ? 'ões' : ''} ativa{stats.activeRegularizations > 1 ? 's' : ''}</p>
+                {stats.stagnantRegularizations > 0 && (
+                  <p className="text-sm text-amber-600">{stats.stagnantRegularizations} sem atualização há mais de 7 dias</p>
+                )}
+              </div>
+            </div>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/admin/clientes">Ver Clientes</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Recent Views */}
-      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Eye className="h-5 w-5" />
