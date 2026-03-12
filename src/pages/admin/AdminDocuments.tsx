@@ -232,19 +232,7 @@ export default function AdminDocuments() {
       {/* Preview Dialog */}
       <Dialog open={!!previewDoc} onOpenChange={() => setPreviewDoc(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          {previewDoc && (
-            <div className="space-y-4">
-              <h2 className="font-display text-xl font-bold">{previewDoc.title}</h2>
-              <div className="prose prose-sm max-w-none">
-                {Object.entries(previewDoc.variables_data).map(([key, value]) => (
-                  <div key={key} className="mb-2">
-                    <span className="font-semibold text-muted-foreground">{key}: </span>
-                    <span className="whitespace-pre-wrap">{value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {previewDoc && <PreviewContent doc={previewDoc} />}
         </DialogContent>
       </Dialog>
     </div>

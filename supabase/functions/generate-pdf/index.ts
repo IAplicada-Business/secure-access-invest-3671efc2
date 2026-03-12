@@ -7,13 +7,18 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Brand colors
+const GOLD = rgb(201 / 255, 169 / 255, 97 / 255); // #C9A961
+const GRAPHITE = rgb(61 / 255, 61 / 255, 61 / 255); // #3D3D3D
+const LIGHT_GRAY = rgb(0.6, 0.6, 0.6);
+const WHITE = rgb(1, 1, 1);
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Auth check
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -55,107 +60,230 @@ Deno.serve(async (req) => {
       processedContent = processedContent.replace(regex, value || "");
     }
 
-    // Generate PDF using pdf-lib
+    // Generate PDF
     const pdfDoc = await PDFDocument.create();
     const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-    const fontSize = 11;
-    const titleFontSize = 18;
-    const lineHeight = fontSize * 1.5;
-    const margin = 60;
-    const pageWidth = 595; // A4
+    const bodySize = 10.5;
+    const sectionSize = 13;
+    const titleSize = 20;
+    const lineHeight = bodySize * 1.7;
+    const sectionLineHeight = sectionSize * 1.8;
+    const marginLeft = 70;
+    const marginRight = 70;
+    const marginTop = 80;
+    const marginBottom = 60;
+    const pageWidth = 595;
     const pageHeight = 842;
-    const maxWidth = pageWidth - margin * 2;
+    const maxWidth = pageWidth - marginLeft - marginRight;
 
-    // Split content into lines
+    // --- Helper: draw page chrome (header bar + footer) ---
+    function drawPageChrome(page: any, pageNum: number, totalPages: number) {
+      // Top gold bar
+      page.drawRectangle({
+        x: 0,
+        y: pageHeight - 8,
+        width: pageWidth,
+        height: 8,
+        color: GOLD,
+      });
+
+      // Header: "J." logo text
+      page.drawText("J.", {
+        x: marginLeft,
+        y: pageHeight - 35,
+        size: 22,
+        font: helveticaBold,
+        color: GOLD,
+      });
+      page.drawText("Imobi", {
+        x: marginLeft + helveticaBold.widthOfTextAtSize("J.", 22) + 1,
+        y: pageHeight - 35,
+        size: 22,
+        font: helvetica,
+        color: GRAPHITE,
+      });
+
+      // Footer separator line
+      page.drawRectangle({
+        x: marginLeft,
+        y: marginBottom - 15,
+        width: maxWidth,
+        height: 0.5,
+        color: GOLD,
+      });
+
+      // Footer text
+      const dateStr = new Date().toLocaleDateString("pt-BR");
+      const footerLeft = `J.Imobi  •  ${dateStr}`;
+      const footerRight = `${pageNum} / ${totalPages}`;
+      page.drawText(footerLeft, {
+        x: marginLeft,
+        y: marginBottom - 28,
+        size: 7.5,
+        font: helvetica,
+        color: LIGHT_GRAY,
+      });
+      page.drawText(footerRight, {
+        x: pageWidth - marginRight - helvetica.widthOfTextAtSize(footerRight, 7.5),
+        y: marginBottom - 28,
+        size: 7.5,
+        font: helvetica,
+        color: LIGHT_GRAY,
+      });
+    }
+
+    // --- Parse content into render instructions ---
+    interface RenderLine {
+      text: string;
+      type: "title" | "section" | "body" | "blank";
+      bold: boolean;
+    }
+
     const paragraphs = processedContent.split("\n");
-    const allLines: { text: string; bold: boolean; isTitle: boolean }[] = [];
+    const renderLines: RenderLine[] = [];
 
-    // Title
-    allLines.push({ text: title, bold: true, isTitle: true });
-    allLines.push({ text: "", bold: false, isTitle: false });
-    allLines.push({ text: "", bold: false, isTitle: false });
+    // Document title
+    renderLines.push({ text: title, type: "title", bold: true });
+    renderLines.push({ text: "", type: "blank", bold: false });
 
     for (const para of paragraphs) {
       if (!para.trim()) {
-        allLines.push({ text: "", bold: false, isTitle: false });
+        renderLines.push({ text: "", type: "blank", bold: false });
         continue;
       }
 
-      // Check for bold markers **text**
       const isBold = para.startsWith("**") && para.endsWith("**");
       const cleanText = isBold ? para.slice(2, -2) : para;
-      const font = isBold ? helveticaBold : helvetica;
 
-      // Word wrap
+      if (isBold) {
+        // Section header
+        renderLines.push({ text: "", type: "blank", bold: false });
+        renderLines.push({ text: cleanText, type: "section", bold: true });
+        continue;
+      }
+
+      // Word wrap body text
+      const font = helvetica;
       const words = cleanText.split(" ");
       let currentLine = "";
       for (const word of words) {
         const testLine = currentLine ? `${currentLine} ${word}` : word;
-        const width = font.widthOfTextAtSize(testLine, fontSize);
+        const width = font.widthOfTextAtSize(testLine, bodySize);
         if (width > maxWidth && currentLine) {
-          allLines.push({ text: currentLine, bold: isBold, isTitle: false });
+          renderLines.push({ text: currentLine, type: "body", bold: false });
           currentLine = word;
         } else {
           currentLine = testLine;
         }
       }
       if (currentLine) {
-        allLines.push({ text: currentLine, bold: isBold, isTitle: false });
+        renderLines.push({ text: currentLine, type: "body", bold: false });
       }
     }
 
-    // Render lines across pages
-    let page = pdfDoc.addPage([pageWidth, pageHeight]);
-    let y = pageHeight - margin;
+    // --- First pass: lay out pages to count total ---
+    interface PageBreak { lineIndex: number; }
+    const pageBreaks: number[] = [0]; // line indices where new pages start
+    let y = pageHeight - marginTop - 50; // after header
 
-    for (const line of allLines) {
-      if (y < margin + 20) {
+    for (let i = 0; i < renderLines.length; i++) {
+      const line = renderLines[i];
+      let needed = lineHeight;
+      if (line.type === "title") needed = titleSize * 2 + 10;
+      else if (line.type === "section") needed = sectionLineHeight + 12;
+      else if (line.type === "blank") needed = lineHeight * 0.5;
+
+      if (y - needed < marginBottom) {
+        pageBreaks.push(i);
+        y = pageHeight - marginTop - 15;
+      }
+      y -= needed;
+    }
+
+    const totalPages = pageBreaks.length;
+
+    // --- Second pass: render ---
+    let currentPageIdx = 0;
+    let page = pdfDoc.addPage([pageWidth, pageHeight]);
+    y = pageHeight - marginTop - 50;
+
+    for (let i = 0; i < renderLines.length; i++) {
+      const line = renderLines[i];
+      let needed = lineHeight;
+      if (line.type === "title") needed = titleSize * 2 + 10;
+      else if (line.type === "section") needed = sectionLineHeight + 12;
+      else if (line.type === "blank") needed = lineHeight * 0.5;
+
+      if (y - needed < marginBottom) {
+        currentPageIdx++;
         page = pdfDoc.addPage([pageWidth, pageHeight]);
-        y = pageHeight - margin;
+        y = pageHeight - marginTop - 15;
       }
 
-      if (line.isTitle) {
+      if (line.type === "title") {
         page.drawText(line.text, {
-          x: margin,
+          x: marginLeft,
           y,
-          size: titleFontSize,
+          size: titleSize,
           font: helveticaBold,
-          color: rgb(0.15, 0.15, 0.15),
+          color: GRAPHITE,
         });
-        y -= titleFontSize * 1.5;
-      } else if (line.text === "") {
-        y -= lineHeight * 0.6;
+        y -= titleSize + 6;
+        // Gold underline
+        page.drawRectangle({
+          x: marginLeft,
+          y,
+          width: 80,
+          height: 2.5,
+          color: GOLD,
+        });
+        y -= 14;
+      } else if (line.type === "section") {
+        y -= 4;
+        page.drawText(line.text, {
+          x: marginLeft,
+          y,
+          size: sectionSize,
+          font: helveticaBold,
+          color: GRAPHITE,
+        });
+        y -= 5;
+        // Gold underline for section
+        const textW = helveticaBold.widthOfTextAtSize(line.text, sectionSize);
+        page.drawRectangle({
+          x: marginLeft,
+          y,
+          width: Math.min(textW + 10, maxWidth),
+          height: 1.5,
+          color: GOLD,
+        });
+        y -= sectionLineHeight * 0.3;
+      } else if (line.type === "blank") {
+        y -= lineHeight * 0.5;
       } else {
         page.drawText(line.text, {
-          x: margin,
+          x: marginLeft,
           y,
-          size: fontSize,
-          font: line.bold ? helveticaBold : helvetica,
-          color: rgb(0.2, 0.2, 0.2),
+          size: bodySize,
+          font: helvetica,
+          color: GRAPHITE,
         });
         y -= lineHeight;
       }
     }
 
-    // Add footer with date
-    const dateStr = new Date().toLocaleDateString("pt-BR");
-    const footerText = `Gerado em ${dateStr} — J.Imobi`;
-    const firstPage = pdfDoc.getPage(0);
-    firstPage.drawText(footerText, {
-      x: margin,
-      y: 30,
-      size: 8,
-      font: helvetica,
-      color: rgb(0.5, 0.5, 0.5),
-    });
+    // Draw chrome on all pages
+    const pages = pdfDoc.getPages();
+    for (let p = 0; p < pages.length; p++) {
+      drawPageChrome(pages[p], p + 1, pages.length);
+    }
 
     const pdfBytes = await pdfDoc.save();
 
-    // Upload to storage
+    // Upload
     const fileName = `${Date.now()}-${title.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 50)}.pdf`;
-
     const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
