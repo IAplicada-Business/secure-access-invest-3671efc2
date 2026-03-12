@@ -17,7 +17,8 @@ import {
   Users,
   ChevronDown,
   DollarSign,
-  FileText
+  FileText,
+  MessageSquare
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
