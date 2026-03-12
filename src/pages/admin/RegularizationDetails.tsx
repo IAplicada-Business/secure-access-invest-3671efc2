@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatCurrency';
+import DocumentWizard from '@/components/documents/DocumentWizard';
 
 type RegStatus = 'nova' | 'em_analise' | 'proposta_enviada' | 'em_execucao' | 'concluida' | 'arquivada';
 type ChecklistStatus = 'pendente' | 'recebido' | 'nao_se_aplica';
