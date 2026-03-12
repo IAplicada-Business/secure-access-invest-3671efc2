@@ -371,13 +371,14 @@ export default function AdminReports() {
                     <TableHead className="hidden md:table-cell">Comissão Paga</TableHead>
                     <TableHead className="hidden md:table-cell">Comissão Pendente</TableHead>
                     <TableHead className="hidden lg:table-cell">Último Contato</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {partnerLoading ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-8">Carregando...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-8">Carregando...</TableCell></TableRow>
                   ) : partnerPerf.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum parceiro cadastrado</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum parceiro cadastrado</TableCell></TableRow>
                   ) : partnerPerf.map(p => (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium">{p.name}</TableCell>
@@ -393,6 +394,11 @@ export default function AdminReports() {
                       <TableCell className="hidden lg:table-cell text-muted-foreground">
                         {p.last_contact ? new Date(p.last_contact).toLocaleDateString('pt-BR') : '-'}
                       </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="outline" size="sm" onClick={() => { setReportPartner(p); setReportDialogOpen(true); }}>
+                          <FileText className="mr-1 h-3 w-3" /> Relatório
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -401,6 +407,89 @@ export default function AdminReports() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Partner Report Dialog */}
+      <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Gerar Relatório de Parceiro</DialogTitle></DialogHeader>
+          {reportPartner && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">Parceiro: <span className="font-medium text-foreground">{reportPartner.name}</span></p>
+              <div className="space-y-2">
+                <Label>Período</Label>
+                <Select value={reportPeriod} onValueChange={(v) => setReportPeriod(v as ReportPeriod)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="month">Último mês</SelectItem>
+                    <SelectItem value="quarter">Último trimestre</SelectItem>
+                    <SelectItem value="custom">Todo o período</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setReportDialogOpen(false)}>Cancelar</Button>
+                <Button onClick={async () => {
+                  setReportGenerating(true);
+                  try {
+                    const periodLabel = reportPeriod === 'month' ? 'Último mês' : reportPeriod === 'quarter' ? 'Último trimestre' : 'Todo o período';
+                    const content = `**RELATÓRIO DE PERFORMANCE DE PARCEIRO**
+
+**Parceiro:** ${reportPartner.name}
+**Tipo:** ${PARTNER_TYPE_LABELS[reportPartner.type]}
+**Período:** ${periodLabel}
+**Data de geração:** ${new Date().toLocaleDateString('pt-BR')}
+
+---
+
+**RESUMO DE MÉTRICAS**
+
+Clientes gerados: ${reportPartner.clients_count}
+Receita total gerada: ${formatCurrency(reportPartner.total_generated)}
+Comissão paga: ${formatCurrency(reportPartner.commission_paid)}
+Comissão pendente: ${formatCurrency(reportPartner.commission_pending)}
+
+---
+
+**Observações:**
+Relatório gerado automaticamente pelo sistema J.Imobi.`;
+
+                    const { data, error } = await supabase.functions.invoke('generate-pdf', {
+                      body: { content, variables_data: {}, title: `Relatório - ${reportPartner.name}` },
+                    });
+                    if (error) throw error;
+
+                    // Save as generated document
+                    await supabase.from('generated_documents').insert({
+                      type: 'relatorio',
+                      title: `Relatório - ${reportPartner.name} - ${periodLabel}`,
+                      variables_data: { parceiro: reportPartner.name, periodo: periodLabel },
+                      file_url: data.file_url,
+                      status: 'rascunho',
+                    });
+
+                    // Auto-download
+                    const { data: fileData } = await supabase.storage.from('generated-documents').download(data.file_url);
+                    if (fileData) {
+                      const url = URL.createObjectURL(fileData);
+                      const a = document.createElement('a'); a.href = url; a.download = `Relatório_${reportPartner.name}.pdf`; a.click();
+                      URL.revokeObjectURL(url);
+                    }
+
+                    toast.success('Relatório gerado e baixado!');
+                    setReportDialogOpen(false);
+                  } catch (err: any) {
+                    toast.error('Erro ao gerar relatório: ' + (err.message || 'Erro'));
+                  } finally {
+                    setReportGenerating(false);
+                  }
+                }} disabled={reportGenerating}>
+                  {reportGenerating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Gerando...</> : <><FileText className="mr-1 h-4 w-4" /> Gerar PDF</>}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
