@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import {
   ArrowLeft, MessageCircle, Pencil, Loader2, Upload, Download, Trash2,
-  Clock, Plus, Building2, Eye, ClipboardList
+  Clock, Plus, Building2, Eye, ClipboardList, FileText
 } from 'lucide-react';
 import { toast } from 'sonner';
 
