@@ -125,6 +125,15 @@ export default function AdminDashboard() {
           unregisteredCount = ownerNames.filter(n => !clientNames.has(n.toLowerCase())).length;
         }
       }
+      // Regularizations
+      const { data: regProcs } = await supabase
+        .from('regularization_processes')
+        .select('id, status, created_at')
+        .not('status', 'in', '("concluida","arquivada")');
+      const activeReg = regProcs?.length || 0;
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      // Count stagnant: active processes created > 7 days ago (simple heuristic)
+      const stagnant = regProcs?.filter(r => r.created_at < sevenDaysAgo).length || 0;
 
       setStats({
         totalProperties: total,
@@ -135,6 +144,8 @@ export default function AdminDashboard() {
         activeLinks: activeLinks || 0,
         recentViews,
         unregisteredOwners: unregisteredCount,
+        activeRegularizations: activeReg,
+        stagnantRegularizations: stagnant,
       });
 
       setLoading(false);
