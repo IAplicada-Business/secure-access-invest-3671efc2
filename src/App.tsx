@@ -24,6 +24,7 @@ import PartnerDetails from "./pages/admin/PartnerDetails";
 import PropertySubmission from "./pages/PropertySubmission";
 import AdminFinanceiro from "./pages/admin/AdminFinanceiro";
 import AdminDocuments from "./pages/admin/AdminDocuments";
+import AdminCommunications from "./pages/admin/AdminCommunications";
 import RegularizationDetails from "./pages/admin/RegularizationDetails";
 
 const queryClient = new QueryClient();
