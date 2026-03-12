@@ -1,140 +1,249 @@
 
+# Sprint 1: Melhorias no Catalogo de Imoveis JMob
 
-# Módulo de Regularizações — Plano de Implementação
+Este plano abrange tres blocos principais de funcionalidades: novos campos e filtros, melhorias na pagina de detalhes, e rastreamento avancado de interesse.
 
-## 1. Banco de dados — 5 novas tabelas
+---
 
-```sql
--- Enum de status
-CREATE TYPE public.regularization_status AS ENUM (
-  'nova', 'em_analise', 'proposta_enviada', 'em_execucao', 'concluida', 'arquivada'
-);
-CREATE TYPE public.checklist_item_status AS ENUM ('pendente', 'recebido', 'nao_se_aplica');
+## Bloco 1 - Novos Campos + Cards + Filtros
 
--- Tipos de regularização (gerenciados em Configurações)
-CREATE TABLE public.regularization_types (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name text NOT NULL,
-  description text,
-  checklist_template jsonb DEFAULT '[]',
-  is_active boolean NOT NULL DEFAULT true,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
+### 1.1 Migracao do Banco de Dados
 
--- Processos de regularização
-CREATE TABLE public.regularization_processes (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  client_id uuid REFERENCES public.clients(id) ON DELETE SET NULL,
-  property_submission_id uuid REFERENCES public.property_submissions(id) ON DELETE SET NULL,
-  title text NOT NULL,
-  type_id uuid REFERENCES public.regularization_types(id) ON DELETE SET NULL,
-  status regularization_status NOT NULL DEFAULT 'nova',
-  address text,
-  property_type text,
-  estimated_value numeric,
-  estimated_completion date,
-  notes text,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
+Adicionar novos campos na tabela `properties`:
 
--- Checklist
-CREATE TABLE public.regularization_checklist_items (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  process_id uuid NOT NULL REFERENCES public.regularization_processes(id) ON DELETE CASCADE,
-  description text NOT NULL,
-  status checklist_item_status NOT NULL DEFAULT 'pendente',
-  received_at date,
-  notes text
-);
-
--- Documentos do processo
-CREATE TABLE public.regularization_documents (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  process_id uuid NOT NULL REFERENCES public.regularization_processes(id) ON DELETE CASCADE,
-  file_name text NOT NULL,
-  file_url text NOT NULL,
-  category text NOT NULL DEFAULT 'outro',
-  uploaded_at timestamptz NOT NULL DEFAULT now()
-);
-
--- Histórico / interações
-CREATE TABLE public.regularization_interactions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  process_id uuid NOT NULL REFERENCES public.regularization_processes(id) ON DELETE CASCADE,
-  type text NOT NULL DEFAULT 'other',
-  note text NOT NULL,
-  interaction_date timestamptz NOT NULL DEFAULT now(),
-  is_automatic boolean NOT NULL DEFAULT false,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
+```text
++------------------------+-------------+----------------------------------+
+| Campo                  | Tipo        | Descricao                        |
++------------------------+-------------+----------------------------------+
+| highlight_tag          | text        | Tag de destaque (OPORTUNIDADE)   |
+| investor_notes         | text        | Notas visiveis na ficha          |
+| latitude               | decimal     | Coordenada geografica            |
+| longitude              | decimal     | Coordenada geografica            |
+| risk_level             | text        | baixo, medio, alto (default)     |
+| has_matricula          | boolean     | Documentacao disponivel          |
+| has_planta             | boolean     | Documentacao disponivel          |
+| has_iptu               | boolean     | Documentacao disponivel          |
+| has_certidoes          | boolean     | Documentacao disponivel          |
++------------------------+-------------+----------------------------------+
 ```
 
-Storage bucket: `regularization-documents` (privado), mesmo padrão do `client-documents`.
+### 1.2 Atualizar PropertyCard
 
-RLS: admin-only em todas as tabelas (mesmo padrão existente com `has_role`).
+**Arquivo:** `src/components/PropertyCard.tsx`
 
----
+- Adicionar badge de `highlight_tag` no canto superior esquerdo
+- Estilo: fundo dourado (primary), texto branco, fonte bold
+- Condicional: so exibe se highlight_tag nao for null/vazio
 
-## 2. Configurações — Tipos de Regularização
+### 1.3 Filtros e Ordenacao no Catalogo
 
-Em `AdminSettings.tsx`, adicionar seção "Tipos de Regularização":
-- Lista dos tipos cadastrados com nome, descrição e quantidade de itens no checklist
-- Botão "Novo Tipo" abre dialog com: nome, descrição, lista editável de itens do checklist padrão
-- Editar/desativar tipos existentes
+**Arquivo:** `src/pages/Catalog.tsx`
 
----
+Adicionar acima da grid:
+- **Select de Ordenacao:**
+  - Mais recentes (created_at DESC) - padrao
+  - Maior valorizacao (calculo percentual DESC)
+  - Menor investimento (acquisition_cost ASC)
+  - Maior investimento (acquisition_cost DESC)
 
-## 3. Aba "Regularizações" no ClientDetails
+- **Select de Tipo de Imovel:**
+  - Todos, Casa, Terreno, Apartamento, Comercial
 
-Em `ClientDetails.tsx`:
-- Adicionar 5a aba "Regularizações" (visível para todos os tipos de cliente)
-- Lista processos do cliente com: título, tipo, status (badge colorido), data abertura, botão ver detalhes
-- Botão "Novo Processo" abre dialog: título, tipo de regularização (select dos tipos cadastrados), endereço, tipo imóvel, valor estimado, prazo, observações
-- Ao salvar, cria o processo e pré-preenche o checklist a partir do `checklist_template` do tipo selecionado
+- **Select de Cidade:**
+  - Dinamico baseado nas cidades distintas dos imoveis publicados
 
----
+Layout responsivo: empilhado em mobile, lado a lado em desktop.
 
-## 4. Página de detalhes do processo
+### 1.4 Atualizar PropertyForm Admin
 
-Novo arquivo `src/pages/admin/RegularizationDetails.tsx`, rota `/admin/regularizacoes/:id`.
+**Arquivo:** `src/pages/admin/PropertyForm.tsx`
 
-4 abas internas:
+Nova secao "Informacoes Complementares":
+- Campo `highlight_tag` (texto, opcional)
+- Campo `investor_notes` (textarea, opcional)
+- Select `risk_level` (Baixo/Medio/Alto, default Medio)
+- Inputs `latitude` e `longitude` (numericos, lado a lado)
+- Checkboxes de documentacao (has_matricula, has_planta, has_iptu, has_certidoes)
 
-**Visão Geral**: dados do imóvel, tipo de regularização, status atual com select para mudar (mudança gera registro automático no histórico), datas, observações editáveis.
+### 1.5 Atualizar Tipos TypeScript
 
-**Checklist**: itens com description, status (Pendente/Recebido/N/A), data de recebimento, observação. Julie marca cada item. Pode adicionar/remover itens.
+**Arquivo:** `src/types/database.ts`
 
-**Documentos**: upload/download/delete de arquivos no bucket `regularization-documents`. Categorias: Matrícula, Planta, IPTU, Certidão, Formulário, Proposta, Contrato, Outro.
-
-**Histórico**: timeline com registros automáticos (mudança de status) e manuais (reunião, ligação, visita ao cartório). Formulário para adicionar nova interação.
-
----
-
-## 5. Conexão com submissões
-
-No `AdminSubmissions.tsx`, ao aprovar uma submissão, adicionar botão "Criar Regularização" no dialog (ou após aprovação):
-- Abre dialog pré-preenchido com dados do imóvel (endereço, tipo, valor, checklist de documentação do corretor)
-- Julie seleciona cliente + tipo de regularização
-- Salva processo com `property_submission_id` vinculado
+Adicionar novos campos na interface Property.
 
 ---
 
-## 6. Card no Dashboard
+## Bloco 2 - Melhorias na Pagina de Detalhes
 
-Em `AdminDashboard.tsx`, adicionar card "Regularizações Ativas" com contagem de processos com status != 'concluida' e != 'arquivada', e destaque para processos sem atualização há mais de 7 dias.
+### 2.1 Carrossel de Imagens
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+Substituir galeria empilhada por carrossel horizontal:
+- Navegacao por setas (esquerda/direita)
+- Indicadores de pagina (dots)
+- Suporte a swipe/touch em mobile
+- Aspect ratio 16:9 com object-fit cover
+- Usando Embla Carousel (ja instalado como dependencia)
+
+### 2.2 Secao de Riscos Melhorada
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+Adicionar badge visual de nivel de risco acima do texto:
+- Risco Baixo: fundo verde-claro, icone ShieldCheck
+- Risco Medio: fundo amarelo-claro, icone AlertTriangle
+- Risco Alto: fundo vermelho-claro, icone AlertOctagon
+
+### 2.3 Secao Documentacao Disponivel
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+Nova secao com grid 2x2:
+- Matricula (FileText)
+- Planta Aprovada (Map)
+- IPTU em Dia (Receipt)
+- Certidoes (FileCheck)
+
+Cada item mostra CheckCircle (verde) se true, XCircle (cinza) se false.
+
+### 2.4 Notas do Investidor
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+Se `investor_notes` preenchido:
+- Card com fundo primary/5%, borda dourada
+- Icone Info, titulo "Observacoes para o Investidor"
+- Posicionado acima do CTA fixo
+
+### 2.5 Mapa de Localizacao
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+Se latitude e longitude preenchidos:
+- Iframe do Google Maps abaixo do endereco
+- Altura 200px mobile, 250px desktop
+- Bordas arredondadas
 
 ---
 
-## 7. Arquivos a criar/editar
+## Bloco 3 - Rastreamento Avancado
 
-| Arquivo | Ação |
+### 3.1 Migracao: scroll_depth na page_views
+
+```text
+ALTER TABLE page_views ADD COLUMN scroll_depth_percent integer DEFAULT 0;
+```
+
+### 3.2 Nova Tabela: cta_clicks
+
+```text
++------------------+-------------+----------------------------------+
+| Campo            | Tipo        | Descricao                        |
++------------------+-------------+----------------------------------+
+| id               | uuid        | Chave primaria                   |
+| access_link_id   | uuid        | FK para access_links             |
+| property_id      | uuid        | FK para properties               |
+| clicked_at       | timestamptz | Timestamp do clique              |
++------------------+-------------+----------------------------------+
+```
+
+RLS: insert anonimo permitido, select apenas admin.
+
+### 3.3 Nova Tabela: notifications
+
+```text
++------------------+-------------+----------------------------------+
+| Campo            | Tipo        | Descricao                        |
++------------------+-------------+----------------------------------+
+| id               | uuid        | Chave primaria                   |
+| type             | text        | hot_lead, new_view, system       |
+| title            | text        | Titulo da notificacao            |
+| message          | text        | Corpo da mensagem                |
+| is_read          | boolean     | Lida ou nao                      |
+| metadata         | jsonb       | Dados extras                     |
+| created_at       | timestamptz | Timestamp de criacao             |
++------------------+-------------+----------------------------------+
+```
+
+RLS: full access para admin, insert anonimo permitido.
+
+### 3.4 Rastreamento de Scroll Depth
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+- Listener de scroll calculando percentual maximo
+- Formula: (scrollTop + windowHeight) / documentHeight * 100
+- Salvar junto com time_spent_seconds no onUnmount
+
+### 3.5 Rastreamento de Cliques CTA
+
+**Arquivo:** `src/pages/PropertyDetails.tsx`
+
+- Ao clicar no botao WhatsApp, inserir registro em cta_clicks
+- Insert assincrono (fire and forget)
+- Nao bloqueia abertura do WhatsApp
+
+### 3.6 Sistema de Score de Interesse
+
+**Nova Edge Function:** `supabase/functions/calculate-interest-score/index.ts`
+
+Calculo de pontuacao:
+- time_spent > 120s: +5 pontos
+- time_spent > 60s: +3 pontos
+- scroll_depth > 75%: +2 pontos
+- clique no CTA: +10 pontos
+
+Se score >= 10: criar notificacao "hot_lead" (sem duplicar).
+
+### 3.7 Icone de Notificacoes no Admin
+
+**Arquivo:** `src/pages/admin/AdminLayout.tsx`
+
+- Icone Bell no header ao lado do logout
+- Badge vermelho com contagem de nao lidas
+- Popover com lista das ultimas 20 notificacoes
+- Opcao "Marcar todas como lidas"
+- Poll automatico a cada 60 segundos
+
+### 3.8 Melhorias no Relatorio Admin
+
+**Arquivo:** `src/pages/admin/AdminReports.tsx`
+
+Novas colunas na tabela:
+- **Scroll:** progress bar colorida (vermelho < 25%, amarelo 25-75%, verde > 75%)
+- **CTA:** icone Check verde ou traco cinza
+- **Score:** pontuacao calculada com destaque visual
+
+Novos cards de metricas:
+- Leads Quentes (score >= 10)
+- Cliques no WhatsApp (total cta_clicks)
+
+Filtro por periodo: 7 dias, 30 dias, todos.
+Ordenacao por score DESC (padrao).
+
+---
+
+## Arquivos a Criar/Modificar
+
+| Arquivo | Acao |
 |---------|------|
-| Migration SQL | Criar 5 tabelas + enum + storage bucket + RLS |
-| `src/pages/admin/RegularizationDetails.tsx` | Criar — página de detalhes com 4 abas |
-| `src/pages/admin/AdminSettings.tsx` | Editar — seção tipos de regularização |
-| `src/pages/admin/ClientDetails.tsx` | Editar — aba Regularizações |
-| `src/pages/admin/AdminSubmissions.tsx` | Editar — botão "Criar Regularização" |
-| `src/pages/admin/AdminDashboard.tsx` | Editar — card regularizações ativas |
-| `src/App.tsx` | Editar — rota `/admin/regularizacoes/:id` |
-| `src/types/database.ts` | Editar — tipos novos |
+| Migration SQL | Criar novos campos e tabelas |
+| `src/types/database.ts` | Adicionar novos tipos |
+| `src/components/PropertyCard.tsx` | Badge highlight_tag |
+| `src/pages/Catalog.tsx` | Filtros e ordenacao |
+| `src/pages/admin/PropertyForm.tsx` | Novos campos |
+| `src/pages/PropertyDetails.tsx` | Carrossel, docs, mapa, scroll tracking |
+| `src/pages/admin/AdminLayout.tsx` | Sistema notificacoes |
+| `src/pages/admin/AdminReports.tsx` | Colunas score, CTA, scroll |
+| `supabase/functions/calculate-interest-score/` | Edge function score |
 
+---
+
+## Notas Tecnicas
+
+- **Embla Carousel:** Ja instalado (`embla-carousel-react ^8.6.0`)
+- **shadcn/ui:** Usar Select, Popover, Badge, Progress existentes
+- **TanStack Query:** Usar para todas queries e mutations
+- **RLS:** Tabelas publicas permitem insert anonimo; notifications requer admin
+- **Edge Function:** Chamar apos update page_view e insert cta_click (fire and forget)

@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -40,6 +43,7 @@ import {
   FileCheck,
   Inbox,
   Users,
+  ClipboardList,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -88,8 +92,17 @@ const matriculaLabels: Record<string, string> = {
 
 export default function AdminSubmissions() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [selectedSubmission, setSelectedSubmission] = useState<SubmissionWithProperty | null>(null);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
+
+  // Regularization creation
+  const [regDialogOpen, setRegDialogOpen] = useState(false);
+  const [regSubmission, setRegSubmission] = useState<SubmissionWithProperty | null>(null);
+  const [regTypes, setRegTypes] = useState<any[]>([]);
+  const [regClients, setRegClients] = useState<any[]>([]);
+  const [regForm, setRegForm] = useState({ client_id: '', type_id: '', title: '' });
+  const [regSaving, setRegSaving] = useState(false);
   const { data: submissions = [], isLoading } = useQuery({
     queryKey: ['admin-submissions'],
     queryFn: async () => {
@@ -166,6 +179,54 @@ export default function AdminSubmissions() {
     },
     onError: () => toast.error('Erro ao arquivar'),
   });
+
+  async function openRegDialog(sub: SubmissionWithProperty) {
+    setRegSubmission(sub);
+    setRegForm({
+      client_id: '', type_id: '',
+      title: `Regularização - ${sub.properties.title}`,
+    });
+    // Load types and clients
+    const [{ data: types }, { data: clients }] = await Promise.all([
+      supabase.from('regularization_types').select('id, name, checklist_template').eq('is_active', true).order('name'),
+      supabase.from('clients').select('id, name').order('name'),
+    ]);
+    setRegTypes(types || []);
+    setRegClients(clients || []);
+    setRegDialogOpen(true);
+  }
+
+  async function handleCreateReg(e: React.FormEvent) {
+    e.preventDefault();
+    if (!regSubmission || !regForm.client_id || !regForm.type_id) return;
+    setRegSaving(true);
+    const prop = regSubmission.properties;
+    const { data: proc, error } = await supabase.from('regularization_processes').insert({
+      client_id: regForm.client_id, title: regForm.title,
+      type_id: regForm.type_id, property_submission_id: regSubmission.id,
+      address: [prop.address, prop.neighborhood, prop.city].filter(Boolean).join(', ') || null,
+      property_type: prop.property_type, estimated_value: prop.acquisition_cost,
+    }).select().single();
+    if (error || !proc) { toast.error('Erro ao criar processo'); setRegSaving(false); return; }
+
+    // Pre-fill checklist
+    const selectedType = regTypes.find((t: any) => t.id === regForm.type_id);
+    if (selectedType?.checklist_template?.length > 0) {
+      await supabase.from('regularization_checklist_items').insert(
+        selectedType.checklist_template.map((desc: string) => ({ process_id: proc.id, description: desc }))
+      );
+    }
+    // Auto interaction
+    await supabase.from('regularization_interactions').insert({
+      process_id: proc.id, type: 'status_change',
+      note: `Processo criado a partir da submissão do corretor ${regSubmission.broker_name}`, is_automatic: true,
+    });
+
+    toast.success('Processo de regularização criado!');
+    setRegSaving(false);
+    setRegDialogOpen(false);
+    navigate(`/admin/regularizacoes/${proc.id}`);
+  }
 
   function contactBroker(sub: SubmissionWithProperty) {
     const phone = sub.broker_phone.replace(/\D/g, '');
@@ -386,6 +447,10 @@ export default function AdminSubmissions() {
                   <MessageCircle className="h-4 w-4" />
                   Contatar Corretor
                 </Button>
+                <Button variant="outline" onClick={() => { setSelectedSubmission(null); openRegDialog(selectedSubmission); }} className="flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4" />
+                  Criar Regularização
+                </Button>
                 <Button variant="outline" onClick={() => archiveMutation.mutate(selectedSubmission.property_id)} disabled={archiveMutation.isPending}>
                   <Archive className="mr-2 h-4 w-4" />
                   Arquivar
@@ -397,6 +462,45 @@ export default function AdminSubmissions() {
               </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Regularization Dialog */}
+      <Dialog open={regDialogOpen} onOpenChange={setRegDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Criar Processo de Regularização</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateReg} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Título</Label>
+              <Input value={regForm.title} onChange={(e) => setRegForm(p => ({ ...p, title: e.target.value }))} required />
+            </div>
+            <div className="space-y-2">
+              <Label>Cliente *</Label>
+              <Select value={regForm.client_id} onValueChange={(v) => setRegForm(p => ({ ...p, client_id: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  {regClients.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Tipo de Regularização *</Label>
+              <Select value={regForm.type_id} onValueChange={(v) => setRegForm(p => ({ ...p, type_id: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  {regTypes.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setRegDialogOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={regSaving || !regForm.client_id || !regForm.type_id}>
+                {regSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Criar
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Client, ClientDocument, ClientInteraction, ClientType, ClientStatus, InteractionType, DocumentCategory, Partner } from '@/types/database';
+import { formatCurrency } from '@/lib/formatCurrency';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,7 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import {
   ArrowLeft, MessageCircle, Pencil, Loader2, Upload, Download, Trash2,
-  Clock, Plus, Building2, Eye
+  Clock, Plus, Building2, Eye, ClipboardList
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -49,6 +50,23 @@ export default function ClientDetails() {
   const [linkedProperties, setLinkedProperties] = useState<Array<{ property_id: string; title: string; time_spent: number; views: number }>>([]);
   // Partners for edit
   const [partners, setPartners] = useState<Partner[]>([]);
+
+  // Regularizations
+  const [regProcesses, setRegProcesses] = useState<any[]>([]);
+  const [regTypes, setRegTypes] = useState<any[]>([]);
+  const [newRegOpen, setNewRegOpen] = useState(false);
+  const [regForm, setRegForm] = useState({ title: '', type_id: '', address: '', property_type: '', estimated_value: '', estimated_completion: '', notes: '' });
+  const [regSaving, setRegSaving] = useState(false);
+
+  const REG_STATUS_LABELS: Record<string, string> = {
+    nova: 'Nova', em_analise: 'Em Análise', proposta_enviada: 'Proposta Enviada',
+    em_execucao: 'Em Execução', concluida: 'Concluída', arquivada: 'Arquivada',
+  };
+  const REG_STATUS_COLORS: Record<string, string> = {
+    nova: 'bg-blue-100 text-blue-800', em_analise: 'bg-amber-100 text-amber-800',
+    proposta_enviada: 'bg-purple-100 text-purple-800', em_execucao: 'bg-primary/10 text-primary',
+    concluida: 'bg-green-100 text-green-800', arquivada: 'bg-muted text-muted-foreground',
+  };
 
   async function loadClient() {
     if (!id) return;
@@ -107,11 +125,24 @@ export default function ClientDetails() {
     setPartners((data || []) as unknown as Partner[]);
   }
 
+  async function loadRegularizations() {
+    if (!id) return;
+    const { data } = await supabase.from('regularization_processes').select('*, regularization_types(name)').eq('client_id', id).order('created_at', { ascending: false });
+    setRegProcesses(data || []);
+  }
+
+  async function loadRegTypes() {
+    const { data } = await supabase.from('regularization_types').select('id, name, checklist_template').eq('is_active', true).order('name');
+    setRegTypes(data || []);
+  }
+
   useEffect(() => {
     loadClient();
     loadDocs();
     loadInteractions();
     loadPartners();
+    loadRegularizations();
+    loadRegTypes();
   }, [id]);
 
   useEffect(() => {
@@ -198,6 +229,39 @@ export default function ClientDetails() {
     loadInteractions();
   }
 
+  async function handleCreateRegularization(e: React.FormEvent) {
+    e.preventDefault();
+    if (!id || !regForm.title.trim() || !regForm.type_id) return;
+    setRegSaving(true);
+    const { data: proc, error } = await supabase.from('regularization_processes').insert({
+      client_id: id, title: regForm.title.trim(), type_id: regForm.type_id,
+      address: regForm.address || null, property_type: regForm.property_type || null,
+      estimated_value: regForm.estimated_value ? Number(regForm.estimated_value) : null,
+      estimated_completion: regForm.estimated_completion || null, notes: regForm.notes || null,
+    }).select().single();
+    if (error || !proc) { toast.error('Erro ao criar processo'); setRegSaving(false); return; }
+
+    // Pre-fill checklist from template
+    const selectedType = regTypes.find((t: any) => t.id === regForm.type_id);
+    if (selectedType?.checklist_template && Array.isArray(selectedType.checklist_template) && selectedType.checklist_template.length > 0) {
+      const checklistItems = selectedType.checklist_template.map((desc: string) => ({
+        process_id: proc.id, description: desc,
+      }));
+      await supabase.from('regularization_checklist_items').insert(checklistItems);
+    }
+
+    // Auto interaction
+    await supabase.from('regularization_interactions').insert({
+      process_id: proc.id, type: 'status_change', note: 'Processo criado com status "Nova"', is_automatic: true,
+    });
+
+    toast.success('Processo criado!');
+    setRegSaving(false);
+    setNewRegOpen(false);
+    setRegForm({ title: '', type_id: '', address: '', property_type: '', estimated_value: '', estimated_completion: '', notes: '' });
+    loadRegularizations();
+  }
+
   function formatTime(seconds: number): string {
     if (seconds < 60) return `${seconds}s`;
     const mins = Math.floor(seconds / 60);
@@ -219,6 +283,7 @@ export default function ClientDetails() {
           <TabsTrigger value="documents">Documentos</TabsTrigger>
           <TabsTrigger value="history">Histórico</TabsTrigger>
           {client.type === 'investor' && <TabsTrigger value="properties">Imóveis Vinculados</TabsTrigger>}
+          <TabsTrigger value="regularizations">Regularizações</TabsTrigger>
         </TabsList>
 
         {/* SUMMARY TAB */}
@@ -408,7 +473,86 @@ export default function ClientDetails() {
             ))}
           </TabsContent>
         )}
+
+        {/* REGULARIZATIONS TAB */}
+        <TabsContent value="regularizations" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold flex items-center gap-2"><ClipboardList className="h-4 w-4" /> Processos de Regularização</h3>
+            <Button size="sm" onClick={() => setNewRegOpen(true)}><Plus className="mr-1 h-3 w-3" /> Novo Processo</Button>
+          </div>
+          {regProcesses.length === 0 ? (
+            <Card><CardContent className="p-6 text-center text-muted-foreground">Nenhum processo de regularização</CardContent></Card>
+          ) : regProcesses.map((proc: any) => (
+            <Card key={proc.id} className="cursor-pointer hover:border-primary/30 transition-colors" onClick={() => navigate(`/admin/regularizacoes/${proc.id}`)}>
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="font-medium">{proc.title}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {proc.regularization_types?.name || 'Tipo não definido'} • {new Date(proc.created_at).toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className={REG_STATUS_COLORS[proc.status] || 'bg-muted'}>{REG_STATUS_LABELS[proc.status] || proc.status}</Badge>
+                  <Eye className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </TabsContent>
       </Tabs>
+
+      {/* New Regularization Dialog */}
+      <Dialog open={newRegOpen} onOpenChange={setNewRegOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Novo Processo de Regularização</DialogTitle></DialogHeader>
+          <form onSubmit={handleCreateRegularization} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Título *</Label>
+              <Input value={regForm.title} onChange={(e) => setRegForm(p => ({ ...p, title: e.target.value }))} required placeholder="Ex: Regularização Lote 42" />
+            </div>
+            <div className="space-y-2">
+              <Label>Tipo de Regularização *</Label>
+              <Select value={regForm.type_id} onValueChange={(v) => setRegForm(p => ({ ...p, type_id: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  {regTypes.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {regTypes.length === 0 && <p className="text-xs text-destructive">Cadastre tipos em Configurações primeiro</p>}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Endereço</Label>
+                <Input value={regForm.address} onChange={(e) => setRegForm(p => ({ ...p, address: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>Tipo do Imóvel</Label>
+                <Input value={regForm.property_type} onChange={(e) => setRegForm(p => ({ ...p, property_type: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Valor Estimado</Label>
+                <Input type="number" value={regForm.estimated_value} onChange={(e) => setRegForm(p => ({ ...p, estimated_value: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>Prazo Estimado</Label>
+                <Input type="date" value={regForm.estimated_completion} onChange={(e) => setRegForm(p => ({ ...p, estimated_completion: e.target.value }))} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Observações</Label>
+              <Textarea value={regForm.notes} onChange={(e) => setRegForm(p => ({ ...p, notes: e.target.value }))} rows={2} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setNewRegOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={regSaving || !regForm.type_id}>
+                {regSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Criar
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
