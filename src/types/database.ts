@@ -10,6 +10,16 @@ export type DocumentCategory = 'rg' | 'cpf' | 'matricula' | 'contract' | 'propos
 export type PartnerType = 'imobiliaria' | 'corretor_autonomo' | 'assessor_investimento' | 'arquiteto' | 'engenheiro' | 'contador' | 'outro';
 export type PartnerStatus = 'active' | 'inactive';
 
+export type DocumentTemplateType = 'proposta' | 'contrato' | 'relatorio';
+export type DocumentTemplateStatus = 'ativo' | 'rascunho';
+export type GeneratedDocumentStatus = 'rascunho' | 'enviado' | 'assinado' | 'arquivado';
+
+export type ServiceType = 'regularizacao' | 'venda_plataforma' | 'consultoria' | 'outro';
+export type ExpenseCategory = 'salario' | 'comissao_paga' | 'fornecedor' | 'escritorio' | 'marketing' | 'outro';
+export type CommissionStatus = 'pending' | 'paid';
+
+// --- Core entities ---
+
 export interface Property {
   id: string;
   title: string;
@@ -39,22 +49,38 @@ export interface Property {
   has_certidoes: boolean;
 }
 
-export interface CtaClick {
+export interface Client {
   id: string;
-  access_link_id: string | null;
-  property_id: string | null;
-  clicked_at: string;
-}
-
-export interface Notification {
-  id: string;
-  type: 'hot_lead' | 'new_view' | 'system';
-  title: string;
-  message: string | null;
-  is_read: boolean;
-  metadata: Record<string, unknown>;
+  name: string;
+  type: ClientType;
+  cpf_cnpj: string | null;
+  phone: string;
+  email: string | null;
+  origin: string | null;
+  partner_name: string | null;
+  partner_id: string | null;
+  status: ClientStatus;
+  notes: string | null;
   created_at: string;
 }
+
+export interface Partner {
+  id: string;
+  name: string;
+  type: PartnerType;
+  phone: string;
+  email: string | null;
+  affiliated_agency: string | null;
+  website: string | null;
+  creci: string | null;
+  commission_rate: number | null;
+  notes: string | null;
+  status: PartnerStatus;
+  parent_partner_id: string | null;
+  created_at: string;
+}
+
+// --- Tracking ---
 
 export interface AccessLink {
   id: string;
@@ -75,6 +101,54 @@ export interface PageView {
   time_spent_seconds: number;
   viewed_at: string;
 }
+
+export interface CtaClick {
+  id: string;
+  access_link_id: string | null;
+  property_id: string | null;
+  clicked_at: string;
+}
+
+export interface Notification {
+  id: string;
+  type: 'hot_lead' | 'new_view' | 'system';
+  title: string;
+  message: string | null;
+  is_read: boolean;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+// --- Documents ---
+
+export interface ClientDocument {
+  id: string;
+  client_id: string;
+  file_name: string;
+  file_url: string;
+  category: DocumentCategory;
+  uploaded_at: string;
+}
+
+export interface ClientInteraction {
+  id: string;
+  client_id: string;
+  type: InteractionType;
+  note: string;
+  interaction_date: string;
+  created_at: string;
+}
+
+export interface PartnerInteraction {
+  id: string;
+  partner_id: string;
+  type: InteractionType;
+  note: string;
+  interaction_date: string;
+  created_at: string;
+}
+
+// --- Settings & Submissions ---
 
 export interface Setting {
   id: string;
@@ -106,67 +180,7 @@ export interface PropertySubmission {
   partner_id: string | null;
 }
 
-export interface Client {
-  id: string;
-  name: string;
-  type: ClientType;
-  cpf_cnpj: string | null;
-  phone: string;
-  email: string | null;
-  origin: string | null;
-  partner_name: string | null;
-  partner_id: string | null;
-  status: ClientStatus;
-  notes: string | null;
-  created_at: string;
-}
-
-export interface ClientDocument {
-  id: string;
-  client_id: string;
-  file_name: string;
-  file_url: string;
-  category: DocumentCategory;
-  uploaded_at: string;
-}
-
-export interface ClientInteraction {
-  id: string;
-  client_id: string;
-  type: InteractionType;
-  note: string;
-  interaction_date: string;
-  created_at: string;
-}
-
-export interface Partner {
-  id: string;
-  name: string;
-  type: PartnerType;
-  phone: string;
-  email: string | null;
-  affiliated_agency: string | null;
-  website: string | null;
-  creci: string | null;
-  commission_rate: number | null;
-  notes: string | null;
-  status: PartnerStatus;
-  parent_partner_id: string | null;
-  created_at: string;
-}
-
-export interface PartnerInteraction {
-  id: string;
-  partner_id: string;
-  type: InteractionType;
-  note: string;
-  interaction_date: string;
-  created_at: string;
-}
-
-export type ServiceType = 'regularizacao' | 'venda_plataforma' | 'consultoria' | 'outro';
-export type ExpenseCategory = 'salario' | 'comissao_paga' | 'fornecedor' | 'escritorio' | 'marketing' | 'outro';
-export type CommissionStatus = 'pending' | 'paid';
+// --- Finance ---
 
 export interface Revenue {
   id: string;
@@ -199,5 +213,30 @@ export interface Expense {
   expense_date: string;
   is_recurring: boolean;
   related_commission_id: string | null;
+  created_at: string;
+}
+
+// --- Document Templates & Generated Documents ---
+
+export interface DocumentTemplate {
+  id: string;
+  name: string;
+  type: DocumentTemplateType;
+  content: string;
+  variables: Array<{ name: string; required: boolean; type?: string }>;
+  status: DocumentTemplateStatus;
+  created_at: string;
+}
+
+export interface GeneratedDocument {
+  id: string;
+  template_id: string | null;
+  client_id: string | null;
+  type: DocumentTemplateType;
+  title: string;
+  variables_data: Record<string, string>;
+  file_url: string | null;
+  status: GeneratedDocumentStatus;
+  process_id: string | null;
   created_at: string;
 }
