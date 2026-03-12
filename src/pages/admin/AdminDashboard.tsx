@@ -13,7 +13,8 @@ import {
   Plus,
   TrendingUp,
   Inbox,
-  Users
+  Users,
+  ClipboardList
 } from 'lucide-react';
 
 interface DashboardStats {
