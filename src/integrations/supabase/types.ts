@@ -239,6 +239,89 @@ export type Database = {
           },
         ]
       }
+      communication_recipients: {
+        Row: {
+          communication_id: string
+          contact_id: string
+          contact_name: string
+          contact_phone: string
+          contact_type: Database["public"]["Enums"]["communication_contact_type"]
+          id: string
+          sent_at: string | null
+        }
+        Insert: {
+          communication_id: string
+          contact_id: string
+          contact_name: string
+          contact_phone: string
+          contact_type: Database["public"]["Enums"]["communication_contact_type"]
+          id?: string
+          sent_at?: string | null
+        }
+        Update: {
+          communication_id?: string
+          contact_id?: string
+          contact_name?: string
+          contact_phone?: string
+          contact_type?: Database["public"]["Enums"]["communication_contact_type"]
+          id?: string
+          sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_recipients_communication_id_fkey"
+            columns: ["communication_id"]
+            isOneToOne: false
+            referencedRelation: "communications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      communications: {
+        Row: {
+          audience_filter: string | null
+          audience_type: Database["public"]["Enums"]["communication_audience"]
+          briefing_points: string | null
+          briefing_topic: string | null
+          created_at: string
+          final_content: string | null
+          generated_content: string | null
+          id: string
+          status: Database["public"]["Enums"]["communication_status"]
+          title: string
+          tone: Database["public"]["Enums"]["communication_tone"]
+          type: Database["public"]["Enums"]["communication_type"]
+        }
+        Insert: {
+          audience_filter?: string | null
+          audience_type?: Database["public"]["Enums"]["communication_audience"]
+          briefing_points?: string | null
+          briefing_topic?: string | null
+          created_at?: string
+          final_content?: string | null
+          generated_content?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["communication_status"]
+          title: string
+          tone?: Database["public"]["Enums"]["communication_tone"]
+          type: Database["public"]["Enums"]["communication_type"]
+        }
+        Update: {
+          audience_filter?: string | null
+          audience_type?: Database["public"]["Enums"]["communication_audience"]
+          briefing_points?: string | null
+          briefing_topic?: string | null
+          created_at?: string
+          final_content?: string | null
+          generated_content?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["communication_status"]
+          title?: string
+          tone?: Database["public"]["Enums"]["communication_tone"]
+          type?: Database["public"]["Enums"]["communication_type"]
+        }
+        Relationships: []
+      }
       cta_clicks: {
         Row: {
           access_link_id: string | null
@@ -1059,6 +1142,15 @@ export type Database = {
       client_status: "prospect" | "active" | "completed"
       client_type: "investor" | "incorporator" | "individual"
       commission_status: "pending" | "paid"
+      communication_audience:
+        | "all_partners"
+        | "partner_type"
+        | "all_clients"
+        | "manual"
+      communication_contact_type: "partner" | "client"
+      communication_status: "rascunho" | "pronta" | "enviada"
+      communication_tone: "informativo" | "comercial" | "relacionamento"
+      communication_type: "newsletter" | "aviso" | "oferta" | "personalizada"
       document_template_status: "ativo" | "rascunho"
       document_template_type: "proposta" | "contrato" | "relatorio"
       expense_category:
@@ -1233,6 +1325,16 @@ export const Constants = {
       client_status: ["prospect", "active", "completed"],
       client_type: ["investor", "incorporator", "individual"],
       commission_status: ["pending", "paid"],
+      communication_audience: [
+        "all_partners",
+        "partner_type",
+        "all_clients",
+        "manual",
+      ],
+      communication_contact_type: ["partner", "client"],
+      communication_status: ["rascunho", "pronta", "enviada"],
+      communication_tone: ["informativo", "comercial", "relacionamento"],
+      communication_type: ["newsletter", "aviso", "oferta", "personalizada"],
       document_template_status: ["ativo", "rascunho"],
       document_template_type: ["proposta", "contrato", "relatorio"],
       expense_category: [
