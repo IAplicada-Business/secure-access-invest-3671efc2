@@ -140,6 +140,12 @@ export default function ClientDetails() {
     setRegTypes(data || []);
   }
 
+  async function loadGenDocs() {
+    if (!id) return;
+    const { data } = await supabase.from('generated_documents').select('*').eq('client_id', id).order('created_at', { ascending: false });
+    setGenDocs(data || []);
+  }
+
   useEffect(() => {
     loadClient();
     loadDocs();
@@ -147,6 +153,7 @@ export default function ClientDetails() {
     loadPartners();
     loadRegularizations();
     loadRegTypes();
+    loadGenDocs();
   }, [id]);
 
   useEffect(() => {
