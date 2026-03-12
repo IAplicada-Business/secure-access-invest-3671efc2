@@ -630,6 +630,208 @@ export type Database = {
           },
         ]
       }
+      regularization_checklist_items: {
+        Row: {
+          description: string
+          id: string
+          notes: string | null
+          process_id: string
+          received_at: string | null
+          status: Database["public"]["Enums"]["checklist_item_status"]
+        }
+        Insert: {
+          description: string
+          id?: string
+          notes?: string | null
+          process_id: string
+          received_at?: string | null
+          status?: Database["public"]["Enums"]["checklist_item_status"]
+        }
+        Update: {
+          description?: string
+          id?: string
+          notes?: string | null
+          process_id?: string
+          received_at?: string | null
+          status?: Database["public"]["Enums"]["checklist_item_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "regularization_checklist_items_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "regularization_processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      regularization_documents: {
+        Row: {
+          category: string
+          file_name: string
+          file_url: string
+          id: string
+          process_id: string
+          uploaded_at: string
+        }
+        Insert: {
+          category?: string
+          file_name: string
+          file_url: string
+          id?: string
+          process_id: string
+          uploaded_at?: string
+        }
+        Update: {
+          category?: string
+          file_name?: string
+          file_url?: string
+          id?: string
+          process_id?: string
+          uploaded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "regularization_documents_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "regularization_processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      regularization_interactions: {
+        Row: {
+          created_at: string
+          id: string
+          interaction_date: string
+          is_automatic: boolean
+          note: string
+          process_id: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          interaction_date?: string
+          is_automatic?: boolean
+          note: string
+          process_id: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          interaction_date?: string
+          is_automatic?: boolean
+          note?: string
+          process_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "regularization_interactions_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "regularization_processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      regularization_processes: {
+        Row: {
+          address: string | null
+          client_id: string | null
+          created_at: string
+          estimated_completion: string | null
+          estimated_value: number | null
+          id: string
+          notes: string | null
+          property_submission_id: string | null
+          property_type: string | null
+          status: Database["public"]["Enums"]["regularization_status"]
+          title: string
+          type_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          client_id?: string | null
+          created_at?: string
+          estimated_completion?: string | null
+          estimated_value?: number | null
+          id?: string
+          notes?: string | null
+          property_submission_id?: string | null
+          property_type?: string | null
+          status?: Database["public"]["Enums"]["regularization_status"]
+          title: string
+          type_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          client_id?: string | null
+          created_at?: string
+          estimated_completion?: string | null
+          estimated_value?: number | null
+          id?: string
+          notes?: string | null
+          property_submission_id?: string | null
+          property_type?: string | null
+          status?: Database["public"]["Enums"]["regularization_status"]
+          title?: string
+          type_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "regularization_processes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "regularization_processes_property_submission_id_fkey"
+            columns: ["property_submission_id"]
+            isOneToOne: false
+            referencedRelation: "property_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "regularization_processes_type_id_fkey"
+            columns: ["type_id"]
+            isOneToOne: false
+            referencedRelation: "regularization_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      regularization_types: {
+        Row: {
+          checklist_template: Json | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          checklist_template?: Json | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          checklist_template?: Json | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
       revenues: {
         Row: {
           amount: number
@@ -762,6 +964,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      checklist_item_status: "pendente" | "recebido" | "nao_se_aplica"
       client_status: "prospect" | "active" | "completed"
       client_type: "investor" | "incorporator" | "individual"
       commission_status: "pending" | "paid"
@@ -788,6 +991,13 @@ export type Database = {
         | "archived"
         | "pending_review"
       property_type: "casa" | "terreno" | "apartamento" | "comercial" | "outro"
+      regularization_status:
+        | "nova"
+        | "em_analise"
+        | "proposta_enviada"
+        | "em_execucao"
+        | "concluida"
+        | "arquivada"
       service_type:
         | "regularizacao"
         | "venda_plataforma"
@@ -921,6 +1131,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      checklist_item_status: ["pendente", "recebido", "nao_se_aplica"],
       client_status: ["prospect", "active", "completed"],
       client_type: ["investor", "incorporator", "individual"],
       commission_status: ["pending", "paid"],
@@ -950,6 +1161,14 @@ export const Constants = {
         "pending_review",
       ],
       property_type: ["casa", "terreno", "apartamento", "comercial", "outro"],
+      regularization_status: [
+        "nova",
+        "em_analise",
+        "proposta_enviada",
+        "em_execucao",
+        "concluida",
+        "arquivada",
+      ],
       service_type: [
         "regularizacao",
         "venda_plataforma",
