@@ -90,8 +90,17 @@ const matriculaLabels: Record<string, string> = {
 
 export default function AdminSubmissions() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [selectedSubmission, setSelectedSubmission] = useState<SubmissionWithProperty | null>(null);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
+
+  // Regularization creation
+  const [regDialogOpen, setRegDialogOpen] = useState(false);
+  const [regSubmission, setRegSubmission] = useState<SubmissionWithProperty | null>(null);
+  const [regTypes, setRegTypes] = useState<any[]>([]);
+  const [regClients, setRegClients] = useState<any[]>([]);
+  const [regForm, setRegForm] = useState({ client_id: '', type_id: '', title: '' });
+  const [regSaving, setRegSaving] = useState(false);
   const { data: submissions = [], isLoading } = useQuery({
     queryKey: ['admin-submissions'],
     queryFn: async () => {
