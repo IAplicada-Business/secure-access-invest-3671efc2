@@ -51,6 +51,23 @@ export default function ClientDetails() {
   // Partners for edit
   const [partners, setPartners] = useState<Partner[]>([]);
 
+  // Regularizations
+  const [regProcesses, setRegProcesses] = useState<any[]>([]);
+  const [regTypes, setRegTypes] = useState<any[]>([]);
+  const [newRegOpen, setNewRegOpen] = useState(false);
+  const [regForm, setRegForm] = useState({ title: '', type_id: '', address: '', property_type: '', estimated_value: '', estimated_completion: '', notes: '' });
+  const [regSaving, setRegSaving] = useState(false);
+
+  const REG_STATUS_LABELS: Record<string, string> = {
+    nova: 'Nova', em_analise: 'Em Análise', proposta_enviada: 'Proposta Enviada',
+    em_execucao: 'Em Execução', concluida: 'Concluída', arquivada: 'Arquivada',
+  };
+  const REG_STATUS_COLORS: Record<string, string> = {
+    nova: 'bg-blue-100 text-blue-800', em_analise: 'bg-amber-100 text-amber-800',
+    proposta_enviada: 'bg-purple-100 text-purple-800', em_execucao: 'bg-primary/10 text-primary',
+    concluida: 'bg-green-100 text-green-800', arquivada: 'bg-muted text-muted-foreground',
+  };
+
   async function loadClient() {
     if (!id) return;
     const { data, error } = await supabase.from('clients').select('*').eq('id', id).single();
