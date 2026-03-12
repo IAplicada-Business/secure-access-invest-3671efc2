@@ -248,7 +248,7 @@ export default function AdminClients() {
               </div>
               <div className="space-y-2">
                 <Label>Indicado por (parceiro)</Label>
-                <Select value={form.partner_id} onValueChange={(v) => setForm(p => ({ ...p, partner_id: v }))}>
+                <Select value={form.partner_id || 'none'} onValueChange={(v) => setForm(p => ({ ...p, partner_id: v === 'none' ? '' : v }))}>
                   <SelectTrigger><SelectValue placeholder="Selecione um parceiro..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Nenhum / Texto livre</SelectItem>
