@@ -47,23 +47,23 @@ interface Client {
   cpf_cnpj: string | null;
 }
 
-export default function DocumentWizard({ type, onComplete, onCancel, preselectedClientId, preselectedProcessId, preselectedScope }: Props) {
-  const [step, setStep] = useState(1);
+export default function DocumentWizard({ type, onComplete, onCancel, preselectedClientId, preselectedProcessId, preselectedScope, editingDoc }: Props) {
+  const [step, setStep] = useState(editingDoc ? 2 : 1);
 
   // Step 1
   const [clients, setClients] = useState<Client[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [selectedClientId, setSelectedClientId] = useState(preselectedClientId || '');
-  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [selectedClientId, setSelectedClientId] = useState(editingDoc?.client_id || preselectedClientId || '');
+  const [selectedTemplateId, setSelectedTemplateId] = useState(editingDoc?.template_id || '');
   const [clientSearch, setClientSearch] = useState('');
 
   // Step 2
-  const [variablesData, setVariablesData] = useState<Record<string, string>>({});
+  const [variablesData, setVariablesData] = useState<Record<string, string>>(editingDoc?.variables_data || {});
 
   // Step 3/4
   const [previewContent, setPreviewContent] = useState('');
   const [generating, setGenerating] = useState(false);
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState(editingDoc?.title || '');
 
   useEffect(() => {
     loadData();
