@@ -854,13 +854,20 @@ export default function AdminCommunications() {
                     <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
-              ) : communications.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    Nenhuma comunicação criada ainda.
-                  </TableCell>
-                </TableRow>
-              ) : communications.map(comm => (
+              ) : (() => {
+                const filtered = communications.filter(c => {
+                  if (filterStatus !== 'all' && c.status !== filterStatus) return false;
+                  if (filterSearch && !c.title.toLowerCase().includes(filterSearch.toLowerCase())) return false;
+                  return true;
+                });
+                if (filtered.length === 0) return (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      {communications.length === 0 ? 'Nenhuma comunicação criada ainda.' : 'Nenhuma comunicação encontrada com esses filtros.'}
+                    </TableCell>
+                  </TableRow>
+                );
+                return filtered.map(comm => (
                 <TableRow key={comm.id} className="cursor-pointer" onClick={() => openView(comm)}>
                   <TableCell className="font-medium">{comm.title}</TableCell>
                   <TableCell><Badge variant="secondary">{typeLabels[comm.type]}</Badge></TableCell>
