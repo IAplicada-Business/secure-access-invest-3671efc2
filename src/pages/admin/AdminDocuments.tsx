@@ -16,6 +16,7 @@ import {
 import { Loader2, Plus, FileText, Download, Archive, Search, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import DocumentWizard from '@/components/documents/DocumentWizard';
+import SignContractDialog from '@/components/documents/SignContractDialog';
 
 interface GeneratedDoc {
   id: string;
@@ -114,6 +115,7 @@ export default function AdminDocuments() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardType, setWizardType] = useState<'proposta' | 'contrato'>('proposta');
   const [previewDoc, setPreviewDoc] = useState<GeneratedDoc | null>(null);
+  const [signingDoc, setSigningDoc] = useState<GeneratedDoc | null>(null);
 
   async function loadDocs() {
     const { data: docsData } = await supabase
@@ -142,6 +144,11 @@ export default function AdminDocuments() {
   useEffect(() => { loadDocs(); }, []);
 
   async function handleStatusChange(docId: string, newStatus: 'rascunho' | 'enviado' | 'assinado' | 'arquivado') {
+    // Intercept "assinado" to show revenue dialog
+    if (newStatus === 'assinado') {
+      const doc = docs.find(d => d.id === docId);
+      if (doc) { setSigningDoc(doc); return; }
+    }
     const { error } = await supabase.from('generated_documents').update({ status: newStatus }).eq('id', docId);
     if (error) { toast.error('Erro ao atualizar'); return; }
     toast.success('Status atualizado');
@@ -300,6 +307,14 @@ export default function AdminDocuments() {
           {previewDoc && <PreviewContent doc={previewDoc} />}
         </DialogContent>
       </Dialog>
+
+      {/* Sign Contract Dialog */}
+      <SignContractDialog
+        doc={signingDoc}
+        open={!!signingDoc}
+        onOpenChange={(open) => { if (!open) setSigningDoc(null); }}
+        onComplete={() => { setSigningDoc(null); loadDocs(); }}
+      />
     </div>
   );
 }
