@@ -884,7 +884,8 @@ export default function AdminCommunications() {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+              ));
+              })()}
             </TableBody>
           </Table>
         </CardContent>
