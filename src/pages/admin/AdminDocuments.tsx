@@ -297,12 +297,20 @@ export default function AdminDocuments() {
       </Card>
 
       {/* Wizard Dialog */}
-      <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
+      <Dialog open={wizardOpen} onOpenChange={(open) => { setWizardOpen(open); if (!open) setEditingDoc(null); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DocumentWizard
-            type={wizardType}
-            onComplete={() => { setWizardOpen(false); loadDocs(); }}
-            onCancel={() => setWizardOpen(false)}
+            type={editingDoc?.type as 'proposta' | 'contrato' || wizardType}
+            onComplete={() => { setWizardOpen(false); setEditingDoc(null); loadDocs(); }}
+            onCancel={() => { setWizardOpen(false); setEditingDoc(null); }}
+            editingDoc={editingDoc ? {
+              id: editingDoc.id,
+              template_id: editingDoc.template_id,
+              client_id: editingDoc.client_id,
+              type: editingDoc.type,
+              title: editingDoc.title,
+              variables_data: editingDoc.variables_data,
+            } : undefined}
           />
         </DialogContent>
       </Dialog>
