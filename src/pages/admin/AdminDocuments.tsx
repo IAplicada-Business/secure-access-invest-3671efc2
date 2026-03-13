@@ -307,6 +307,14 @@ export default function AdminDocuments() {
           {previewDoc && <PreviewContent doc={previewDoc} />}
         </DialogContent>
       </Dialog>
+
+      {/* Sign Contract Dialog */}
+      <SignContractDialog
+        doc={signingDoc}
+        open={!!signingDoc}
+        onOpenChange={(open) => { if (!open) setSigningDoc(null); }}
+        onComplete={() => { setSigningDoc(null); loadDocs(); }}
+      />
     </div>
   );
 }
