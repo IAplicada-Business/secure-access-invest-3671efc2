@@ -13,7 +13,7 @@ import {
 import {
   Dialog, DialogContent,
 } from '@/components/ui/dialog';
-import { Loader2, Plus, FileText, Download, Archive, Search, Eye } from 'lucide-react';
+import { Loader2, Plus, FileText, Download, Archive, Search, Eye, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import DocumentWizard from '@/components/documents/DocumentWizard';
 import SignContractDialog from '@/components/documents/SignContractDialog';
@@ -116,6 +116,7 @@ export default function AdminDocuments() {
   const [wizardType, setWizardType] = useState<'proposta' | 'contrato'>('proposta');
   const [previewDoc, setPreviewDoc] = useState<GeneratedDoc | null>(null);
   const [signingDoc, setSigningDoc] = useState<GeneratedDoc | null>(null);
+  const [editingDoc, setEditingDoc] = useState<GeneratedDoc | null>(null);
 
   async function loadDocs() {
     const { data: docsData } = await supabase
@@ -271,6 +272,11 @@ export default function AdminDocuments() {
                           <Eye className="h-4 w-4" />
                         </Button>
                       )}
+                      {(doc.status === 'rascunho' || doc.status === 'enviado') && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingDoc(doc); setWizardOpen(true); }}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
                       {doc.file_url && (
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownload(doc)}>
                           <Download className="h-4 w-4" />
@@ -291,12 +297,20 @@ export default function AdminDocuments() {
       </Card>
 
       {/* Wizard Dialog */}
-      <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
+      <Dialog open={wizardOpen} onOpenChange={(open) => { setWizardOpen(open); if (!open) setEditingDoc(null); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DocumentWizard
-            type={wizardType}
-            onComplete={() => { setWizardOpen(false); loadDocs(); }}
-            onCancel={() => setWizardOpen(false)}
+            type={editingDoc?.type as 'proposta' | 'contrato' || wizardType}
+            onComplete={() => { setWizardOpen(false); setEditingDoc(null); loadDocs(); }}
+            onCancel={() => { setWizardOpen(false); setEditingDoc(null); }}
+            editingDoc={editingDoc ? {
+              id: editingDoc.id,
+              template_id: editingDoc.template_id,
+              client_id: editingDoc.client_id,
+              type: editingDoc.type,
+              title: editingDoc.title,
+              variables_data: editingDoc.variables_data,
+            } : undefined}
           />
         </DialogContent>
       </Dialog>

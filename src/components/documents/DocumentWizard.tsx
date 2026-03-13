@@ -12,6 +12,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, ArrowLeft, ArrowRight, FileText, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
+interface EditingDoc {
+  id: string;
+  template_id: string | null;
+  client_id: string | null;
+  type: string;
+  title: string;
+  variables_data: Record<string, string>;
+}
+
 interface Props {
   type: 'proposta' | 'contrato';
   onComplete: () => void;
@@ -19,6 +28,7 @@ interface Props {
   preselectedClientId?: string;
   preselectedProcessId?: string;
   preselectedScope?: string;
+  editingDoc?: EditingDoc;
 }
 
 interface Template {
@@ -37,23 +47,23 @@ interface Client {
   cpf_cnpj: string | null;
 }
 
-export default function DocumentWizard({ type, onComplete, onCancel, preselectedClientId, preselectedProcessId, preselectedScope }: Props) {
-  const [step, setStep] = useState(1);
+export default function DocumentWizard({ type, onComplete, onCancel, preselectedClientId, preselectedProcessId, preselectedScope, editingDoc }: Props) {
+  const [step, setStep] = useState(editingDoc ? 2 : 1);
 
   // Step 1
   const [clients, setClients] = useState<Client[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [selectedClientId, setSelectedClientId] = useState(preselectedClientId || '');
-  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [selectedClientId, setSelectedClientId] = useState(editingDoc?.client_id || preselectedClientId || '');
+  const [selectedTemplateId, setSelectedTemplateId] = useState(editingDoc?.template_id || '');
   const [clientSearch, setClientSearch] = useState('');
 
   // Step 2
-  const [variablesData, setVariablesData] = useState<Record<string, string>>({});
+  const [variablesData, setVariablesData] = useState<Record<string, string>>(editingDoc?.variables_data || {});
 
   // Step 3/4
   const [previewContent, setPreviewContent] = useState('');
   const [generating, setGenerating] = useState(false);
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState(editingDoc?.title || '');
 
   useEffect(() => {
     loadData();
@@ -146,21 +156,34 @@ export default function DocumentWizard({ type, onComplete, onCancel, preselected
 
       if (error) throw error;
 
-      // Save generated document record
-      const { error: insertError } = await supabase.from('generated_documents').insert({
-        template_id: selectedTemplateId,
-        client_id: selectedClientId,
-        type,
-        title,
-        variables_data: variablesData,
-        file_url: data.file_url,
-        status: 'rascunho',
-        process_id: preselectedProcessId || null,
-      });
+      if (editingDoc) {
+        // Update existing document
+        const { error: updateError } = await supabase.from('generated_documents').update({
+          template_id: selectedTemplateId,
+          client_id: selectedClientId,
+          title,
+          variables_data: variablesData,
+          file_url: data.file_url,
+        }).eq('id', editingDoc.id);
 
-      if (insertError) throw insertError;
+        if (updateError) throw updateError;
+      } else {
+        // Save new generated document record
+        const { error: insertError } = await supabase.from('generated_documents').insert({
+          template_id: selectedTemplateId,
+          client_id: selectedClientId,
+          type,
+          title,
+          variables_data: variablesData,
+          file_url: data.file_url,
+          status: 'rascunho',
+          process_id: preselectedProcessId || null,
+        });
 
-      toast.success('Documento gerado com sucesso!');
+        if (insertError) throw insertError;
+      }
+
+      toast.success(editingDoc ? 'Documento atualizado com sucesso!' : 'Documento gerado com sucesso!');
       setStep(4);
     } catch (err: any) {
       console.error('Error generating PDF:', err);
