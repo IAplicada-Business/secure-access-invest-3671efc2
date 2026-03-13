@@ -179,6 +179,7 @@ export default function AdminCommunications() {
   // Load contacts for step 4
   const loadContacts = useCallback(async () => {
     const allContacts: Contact[] = [];
+    const excluded: { name: string; type: string }[] = [];
 
     // Partners
     const { data: partners } = await supabase
@@ -202,6 +203,10 @@ export default function AdminCommunications() {
 
       partners.forEach(p => {
         if (wizardAudience === 'partner_type' && wizardPartnerType && p.type !== wizardPartnerType) return;
+        if (!p.phone || p.phone.trim() === '') {
+          excluded.push({ name: p.name, type: 'Parceiro' });
+          return;
+        }
         allContacts.push({
           id: p.id,
           name: p.name,
@@ -234,6 +239,10 @@ export default function AdminCommunications() {
         });
 
         clients.forEach(c => {
+          if (!c.phone || c.phone.trim() === '') {
+            excluded.push({ name: c.name, type: 'Cliente' });
+            return;
+          }
           allContacts.push({
             id: c.id,
             name: c.name,
@@ -247,6 +256,8 @@ export default function AdminCommunications() {
     }
 
     setContacts(allContacts);
+    setContactsWithoutPhone(excluded);
+    setShowExcluded(false);
 
     // Auto-select all for non-manual audiences
     if (wizardAudience !== 'manual') {
