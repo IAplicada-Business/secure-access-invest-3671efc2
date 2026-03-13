@@ -156,6 +156,14 @@ export default function AdminCommunications() {
   const [viewRecipients, setViewRecipients] = useState<Recipient[]>([]);
   const [viewOpen, setViewOpen] = useState(false);
 
+  // Filters
+  const [filterSearch, setFilterSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  // Contacts without phone
+  const [contactsWithoutPhone, setContactsWithoutPhone] = useState<{ name: string; type: string }[]>([]);
+  const [showExcluded, setShowExcluded] = useState(false);
+
   const fetchCommunications = useCallback(async () => {
     const { data, error } = await supabase
       .from('communications')
