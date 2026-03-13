@@ -12,6 +12,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, ArrowLeft, ArrowRight, FileText, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
+interface EditingDoc {
+  id: string;
+  template_id: string | null;
+  client_id: string | null;
+  type: string;
+  title: string;
+  variables_data: Record<string, string>;
+}
+
 interface Props {
   type: 'proposta' | 'contrato';
   onComplete: () => void;
@@ -19,6 +28,7 @@ interface Props {
   preselectedClientId?: string;
   preselectedProcessId?: string;
   preselectedScope?: string;
+  editingDoc?: EditingDoc;
 }
 
 interface Template {
