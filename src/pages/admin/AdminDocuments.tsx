@@ -16,6 +16,7 @@ import {
 import { Loader2, Plus, FileText, Download, Archive, Search, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import DocumentWizard from '@/components/documents/DocumentWizard';
+import SignContractDialog from '@/components/documents/SignContractDialog';
 
 interface GeneratedDoc {
   id: string;
