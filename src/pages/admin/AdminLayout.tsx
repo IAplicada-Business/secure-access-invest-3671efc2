@@ -180,17 +180,30 @@ export default function AdminLayout() {
                   Financeiro
                 </Link>
 
-                {/* Documentos */}
-                <Link to="/admin/documentos" className={navLinkClasses(isRouteActive('/admin/documentos'))}>
-                  <FileText className="h-4 w-4" />
-                  Documentos
-                </Link>
-
-                {/* Comunicações */}
-                <Link to="/admin/comunicacoes" className={navLinkClasses(isRouteActive('/admin/comunicacoes'))}>
-                  <MessageSquare className="h-4 w-4" />
-                  Comunicações
-                </Link>
+                {/* Comunicações dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className={cn(navLinkClasses(isGroupActive(['/admin/comunicacoes', '/admin/documentos'])), "gap-1.5")}>
+                      <MessageSquare className="h-4 w-4" />
+                      Comunicações
+                      <ChevronDown className="h-3 w-3 opacity-60" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/comunicacoes" className="flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4" />
+                        Comunicações
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/documentos" className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Documentos
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
                 {/* CRM dropdown */}
                 <DropdownMenu>
