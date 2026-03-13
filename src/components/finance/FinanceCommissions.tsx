@@ -17,14 +17,22 @@ import {
 import { Search, CheckCircle, DollarSign, Clock } from 'lucide-react';
 import { formatCurrency, formatPercentage } from '@/lib/formatCurrency';
 import { toast } from 'sonner';
+import { PeriodFilter, filterByPeriod, type PeriodPreset } from './PeriodFilter';
 
 export function FinanceCommissions() {
   const [commissions, setCommissions] = useState<any[]>([]);
   const [partners, setPartners] = useState<Map<string, string>>(new Map());
+  const [partnerList, setPartnerList] = useState<Array<{ id: string; name: string }>>([]);
   const [clients, setClients] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  // Filters
+  const [period, setPeriod] = useState<PeriodPreset>('all');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+  const [partnerFilter, setPartnerFilter] = useState('all');
 
   // Pay dialog
   const [payDialogOpen, setPayDialogOpen] = useState(false);
@@ -41,6 +49,7 @@ export function FinanceCommissions() {
       supabase.from('clients').select('id, name'),
     ]);
     setCommissions(commData || []);
+    setPartnerList(pData || []);
     setPartners(new Map(pData?.map(p => [p.id, p.name]) || []));
     setClients(new Map(cData?.map(c => [c.id, c.name]) || []));
     setLoading(false);
@@ -50,7 +59,6 @@ export function FinanceCommissions() {
     if (!selectedCommission) return;
     setPaying(true);
 
-    // Update commission status
     const { error: commError } = await supabase
       .from('commissions')
       .update({ status: 'paid', paid_at: paidAt })
@@ -58,7 +66,6 @@ export function FinanceCommissions() {
 
     if (commError) { toast.error('Erro ao atualizar comissão'); setPaying(false); return; }
 
-    // Auto-create expense
     const partnerName = partners.get(selectedCommission.partner_id) || 'Parceiro';
     const { error: expError } = await supabase.from('expenses').insert({
       category: 'comissao_paga',
@@ -88,10 +95,16 @@ export function FinanceCommissions() {
 
   const filtered = commissions.filter(c => {
     if (statusFilter !== 'all' && c.status !== statusFilter) return false;
-    if (!search) return true;
-    const pName = partners.get(c.partner_id) || '';
-    const cName = clients.get(c.client_id) || '';
-    return pName.toLowerCase().includes(search.toLowerCase()) || cName.toLowerCase().includes(search.toLowerCase());
+    if (partnerFilter !== 'all' && c.partner_id !== partnerFilter) return false;
+    const dateField = c.status === 'paid' && c.paid_at ? c.paid_at : c.created_at;
+    if (!filterByPeriod(dateField, period, customStart, customEnd)) return false;
+    if (search) {
+      const pName = partners.get(c.partner_id) || '';
+      const cName = clients.get(c.client_id) || '';
+      const q = search.toLowerCase();
+      if (!pName.toLowerCase().includes(q) && !cName.toLowerCase().includes(q)) return false;
+    }
+    return true;
   });
 
   return (
@@ -122,17 +135,27 @@ export function FinanceCommissions() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input placeholder="Buscar por parceiro ou cliente..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
+        <PeriodFilter period={period} onPeriodChange={setPeriod} customStart={customStart} customEnd={customEnd} onCustomStartChange={setCustomStart} onCustomEndChange={setCustomEnd} />
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="pending">Pendentes</SelectItem>
             <SelectItem value="paid">Pagas</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={partnerFilter} onValueChange={setPartnerFilter}>
+          <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos parceiros</SelectItem>
+            {partnerList.map(p => (
+              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

@@ -18,7 +18,8 @@ import {
 import { Plus, Search } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { toast } from 'sonner';
-import type { ServiceType } from '@/types/database';
+import { PeriodFilter, filterByPeriod, type PeriodPreset } from './PeriodFilter';
+import type { ServiceType, CommissionStatus } from '@/types/database';
 
 const SERVICE_LABELS: Record<ServiceType, string> = {
   regularizacao: 'Regularização',
@@ -45,9 +46,16 @@ export function FinanceRevenues() {
   const [revenues, setRevenues] = useState<any[]>([]);
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [partners, setPartners] = useState<PartnerOption[]>([]);
+  const [commissionMap, setCommissionMap] = useState<Map<string, CommissionStatus>>(new Map());
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [search, setSearch] = useState('');
+
+  // Filters
+  const [period, setPeriod] = useState<PeriodPreset>('all');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+  const [serviceTypeFilter, setServiceTypeFilter] = useState('all');
 
   // Form state
   const [clientId, setClientId] = useState('');
@@ -63,19 +71,19 @@ export function FinanceRevenues() {
   const commissionRate = selectedPartner?.commission_rate || 0;
   const commissionAmount = commissionRate > 0 && amount ? (Number(amount) * commissionRate / 100) : 0;
 
-  useEffect(() => {
-    loadAll();
-  }, []);
+  useEffect(() => { loadAll(); }, []);
 
   async function loadAll() {
-    const [{ data: revData }, { data: cData }, { data: pData }] = await Promise.all([
+    const [{ data: revData }, { data: cData }, { data: pData }, { data: commData }] = await Promise.all([
       supabase.from('revenues').select('*').order('received_at', { ascending: false }),
       supabase.from('clients').select('id, name, partner_id, partner_name, type'),
       supabase.from('partners').select('id, name, commission_rate'),
+      supabase.from('commissions').select('revenue_id, status'),
     ]);
     setRevenues(revData || []);
     setClients(cData || []);
     setPartners(pData || []);
+    setCommissionMap(new Map((commData || []).map(c => [c.revenue_id, c.status as CommissionStatus])));
     setLoading(false);
   }
 
@@ -96,7 +104,6 @@ export function FinanceRevenues() {
 
     if (error) { toast.error('Erro ao salvar receita'); setSaving(false); return; }
 
-    // Create commission if partner with rate
     if (partnerId && commissionRate > 0 && rev) {
       await supabase.from('commissions').insert({
         partner_id: partnerId,
@@ -127,20 +134,36 @@ export function FinanceRevenues() {
   const partnerMap = new Map(partners.map(p => [p.id, p.name]));
 
   const filtered = revenues.filter(r => {
-    if (!search) return true;
-    const cName = clientMap.get(r.client_id) || '';
-    const pName = partnerMap.get(r.partner_id) || '';
-    return cName.toLowerCase().includes(search.toLowerCase()) ||
-      pName.toLowerCase().includes(search.toLowerCase()) ||
-      SERVICE_LABELS[r.service_type as ServiceType]?.toLowerCase().includes(search.toLowerCase());
+    if (!filterByPeriod(r.received_at, period, customStart, customEnd)) return false;
+    if (serviceTypeFilter !== 'all' && r.service_type !== serviceTypeFilter) return false;
+    if (search) {
+      const cName = clientMap.get(r.client_id) || '';
+      const pName = partnerMap.get(r.partner_id) || '';
+      const q = search.toLowerCase();
+      if (!cName.toLowerCase().includes(q) && !pName.toLowerCase().includes(q) &&
+          !(SERVICE_LABELS[r.service_type as ServiceType]?.toLowerCase().includes(q))) return false;
+    }
+    return true;
   });
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Buscar receitas..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input placeholder="Buscar receitas..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+          </div>
+          <PeriodFilter period={period} onPeriodChange={setPeriod} customStart={customStart} customEnd={customEnd} onCustomStartChange={setCustomStart} onCustomEndChange={setCustomEnd} />
+          <Select value={serviceTypeFilter} onValueChange={setServiceTypeFilter}>
+            <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os tipos</SelectItem>
+              {Object.entries(SERVICE_LABELS).map(([k, v]) => (
+                <SelectItem key={k} value={k}>{v}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <Button onClick={() => setDialogOpen(true)}><Plus className="mr-2 h-4 w-4" />Nova Receita</Button>
       </div>
@@ -154,25 +177,38 @@ export function FinanceRevenues() {
                 <TableHead>Cliente</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Valor</TableHead>
+                <TableHead>Comissão</TableHead>
                 <TableHead className="hidden md:table-cell">Parceiro</TableHead>
                 <TableHead className="hidden lg:table-cell">Observações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8">Carregando...</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhuma receita registrada</TableCell></TableRow>
-              ) : filtered.map(r => (
-                <TableRow key={r.id}>
-                  <TableCell>{new Date(r.received_at).toLocaleDateString('pt-BR')}</TableCell>
-                  <TableCell className="font-medium">{clientMap.get(r.client_id) || '-'}</TableCell>
-                  <TableCell><Badge variant="outline">{SERVICE_LABELS[r.service_type as ServiceType] || r.service_type}</Badge></TableCell>
-                  <TableCell className="font-medium">{formatCurrency(Number(r.amount))}</TableCell>
-                  <TableCell className="hidden md:table-cell text-muted-foreground">{partnerMap.get(r.partner_id) || '-'}</TableCell>
-                  <TableCell className="hidden lg:table-cell text-muted-foreground max-w-[200px] truncate">{r.notes || '-'}</TableCell>
-                </TableRow>
-              ))}
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma receita registrada</TableCell></TableRow>
+              ) : filtered.map(r => {
+                const commStatus = commissionMap.get(r.id);
+                return (
+                  <TableRow key={r.id}>
+                    <TableCell>{new Date(r.received_at).toLocaleDateString('pt-BR')}</TableCell>
+                    <TableCell className="font-medium">{clientMap.get(r.client_id) || '-'}</TableCell>
+                    <TableCell><Badge variant="outline">{SERVICE_LABELS[r.service_type as ServiceType] || r.service_type}</Badge></TableCell>
+                    <TableCell className="font-medium">{formatCurrency(Number(r.amount))}</TableCell>
+                    <TableCell>
+                      {commStatus === 'pending' ? (
+                        <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">Pendente</Badge>
+                      ) : commStatus === 'paid' ? (
+                        <Badge className="bg-primary/10 text-primary">Paga</Badge>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">{partnerMap.get(r.partner_id) || '-'}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-muted-foreground max-w-[200px] truncate">{r.notes || '-'}</TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
@@ -185,9 +221,10 @@ export function FinanceRevenues() {
           <div className="space-y-4">
             <div>
               <Label>Cliente</Label>
-              <Select value={clientId} onValueChange={setClientId}>
+              <Select value={clientId || 'none'} onValueChange={v => setClientId(v === 'none' ? '' : v)}>
                 <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">Sem cliente</SelectItem>
                   {clients.map(c => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
@@ -218,7 +255,6 @@ export function FinanceRevenues() {
               <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Detalhes da receita..." />
             </div>
 
-            {/* Commission preview */}
             {selectedPartner && commissionRate > 0 && Number(amount) > 0 && (
               <Card className="border-primary/30 bg-accent">
                 <CardContent className="p-3">
