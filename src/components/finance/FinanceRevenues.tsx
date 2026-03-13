@@ -197,7 +197,7 @@ export function FinanceRevenues() {
                     <TableCell className="font-medium">{formatCurrency(Number(r.amount))}</TableCell>
                     <TableCell>
                       {commStatus === 'pending' ? (
-                        <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">Pendente</Badge>
+                        <Badge variant="secondary" className="border-warning text-warning">Pendente</Badge>
                       ) : commStatus === 'paid' ? (
                         <Badge className="bg-primary/10 text-primary">Paga</Badge>
                       ) : (
