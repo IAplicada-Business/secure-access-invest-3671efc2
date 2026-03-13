@@ -13,7 +13,7 @@ import {
 import {
   Dialog, DialogContent,
 } from '@/components/ui/dialog';
-import { Loader2, Plus, FileText, Download, Archive, Search, Eye } from 'lucide-react';
+import { Loader2, Plus, FileText, Download, Archive, Search, Eye, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import DocumentWizard from '@/components/documents/DocumentWizard';
 import SignContractDialog from '@/components/documents/SignContractDialog';
