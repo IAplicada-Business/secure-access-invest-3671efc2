@@ -433,7 +433,38 @@ export default function AdminReports() {
                   setReportGenerating(true);
                   try {
                     const periodLabel = reportPeriod === 'month' ? 'Último mês' : reportPeriod === 'quarter' ? 'Último trimestre' : 'Todo o período';
-                    const content = `**RELATÓRIO DE PERFORMANCE DE PARCEIRO**
+
+                    // Build variables map
+                    const variablesData: Record<string, string> = {
+                      nome_parceiro: reportPartner.name,
+                      tipo_parceiro: PARTNER_TYPE_LABELS[reportPartner.type],
+                      periodo: periodLabel,
+                      data_geracao: new Date().toLocaleDateString('pt-BR'),
+                      clientes_gerados: String(reportPartner.clients_count),
+                      receita_total: formatCurrency(reportPartner.total_generated),
+                      comissao_paga: formatCurrency(reportPartner.commission_paid),
+                      comissao_pendente: formatCurrency(reportPartner.commission_pending),
+                    };
+
+                    // Try to find an active "relatorio" template
+                    const { data: template } = await supabase
+                      .from('document_templates')
+                      .select('*')
+                      .eq('type', 'relatorio')
+                      .eq('status', 'ativo')
+                      .limit(1)
+                      .maybeSingle();
+
+                    let content: string;
+                    if (template?.content) {
+                      // Use configurable template — replace variables
+                      content = template.content;
+                      for (const [key, value] of Object.entries(variablesData)) {
+                        content = content.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
+                      }
+                    } else {
+                      // Fallback: hardcoded content
+                      content = `**RELATÓRIO DE PERFORMANCE DE PARCEIRO**
 
 **Parceiro:** ${reportPartner.name}
 **Tipo:** ${PARTNER_TYPE_LABELS[reportPartner.type]}
@@ -453,9 +484,10 @@ Comissão pendente: ${formatCurrency(reportPartner.commission_pending)}
 
 **Observações:**
 Relatório gerado automaticamente pelo sistema J.Imobi.`;
+                    }
 
                     const { data, error } = await supabase.functions.invoke('generate-pdf', {
-                      body: { content, variables_data: {}, title: `Relatório - ${reportPartner.name}` },
+                      body: { content, variables_data: variablesData, title: `Relatório - ${reportPartner.name}` },
                     });
                     if (error) throw error;
 
@@ -463,7 +495,8 @@ Relatório gerado automaticamente pelo sistema J.Imobi.`;
                     await supabase.from('generated_documents').insert({
                       type: 'relatorio',
                       title: `Relatório - ${reportPartner.name} - ${periodLabel}`,
-                      variables_data: { parceiro: reportPartner.name, periodo: periodLabel },
+                      template_id: template?.id || null,
+                      variables_data: variablesData,
                       file_url: data.file_url,
                       status: 'rascunho',
                     });
