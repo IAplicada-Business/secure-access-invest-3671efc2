@@ -809,6 +809,30 @@ export default function AdminCommunications() {
         </Button>
       </div>
 
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por título..."
+            value={filterSearch}
+            onChange={(e) => setFilterSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os status</SelectItem>
+            <SelectItem value="rascunho">Rascunho</SelectItem>
+            <SelectItem value="pronta">Pronta</SelectItem>
+            <SelectItem value="enviada">Enviada</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Listing */}
       <Card>
         <CardContent className="p-0">
