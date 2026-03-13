@@ -593,6 +593,37 @@ export default function AdminCommunications() {
   const renderStep4 = () => (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">Destinatários</h3>
+      {contactsWithoutPhone.length > 0 && (
+        <Collapsible open={showExcluded} onOpenChange={setShowExcluded}>
+          <Alert className="border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20">
+            <AlertTriangle className="h-4 w-4 text-yellow-600" />
+            <AlertDescription className="flex items-center justify-between">
+              <span className="text-sm">
+                <strong>{contactsWithoutPhone.length}</strong> contato{contactsWithoutPhone.length !== 1 ? 's' : ''} excluído{contactsWithoutPhone.length !== 1 ? 's' : ''} por não ter telefone cadastrado.
+              </span>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="ml-2 h-auto py-1 px-2 text-xs">
+                  {showExcluded ? <ChevronUp className="h-3 w-3 mr-1" /> : <ChevronDown className="h-3 w-3 mr-1" />}
+                  {showExcluded ? 'Ocultar' : 'Ver quais'}
+                </Button>
+              </CollapsibleTrigger>
+            </AlertDescription>
+          </Alert>
+          <CollapsibleContent>
+            <div className="rounded-lg border border-yellow-500/30 bg-yellow-50/50 dark:bg-yellow-950/10 p-3 mt-2">
+              <p className="text-xs text-muted-foreground mb-2">Cadastre o telefone destes contatos no CRM para incluí-los:</p>
+              <ul className="space-y-1">
+                {contactsWithoutPhone.map((c, i) => (
+                  <li key={i} className="text-sm flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">{c.type}</Badge>
+                    {c.name}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
       {wizardAudience !== 'manual' ? (
         <div className="rounded-lg border border-border p-4 text-center">
           <p className="text-sm text-muted-foreground">
