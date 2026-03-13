@@ -272,6 +272,11 @@ export default function AdminDocuments() {
                           <Eye className="h-4 w-4" />
                         </Button>
                       )}
+                      {(doc.status === 'rascunho' || doc.status === 'enviado') && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingDoc(doc); setWizardOpen(true); }}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
                       {doc.file_url && (
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownload(doc)}>
                           <Download className="h-4 w-4" />
