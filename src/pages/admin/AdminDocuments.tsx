@@ -115,6 +115,7 @@ export default function AdminDocuments() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardType, setWizardType] = useState<'proposta' | 'contrato'>('proposta');
   const [previewDoc, setPreviewDoc] = useState<GeneratedDoc | null>(null);
+  const [signingDoc, setSigningDoc] = useState<GeneratedDoc | null>(null);
 
   async function loadDocs() {
     const { data: docsData } = await supabase
