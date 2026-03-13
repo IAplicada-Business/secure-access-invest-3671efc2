@@ -18,6 +18,7 @@ import {
 import { Plus, Search } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { toast } from 'sonner';
+import { PeriodFilter, filterByPeriod, type PeriodPreset } from './PeriodFilter';
 import type { ExpenseCategory } from '@/types/database';
 
 const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
@@ -34,6 +35,12 @@ export function FinanceExpenses() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [search, setSearch] = useState('');
+
+  // Filters
+  const [period, setPeriod] = useState<PeriodPreset>('all');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
   const [category, setCategory] = useState<ExpenseCategory>('outro');
   const [description, setDescription] = useState('');
@@ -80,17 +87,34 @@ export function FinanceExpenses() {
   }
 
   const filtered = expenses.filter(e => {
-    if (!search) return true;
-    return e.description.toLowerCase().includes(search.toLowerCase()) ||
-      CATEGORY_LABELS[e.category as ExpenseCategory]?.toLowerCase().includes(search.toLowerCase());
+    if (!filterByPeriod(e.expense_date, period, customStart, customEnd)) return false;
+    if (categoryFilter !== 'all' && e.category !== categoryFilter) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      if (!e.description.toLowerCase().includes(q) &&
+          !CATEGORY_LABELS[e.category as ExpenseCategory]?.toLowerCase().includes(q)) return false;
+    }
+    return true;
   });
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Buscar despesas..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input placeholder="Buscar despesas..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+          </div>
+          <PeriodFilter period={period} onPeriodChange={setPeriod} customStart={customStart} customEnd={customEnd} onCustomStartChange={setCustomStart} onCustomEndChange={setCustomEnd} />
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas categorias</SelectItem>
+              {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
+                <SelectItem key={k} value={k}>{v}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <Button onClick={() => setDialogOpen(true)}><Plus className="mr-2 h-4 w-4" />Nova Despesa</Button>
       </div>
