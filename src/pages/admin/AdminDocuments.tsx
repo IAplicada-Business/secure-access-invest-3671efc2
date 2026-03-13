@@ -144,6 +144,11 @@ export default function AdminDocuments() {
   useEffect(() => { loadDocs(); }, []);
 
   async function handleStatusChange(docId: string, newStatus: 'rascunho' | 'enviado' | 'assinado' | 'arquivado') {
+    // Intercept "assinado" to show revenue dialog
+    if (newStatus === 'assinado') {
+      const doc = docs.find(d => d.id === docId);
+      if (doc) { setSigningDoc(doc); return; }
+    }
     const { error } = await supabase.from('generated_documents').update({ status: newStatus }).eq('id', docId);
     if (error) { toast.error('Erro ao atualizar'); return; }
     toast.success('Status atualizado');
