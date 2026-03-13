@@ -180,17 +180,30 @@ export default function AdminLayout() {
                   Financeiro
                 </Link>
 
-                {/* Documentos */}
-                <Link to="/admin/documentos" className={navLinkClasses(isRouteActive('/admin/documentos'))}>
-                  <FileText className="h-4 w-4" />
-                  Documentos
-                </Link>
-
-                {/* Comunicações */}
-                <Link to="/admin/comunicacoes" className={navLinkClasses(isRouteActive('/admin/comunicacoes'))}>
-                  <MessageSquare className="h-4 w-4" />
-                  Comunicações
-                </Link>
+                {/* Comunicações dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className={cn(navLinkClasses(isGroupActive(['/admin/comunicacoes', '/admin/documentos'])), "gap-1.5")}>
+                      <MessageSquare className="h-4 w-4" />
+                      Comunicações
+                      <ChevronDown className="h-3 w-3 opacity-60" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/comunicacoes" className="flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4" />
+                        Comunicações
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/documentos" className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Documentos
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
                 {/* CRM dropdown */}
                 <DropdownMenu>
@@ -279,11 +292,11 @@ export default function AdminLayout() {
               <Link to="/admin/financeiro" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
                 <DollarSign className="h-5 w-5" />Financeiro
               </Link>
-              <Link to="/admin/documentos" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
-                <FileText className="h-5 w-5" />Documentos
-              </Link>
               <Link to="/admin/comunicacoes" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
                 <MessageSquare className="h-5 w-5" />Comunicações
+              </Link>
+              <Link to="/admin/documentos" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 pl-12 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                <FileText className="h-4 w-4" />Documentos
               </Link>
               <Link to="/admin/clientes" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
                 <Users className="h-5 w-5" />Clientes
