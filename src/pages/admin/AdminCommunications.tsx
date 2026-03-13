@@ -40,7 +40,13 @@ import {
   Send,
   MessageSquare,
   Loader2,
+  Search,
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -150,6 +156,14 @@ export default function AdminCommunications() {
   const [viewRecipients, setViewRecipients] = useState<Recipient[]>([]);
   const [viewOpen, setViewOpen] = useState(false);
 
+  // Filters
+  const [filterSearch, setFilterSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  // Contacts without phone
+  const [contactsWithoutPhone, setContactsWithoutPhone] = useState<{ name: string; type: string }[]>([]);
+  const [showExcluded, setShowExcluded] = useState(false);
+
   const fetchCommunications = useCallback(async () => {
     const { data, error } = await supabase
       .from('communications')
@@ -165,6 +179,7 @@ export default function AdminCommunications() {
   // Load contacts for step 4
   const loadContacts = useCallback(async () => {
     const allContacts: Contact[] = [];
+    const excluded: { name: string; type: string }[] = [];
 
     // Partners
     const { data: partners } = await supabase
@@ -188,6 +203,10 @@ export default function AdminCommunications() {
 
       partners.forEach(p => {
         if (wizardAudience === 'partner_type' && wizardPartnerType && p.type !== wizardPartnerType) return;
+        if (!p.phone || p.phone.trim() === '') {
+          excluded.push({ name: p.name, type: 'Parceiro' });
+          return;
+        }
         allContacts.push({
           id: p.id,
           name: p.name,
@@ -220,6 +239,10 @@ export default function AdminCommunications() {
         });
 
         clients.forEach(c => {
+          if (!c.phone || c.phone.trim() === '') {
+            excluded.push({ name: c.name, type: 'Cliente' });
+            return;
+          }
           allContacts.push({
             id: c.id,
             name: c.name,
@@ -233,6 +256,8 @@ export default function AdminCommunications() {
     }
 
     setContacts(allContacts);
+    setContactsWithoutPhone(excluded);
+    setShowExcluded(false);
 
     // Auto-select all for non-manual audiences
     if (wizardAudience !== 'manual') {
@@ -568,6 +593,37 @@ export default function AdminCommunications() {
   const renderStep4 = () => (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">Destinatários</h3>
+      {contactsWithoutPhone.length > 0 && (
+        <Collapsible open={showExcluded} onOpenChange={setShowExcluded}>
+          <Alert className="border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20">
+            <AlertTriangle className="h-4 w-4 text-yellow-600" />
+            <AlertDescription className="flex items-center justify-between">
+              <span className="text-sm">
+                <strong>{contactsWithoutPhone.length}</strong> contato{contactsWithoutPhone.length !== 1 ? 's' : ''} excluído{contactsWithoutPhone.length !== 1 ? 's' : ''} por não ter telefone cadastrado.
+              </span>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="ml-2 h-auto py-1 px-2 text-xs">
+                  {showExcluded ? <ChevronUp className="h-3 w-3 mr-1" /> : <ChevronDown className="h-3 w-3 mr-1" />}
+                  {showExcluded ? 'Ocultar' : 'Ver quais'}
+                </Button>
+              </CollapsibleTrigger>
+            </AlertDescription>
+          </Alert>
+          <CollapsibleContent>
+            <div className="rounded-lg border border-yellow-500/30 bg-yellow-50/50 dark:bg-yellow-950/10 p-3 mt-2">
+              <p className="text-xs text-muted-foreground mb-2">Cadastre o telefone destes contatos no CRM para incluí-los:</p>
+              <ul className="space-y-1">
+                {contactsWithoutPhone.map((c, i) => (
+                  <li key={i} className="text-sm flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">{c.type}</Badge>
+                    {c.name}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
       {wizardAudience !== 'manual' ? (
         <div className="rounded-lg border border-border p-4 text-center">
           <p className="text-sm text-muted-foreground">
@@ -753,6 +809,30 @@ export default function AdminCommunications() {
         </Button>
       </div>
 
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por título..."
+            value={filterSearch}
+            onChange={(e) => setFilterSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os status</SelectItem>
+            <SelectItem value="rascunho">Rascunho</SelectItem>
+            <SelectItem value="pronta">Pronta</SelectItem>
+            <SelectItem value="enviada">Enviada</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Listing */}
       <Card>
         <CardContent className="p-0">
@@ -774,13 +854,20 @@ export default function AdminCommunications() {
                     <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
-              ) : communications.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    Nenhuma comunicação criada ainda.
-                  </TableCell>
-                </TableRow>
-              ) : communications.map(comm => (
+              ) : (() => {
+                const filtered = communications.filter(c => {
+                  if (filterStatus !== 'all' && c.status !== filterStatus) return false;
+                  if (filterSearch && !c.title.toLowerCase().includes(filterSearch.toLowerCase())) return false;
+                  return true;
+                });
+                if (filtered.length === 0) return (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      {communications.length === 0 ? 'Nenhuma comunicação criada ainda.' : 'Nenhuma comunicação encontrada com esses filtros.'}
+                    </TableCell>
+                  </TableRow>
+                );
+                return filtered.map(comm => (
                 <TableRow key={comm.id} className="cursor-pointer" onClick={() => openView(comm)}>
                   <TableCell className="font-medium">{comm.title}</TableCell>
                   <TableCell><Badge variant="secondary">{typeLabels[comm.type]}</Badge></TableCell>
@@ -797,7 +884,8 @@ export default function AdminCommunications() {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+              ));
+              })()}
             </TableBody>
           </Table>
         </CardContent>
