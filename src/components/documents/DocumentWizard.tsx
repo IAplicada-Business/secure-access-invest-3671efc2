@@ -156,21 +156,34 @@ export default function DocumentWizard({ type, onComplete, onCancel, preselected
 
       if (error) throw error;
 
-      // Save generated document record
-      const { error: insertError } = await supabase.from('generated_documents').insert({
-        template_id: selectedTemplateId,
-        client_id: selectedClientId,
-        type,
-        title,
-        variables_data: variablesData,
-        file_url: data.file_url,
-        status: 'rascunho',
-        process_id: preselectedProcessId || null,
-      });
+      if (editingDoc) {
+        // Update existing document
+        const { error: updateError } = await supabase.from('generated_documents').update({
+          template_id: selectedTemplateId,
+          client_id: selectedClientId,
+          title,
+          variables_data: variablesData,
+          file_url: data.file_url,
+        }).eq('id', editingDoc.id);
 
-      if (insertError) throw insertError;
+        if (updateError) throw updateError;
+      } else {
+        // Save new generated document record
+        const { error: insertError } = await supabase.from('generated_documents').insert({
+          template_id: selectedTemplateId,
+          client_id: selectedClientId,
+          type,
+          title,
+          variables_data: variablesData,
+          file_url: data.file_url,
+          status: 'rascunho',
+          process_id: preselectedProcessId || null,
+        });
 
-      toast.success('Documento gerado com sucesso!');
+        if (insertError) throw insertError;
+      }
+
+      toast.success(editingDoc ? 'Documento atualizado com sucesso!' : 'Documento gerado com sucesso!');
       setStep(4);
     } catch (err: any) {
       console.error('Error generating PDF:', err);
