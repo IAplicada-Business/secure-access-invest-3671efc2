@@ -127,7 +127,7 @@ export function FinanceOverview() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Faturamento do Mês</CardTitle>
             <DollarSign className="h-4 w-4 text-primary" />
           </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{formatCurrency(currentRevenue)}</div></CardContent>
+          <CardContent><div className="text-xl sm:text-2xl font-bold">{formatCurrency(currentRevenue)}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
