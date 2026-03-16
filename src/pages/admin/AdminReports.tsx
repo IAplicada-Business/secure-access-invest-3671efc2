@@ -364,6 +364,7 @@ export default function AdminReports() {
               <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" /> Performance de Parceiros</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
