@@ -142,7 +142,7 @@ export function FinanceOverview() {
             <TrendingUp className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${netProfit >= 0 ? 'text-primary' : 'text-destructive'}`}>
+            <div className={`text-xl sm:text-2xl font-bold ${netProfit >= 0 ? 'text-primary' : 'text-destructive'}`}>
               {formatCurrency(netProfit)}
             </div>
           </CardContent>
