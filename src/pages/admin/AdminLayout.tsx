@@ -273,7 +273,7 @@ export default function AdminLayout() {
         {/* Mobile Navigation Dropdown */}
         {mobileMenuOpen && (
           <div className="lg:hidden border-t border-border bg-card">
-            <nav className="mx-auto max-w-7xl px-4 py-3 space-y-1">
+            <nav className="w-full px-3 sm:px-4 lg:px-6 xl:px-8 py-3 space-y-1">
               <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
                 <LayoutDashboard className="h-5 w-5" />Dashboard
               </Link>
