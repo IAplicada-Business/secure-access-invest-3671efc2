@@ -152,7 +152,7 @@ export function FinanceOverview() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Comissões a Pagar</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{formatCurrency(pendingCommissions)}</div></CardContent>
+          <CardContent><div className="text-xl sm:text-2xl font-bold">{formatCurrency(pendingCommissions)}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
