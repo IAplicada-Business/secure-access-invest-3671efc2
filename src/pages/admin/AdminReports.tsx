@@ -300,6 +300,7 @@ export default function AdminReports() {
           {/* Table */}
           <Card>
             <CardContent className="p-0">
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
