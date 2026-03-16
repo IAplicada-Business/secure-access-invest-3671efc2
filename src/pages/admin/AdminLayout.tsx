@@ -108,7 +108,7 @@ export default function AdminLayout() {
     <div className="min-h-screen bg-secondary">
       {/* Top Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-card">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-3 sm:px-4 lg:px-6 xl:px-8">
           <div className="flex h-16 items-center justify-between gap-4">
             {/* Logo */}
             <Link to="/admin" className="flex-shrink-0">
@@ -273,7 +273,7 @@ export default function AdminLayout() {
         {/* Mobile Navigation Dropdown */}
         {mobileMenuOpen && (
           <div className="lg:hidden border-t border-border bg-card">
-            <nav className="mx-auto max-w-7xl px-4 py-3 space-y-1">
+            <nav className="w-full px-3 sm:px-4 lg:px-6 xl:px-8 py-3 space-y-1">
               <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
                 <LayoutDashboard className="h-5 w-5" />Dashboard
               </Link>
@@ -313,7 +313,7 @@ export default function AdminLayout() {
       </header>
 
       {/* Main Content */}
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+      <main className="w-full px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 min-w-0">
         <Outlet />
       </main>
     </div>
