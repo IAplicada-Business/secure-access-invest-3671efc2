@@ -170,6 +170,7 @@ export function FinanceRevenues() {
 
       <Card>
         <CardContent className="p-0">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -211,6 +212,7 @@ export function FinanceRevenues() {
               })}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

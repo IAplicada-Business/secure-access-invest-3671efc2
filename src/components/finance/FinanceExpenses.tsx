@@ -121,6 +121,7 @@ export function FinanceExpenses() {
 
       <Card>
         <CardContent className="p-0">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -147,6 +148,7 @@ export function FinanceExpenses() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

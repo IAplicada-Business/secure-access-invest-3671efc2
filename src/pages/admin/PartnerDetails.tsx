@@ -312,7 +312,7 @@ export default function PartnerDetails() {
               <Label>Nome *</Label>
               <Input value={editForm.name || ''} onChange={(e) => setEditForm(p => ({ ...p, name: e.target.value }))} required />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Tipo</Label>
                 <Select value={editForm.type} onValueChange={(v) => setEditForm(p => ({ ...p, type: v as PartnerType }))}>
@@ -335,7 +335,7 @@ export default function PartnerDetails() {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Telefone *</Label>
                 <Input value={editForm.phone || ''} onChange={(e) => setEditForm(p => ({ ...p, phone: e.target.value }))} required />
@@ -345,7 +345,7 @@ export default function PartnerDetails() {
                 <Input type="email" value={editForm.email || ''} onChange={(e) => setEditForm(p => ({ ...p, email: e.target.value }))} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>CRECI</Label>
                 <Input value={editForm.creci || ''} onChange={(e) => setEditForm(p => ({ ...p, creci: e.target.value }))} />

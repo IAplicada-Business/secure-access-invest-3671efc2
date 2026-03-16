@@ -632,6 +632,7 @@ export default function AdminCommunications() {
         </div>
       ) : null}
       <div className="max-h-[400px] overflow-auto rounded-lg border">
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -677,12 +678,13 @@ export default function AdminCommunications() {
             {contacts.length === 0 && (
               <TableRow>
                 <TableCell colSpan={wizardAudience === 'manual' ? 5 : 4} className="text-center text-muted-foreground py-8">
-                  Nenhum contato encontrado com telefone cadastrado.
+                  Nenhum contato encontrado.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
       {wizardAudience === 'manual' && (
         <p className="text-sm text-muted-foreground">
@@ -836,6 +838,7 @@ export default function AdminCommunications() {
       {/* Listing */}
       <Card>
         <CardContent className="p-0">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -888,6 +891,7 @@ export default function AdminCommunications() {
               })()}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 
