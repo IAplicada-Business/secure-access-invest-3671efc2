@@ -632,6 +632,7 @@ export default function AdminCommunications() {
         </div>
       ) : null}
       <div className="max-h-[400px] overflow-auto rounded-lg border">
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
