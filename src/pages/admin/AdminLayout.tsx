@@ -108,7 +108,7 @@ export default function AdminLayout() {
     <div className="min-h-screen bg-secondary">
       {/* Top Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-card">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-3 sm:px-4 lg:px-6 xl:px-8">
           <div className="flex h-16 items-center justify-between gap-4">
             {/* Logo */}
             <Link to="/admin" className="flex-shrink-0">
