@@ -200,6 +200,7 @@ export default function AdminLinks() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
