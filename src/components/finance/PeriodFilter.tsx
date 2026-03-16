@@ -32,9 +32,9 @@ export function PeriodFilter({
       </Select>
       {period === 'custom' && (
         <>
-          <Input type="date" value={customStart} onChange={e => onCustomStartChange(e.target.value)} className="w-[150px]" />
+          <Input type="date" value={customStart} onChange={e => onCustomStartChange(e.target.value)} className="w-full sm:w-[150px]" />
           <span className="text-muted-foreground text-sm">até</span>
-          <Input type="date" value={customEnd} onChange={e => onCustomEndChange(e.target.value)} className="w-[150px]" />
+          <Input type="date" value={customEnd} onChange={e => onCustomEndChange(e.target.value)} className="w-full sm:w-[150px]" />
         </>
       )}
     </div>
