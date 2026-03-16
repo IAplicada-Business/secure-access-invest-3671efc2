@@ -684,6 +684,7 @@ export default function AdminCommunications() {
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
       {wizardAudience === 'manual' && (
         <p className="text-sm text-muted-foreground">
