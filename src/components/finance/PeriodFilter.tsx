@@ -19,9 +19,9 @@ export function PeriodFilter({
   period, onPeriodChange, customStart, customEnd, onCustomStartChange, onCustomEndChange,
 }: PeriodFilterProps) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
       <Select value={period} onValueChange={v => onPeriodChange(v as PeriodPreset)}>
-        <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+        <SelectTrigger className="w-full sm:w-[160px]"><SelectValue /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todos</SelectItem>
           <SelectItem value="current_month">Mês atual</SelectItem>
@@ -32,9 +32,9 @@ export function PeriodFilter({
       </Select>
       {period === 'custom' && (
         <>
-          <Input type="date" value={customStart} onChange={e => onCustomStartChange(e.target.value)} className="w-[150px]" />
+          <Input type="date" value={customStart} onChange={e => onCustomStartChange(e.target.value)} className="w-full sm:w-[150px]" />
           <span className="text-muted-foreground text-sm">até</span>
-          <Input type="date" value={customEnd} onChange={e => onCustomEndChange(e.target.value)} className="w-[150px]" />
+          <Input type="date" value={customEnd} onChange={e => onCustomEndChange(e.target.value)} className="w-full sm:w-[150px]" />
         </>
       )}
     </div>

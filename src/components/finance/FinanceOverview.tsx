@@ -127,14 +127,14 @@ export function FinanceOverview() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Faturamento do Mês</CardTitle>
             <DollarSign className="h-4 w-4 text-primary" />
           </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{formatCurrency(currentRevenue)}</div></CardContent>
+          <CardContent><div className="text-xl sm:text-2xl font-bold">{formatCurrency(currentRevenue)}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Despesas do Mês</CardTitle>
             <TrendingDown className="h-4 w-4 text-destructive" />
           </CardHeader>
-          <CardContent><div className="text-2xl font-bold text-destructive">{formatCurrency(currentExpenses)}</div></CardContent>
+          <CardContent><div className="text-xl sm:text-2xl font-bold text-destructive">{formatCurrency(currentExpenses)}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -142,7 +142,7 @@ export function FinanceOverview() {
             <TrendingUp className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${netProfit >= 0 ? 'text-primary' : 'text-destructive'}`}>
+            <div className={`text-xl sm:text-2xl font-bold ${netProfit >= 0 ? 'text-primary' : 'text-destructive'}`}>
               {formatCurrency(netProfit)}
             </div>
           </CardContent>
@@ -152,14 +152,14 @@ export function FinanceOverview() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Comissões a Pagar</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{formatCurrency(pendingCommissions)}</div></CardContent>
+          <CardContent><div className="text-xl sm:text-2xl font-bold">{formatCurrency(pendingCommissions)}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Faturamento Anterior</CardTitle>
             <ArrowDown className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent><div className="text-2xl font-bold text-muted-foreground">{formatCurrency(previousRevenue)}</div></CardContent>
+          <CardContent><div className="text-xl sm:text-2xl font-bold text-muted-foreground">{formatCurrency(previousRevenue)}</div></CardContent>
         </Card>
       </div>
 

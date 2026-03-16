@@ -10,7 +10,7 @@ export default function AdminFinanceiro() {
       <h1 className="font-display text-2xl font-bold">Financeiro</h1>
 
       <Tabs defaultValue="overview">
-        <TabsList>
+        <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
           <TabsTrigger value="revenues">Receitas</TabsTrigger>
           <TabsTrigger value="expenses">Despesas</TabsTrigger>
