@@ -209,7 +209,7 @@ export default function AdminClients() {
               <Label>Nome completo *</Label>
               <Input value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} required />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Tipo *</Label>
                 <Select value={form.type} onValueChange={(v) => setForm(p => ({ ...p, type: v as ClientType }))}>
