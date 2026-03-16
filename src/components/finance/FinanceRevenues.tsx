@@ -212,6 +212,7 @@ export function FinanceRevenues() {
               })}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

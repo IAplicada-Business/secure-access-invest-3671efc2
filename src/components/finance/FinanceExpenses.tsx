@@ -148,6 +148,7 @@ export function FinanceExpenses() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

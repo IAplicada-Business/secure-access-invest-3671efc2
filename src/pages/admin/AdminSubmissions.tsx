@@ -332,6 +332,7 @@ export default function AdminSubmissions() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
       )}

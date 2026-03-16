@@ -345,7 +345,7 @@ export default function PartnerDetails() {
                 <Input type="email" value={editForm.email || ''} onChange={(e) => setEditForm(p => ({ ...p, email: e.target.value }))} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>CRECI</Label>
                 <Input value={editForm.creci || ''} onChange={(e) => setEditForm(p => ({ ...p, creci: e.target.value }))} />

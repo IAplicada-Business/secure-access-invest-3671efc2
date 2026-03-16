@@ -890,6 +890,7 @@ export default function AdminCommunications() {
               })()}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

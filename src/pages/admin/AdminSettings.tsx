@@ -319,7 +319,7 @@ export default function AdminSettings() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editingTmpl ? 'Editar Template' : 'Novo Template de Documento'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSaveTmpl} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Nome *</Label>
                 <Input value={tmplForm.name} onChange={(e) => setTmplForm(p => ({ ...p, name: e.target.value }))} required placeholder="Proposta de Regularização" />

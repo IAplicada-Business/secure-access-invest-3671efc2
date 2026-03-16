@@ -198,6 +198,7 @@ export default function AdminClients() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

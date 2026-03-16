@@ -407,6 +407,7 @@ export default function AdminReports() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

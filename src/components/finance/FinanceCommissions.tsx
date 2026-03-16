@@ -207,6 +207,7 @@ export function FinanceCommissions() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

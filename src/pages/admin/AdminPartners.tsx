@@ -188,6 +188,7 @@ export default function AdminPartners() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 
