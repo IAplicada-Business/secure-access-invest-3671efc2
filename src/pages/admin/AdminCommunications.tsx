@@ -837,6 +837,7 @@ export default function AdminCommunications() {
       {/* Listing */}
       <Card>
         <CardContent className="p-0">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
