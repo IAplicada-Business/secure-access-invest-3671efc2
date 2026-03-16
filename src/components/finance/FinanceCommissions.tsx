@@ -150,7 +150,7 @@ export function FinanceCommissions() {
           </SelectContent>
         </Select>
         <Select value={partnerFilter} onValueChange={setPartnerFilter}>
-          <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[180px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos parceiros</SelectItem>
             {partnerList.map(p => (

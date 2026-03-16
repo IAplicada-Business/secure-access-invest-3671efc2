@@ -236,7 +236,7 @@ export default function AdminClients() {
                 <Input type="email" value={form.email} onChange={(e) => setForm(p => ({ ...p, email: e.target.value }))} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Origem</Label>
                 <Select value={form.origin} onValueChange={(v) => setForm(p => ({ ...p, origin: v }))}>

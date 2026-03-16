@@ -139,7 +139,7 @@ export default function AdminLinks() {
       <h1 className="font-display text-2xl font-bold">Links de Acesso</h1>
 
       <Tabs defaultValue="investors">
-        <TabsList>
+        <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="investors">Investidores</TabsTrigger>
           <TabsTrigger value="brokers" className="flex items-center gap-1.5">
             <Inbox className="h-3.5 w-3.5" />

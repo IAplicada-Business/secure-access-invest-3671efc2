@@ -238,7 +238,7 @@ export default function AdminReports() {
       <h1 className="font-display text-2xl font-bold">Relatórios</h1>
 
       <Tabs defaultValue="interest">
-        <TabsList>
+        <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="interest">Interesse de Investidores</TabsTrigger>
           <TabsTrigger value="partners">Performance de Parceiros</TabsTrigger>
         </TabsList>
