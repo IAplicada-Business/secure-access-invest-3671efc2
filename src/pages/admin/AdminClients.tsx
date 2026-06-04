@@ -81,7 +81,7 @@ export default function AdminClients() {
     const { data, error } = await supabase
       .from('clients').select('*').order('created_at', { ascending: false });
     if (error) { toast.error('Erro ao carregar clientes'); setLoading(false); return; }
-    setClients((data ?? []) as unknown as ClientExt[]);
+    setClients(data ?? []);
 
     const { data: interactions } = await supabase
       .from('client_interactions')
@@ -122,8 +122,7 @@ export default function AdminClients() {
       tags,
       observacoes: form.observacoes || null,
     };
-    // Campos novos não estão no tipo Insert gerado — cast pontual.
-    const { error } = await supabase.from('clients').insert(payload as never);
+    const { error } = await supabase.from('clients').insert(payload);
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
     toast.success('Cliente cadastrado!');
     setDrawerOpen(false);
