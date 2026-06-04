@@ -50,7 +50,7 @@ export default function ClientDetails() {
   // Linked properties (for investors)
   const [linkedProperties, setLinkedProperties] = useState<Array<{ property_id: string; title: string; time_spent: number; views: number }>>([]);
   // Partners for edit
-  const [partners, setPartners] = useState<Partner[]>([]);
+  const [partners, setPartners] = useState<Pick<Partner, 'id' | 'name'>[]>([]);
 
   // Regularizations
   const [regProcesses, setRegProcesses] = useState<any[]>([]);
@@ -126,7 +126,7 @@ export default function ClientDetails() {
 
   async function loadPartners() {
     const { data } = await supabase.from('partners').select('id, name').eq('status', 'active').order('name');
-    setPartners((data || []) as unknown as Partner[]);
+    setPartners(data || []);
   }
 
   async function loadRegularizations() {

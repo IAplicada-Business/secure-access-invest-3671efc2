@@ -120,7 +120,7 @@ export default function AdminSubmissions() {
 
       if (error) throw error;
       // Filter only pending_review
-      return ((data || []) as unknown as SubmissionWithProperty[]).filter(
+      return (data || []).filter(
         s => s.properties?.status === 'pending_review'
       );
     },
