@@ -185,76 +185,15 @@ export default function PropertyDetails() {
     };
   }, [propertyId, token, navigate]);
 
-  // Calculate interest score and create notification if score >= 10
+  // Calcula o interest score e cria a notificação de hot_lead via edge function
+  // (server-side, com service_role). Lógica centralizada em um único lugar
+  // (supabase/functions/calculate-interest-score) e compatível com a RLS de
+  // notifications restrita a service_role.
   async function calculateAndNotify(accessLinkId: string, propId: string) {
     try {
-      // Get page views
-      const { data: pageViews } = await supabase
-        .from('page_views')
-        .select('time_spent_seconds, scroll_depth_percent')
-        .eq('access_link_id', accessLinkId)
-        .eq('property_id', propId);
-
-      // Get CTA clicks
-      const { data: ctaClicks } = await supabase
-        .from('cta_clicks')
-        .select('id')
-        .eq('access_link_id', accessLinkId)
-        .eq('property_id', propId);
-
-      // Calculate score
-      let score = 0;
-      const maxTimeSpent = Math.max(...(pageViews?.map(v => v.time_spent_seconds || 0) || [0]));
-      if (maxTimeSpent > 120) score += 5;
-      else if (maxTimeSpent > 60) score += 3;
-
-      const maxScrollDepth = Math.max(...(pageViews?.map(v => v.scroll_depth_percent || 0) || [0]));
-      if (maxScrollDepth > 75) score += 2;
-
-      if (ctaClicks && ctaClicks.length > 0) score += 10;
-
-      // If score >= 10, create notification (if not exists)
-      if (score >= 10) {
-        // Check if notification already exists
-        const { data: existingNotification } = await supabase
-          .from('notifications')
-          .select('id')
-          .eq('type', 'hot_lead')
-          .filter('metadata->>access_link_id', 'eq', accessLinkId)
-          .filter('metadata->>property_id', 'eq', propId)
-          .maybeSingle();
-
-        if (!existingNotification) {
-          // Get investor name
-          const { data: accessLink } = await supabase
-            .from('access_links')
-            .select('investor_name')
-            .eq('id', accessLinkId)
-            .single();
-
-          // Get property title
-          const { data: propertyData } = await supabase
-            .from('properties')
-            .select('title')
-            .eq('id', propId)
-            .single();
-
-          const investorName = accessLink?.investor_name || 'Investidor';
-          const propertyTitle = propertyData?.title || 'Imóvel';
-
-          // Create notification
-          await supabase.from('notifications').insert({
-            type: 'hot_lead',
-            title: 'Lead Quente Detectado 🔥',
-            message: `${investorName} demonstrou alto interesse no imóvel "${propertyTitle}"`,
-            metadata: {
-              access_link_id: accessLinkId,
-              property_id: propId,
-              score,
-            },
-          });
-        }
-      }
+      await supabase.functions.invoke('calculate-interest-score', {
+        body: { access_link_id: accessLinkId, property_id: propId },
+      });
     } catch (error) {
       console.error('Error calculating interest score:', error);
     }
