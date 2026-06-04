@@ -33,6 +33,7 @@ interface DashboardStats {
   unregisteredOwners: number;
   activeRegularizations: number;
   stagnantRegularizations: number;
+  topProperties: Array<{ property_id: string; title: string; views: number; time_spent: number }>;
 }
 
 export default function AdminDashboard() {
@@ -47,6 +48,7 @@ export default function AdminDashboard() {
     unregisteredOwners: 0,
     activeRegularizations: 0,
     stagnantRegularizations: 0,
+    topProperties: [],
   });
   const [loading, setLoading] = useState(true);
 
@@ -109,6 +111,29 @@ export default function AdminDashboard() {
         }));
       }
 
+      // Top properties by engagement (all page_views aggregated)
+      const { data: allViews } = await supabase
+        .from('page_views')
+        .select('property_id, time_spent_seconds');
+      const aggMap = new Map<string, { views: number; time: number }>();
+      allViews?.forEach(v => {
+        if (!v.property_id) return;
+        const cur = aggMap.get(v.property_id) || { views: 0, time: 0 };
+        aggMap.set(v.property_id, { views: cur.views + 1, time: cur.time + (v.time_spent_seconds || 0) });
+      });
+      let topProperties: DashboardStats['topProperties'] = [];
+      if (aggMap.size > 0) {
+        const topIds = [...aggMap.entries()].sort((a, b) => b[1].time - a[1].time).slice(0, 5).map(([id]) => id);
+        const { data: topProps } = await supabase.from('properties').select('id, title').in('id', topIds);
+        const titleMap = new Map(topProps?.map(p => [p.id, p.title]) || []);
+        topProperties = topIds.map(pid => ({
+          property_id: pid,
+          title: titleMap.get(pid) || 'Imóvel removido',
+          views: aggMap.get(pid)!.views,
+          time_spent: aggMap.get(pid)!.time,
+        }));
+      }
+
       // Count unregistered owners from submissions
       const { data: submissions } = await supabase
         .from('property_submissions')
@@ -161,6 +186,7 @@ export default function AdminDashboard() {
         unregisteredOwners: unregisteredCount,
         activeRegularizations: activeReg,
         stagnantRegularizations: stagnant,
+        topProperties,
       });
 
       setLoading(false);
@@ -316,50 +342,74 @@ export default function AdminDashboard() {
         </Card>
       )}
 
-      {/* Recent Views */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            Visualizações Recentes
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {stats.recentViews.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              Nenhuma visualização registrada ainda.
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {stats.recentViews.map((view, idx) => (
-                <div 
-                  key={idx} 
-                  className={`flex items-center justify-between p-3 rounded-lg ${
-                    view.time_spent_seconds > 60 
-                      ? 'bg-primary/10 border border-primary/20' 
-                      : 'bg-muted'
-                  }`}
-                >
-                  <div>
-                    <p className="font-medium">{view.investor_name}</p>
-                    <p className="text-sm text-muted-foreground">{view.property_title}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className={`font-medium flex items-center gap-1 ${
-                      view.time_spent_seconds > 60 ? 'text-primary' : ''
-                    }`}>
-                      <Clock className="h-3 w-3" />
-                      {formatTime(view.time_spent_seconds)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDate(view.viewed_at)}
-                    </p>
-                  </div>
+      {/* Engajamento: imóveis mais vistos + últimos acessos */}
+      <div className="grid gap-6 lg:grid-cols-5">
+        {/* Imóveis mais visualizados (visual) */}
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              Imóveis mais visualizados
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stats.topProperties.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">Sem visualizações registradas ainda.</p>
+            ) : (() => {
+              const maxTime = Math.max(1, ...stats.topProperties.map(p => p.time_spent));
+              return (
+                <div className="space-y-4">
+                  {stats.topProperties.map((p) => (
+                    <Link key={p.property_id} to={`/admin/imoveis/${p.property_id}`} className="block group">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="font-medium truncate group-hover:text-primary transition-colors">{p.title}</span>
+                        <span className="text-sm text-muted-foreground whitespace-nowrap ml-3">
+                          {p.views} {p.views === 1 ? 'acesso' : 'acessos'} • {formatTime(p.time_spent)}
+                        </span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${(p.time_spent / maxTime) * 100}%`, background: 'linear-gradient(90deg, hsl(41,46%,68%), hsl(41,46%,52%))' }}
+                        />
+                      </div>
+                    </Link>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              );
+            })()}
+          </CardContent>
+        </Card>
+
+        {/* Últimos acessos (compacto) */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Eye className="h-4 w-4 text-muted-foreground" />
+              Últimos acessos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stats.recentViews.length === 0 ? (
+              <p className="text-muted-foreground text-center py-6 text-sm">Nenhum acesso ainda.</p>
+            ) : (
+              <div className="space-y-2">
+                {stats.recentViews.slice(0, 6).map((view, idx) => (
+                  <div key={idx} className="flex items-center justify-between gap-2 text-sm">
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{view.investor_name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{view.property_title}</p>
+                    </div>
+                    <span className={`flex items-center gap-1 whitespace-nowrap text-xs ${view.time_spent_seconds > 60 ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                      <Clock className="h-3 w-3" />{formatTime(view.time_spent_seconds)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

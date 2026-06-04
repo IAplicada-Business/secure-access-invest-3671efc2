@@ -89,20 +89,27 @@ Deno.serve(async (req) => {
         color: GOLD,
       });
 
-      // Header: "J." logo text
-      page.drawText("J.", {
+      // Header: marca "TIJOLO EM CAPITAL"
+      page.drawText("TIJOLO", {
         x: marginLeft,
-        y: pageHeight - 35,
-        size: 22,
+        y: pageHeight - 36,
+        size: 18,
         font: helveticaBold,
         color: GOLD,
       });
-      page.drawText("Imobi", {
-        x: marginLeft + helveticaBold.widthOfTextAtSize("J.", 22) + 1,
-        y: pageHeight - 35,
-        size: 22,
+      page.drawText(" EM CAPITAL", {
+        x: marginLeft + helveticaBold.widthOfTextAtSize("TIJOLO", 18),
+        y: pageHeight - 36,
+        size: 18,
         font: helvetica,
         color: GRAPHITE,
+      });
+      page.drawText("Plataforma de Gestão e Regularização de Imóveis", {
+        x: marginLeft,
+        y: pageHeight - 50,
+        size: 7.5,
+        font: helvetica,
+        color: LIGHT_GRAY,
       });
 
       // Footer separator line
