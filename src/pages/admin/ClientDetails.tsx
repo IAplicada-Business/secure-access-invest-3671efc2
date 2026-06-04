@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Client, ClientDocument, ClientInteraction, ClientType, ClientStatus, InteractionType, DocumentCategory, Partner } from '@/types/database';
 import { GeneratedDocument } from '@/types/database';
 import { formatCurrency } from '@/lib/formatCurrency';
+import { StatCard, Drawer } from '@/components/ui-system';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -86,6 +87,13 @@ export default function ClientDetails() {
 
   // Generated documents
   const [genDocs, setGenDocs] = useState<any[]>([]);
+
+  // Financeiro
+  const [finRevenues, setFinRevenues] = useState<any[]>([]);
+  const [finCommissions, setFinCommissions] = useState<any[]>([]);
+  const [chargeOpen, setChargeOpen] = useState(false);
+  const [chargeForm, setChargeForm] = useState({ service_type: 'regularizacao', amount: '', received_at: new Date().toISOString().slice(0, 10), notes: '' });
+  const [chargeSaving, setChargeSaving] = useState(false);
 
   const REG_STATUS_LABELS: Record<string, string> = {
     nova: 'Nova', em_analise: 'Em Análise', proposta_enviada: 'Proposta Enviada',
@@ -171,6 +179,35 @@ export default function ClientDetails() {
     setGenDocs(data || []);
   }
 
+  async function loadFinancials() {
+    if (!id) return;
+    const [{ data: revs }, { data: comms }] = await Promise.all([
+      supabase.from('revenues').select('id, amount, received_at, service_type, notes').eq('client_id', id).order('received_at', { ascending: false }),
+      supabase.from('commissions').select('id, amount, status, paid_at, created_at').eq('client_id', id).order('created_at', { ascending: false }),
+    ]);
+    setFinRevenues(revs || []);
+    setFinCommissions(comms || []);
+  }
+
+  async function handleCreateCharge(e: React.FormEvent) {
+    e.preventDefault();
+    if (!id || !chargeForm.amount) return;
+    setChargeSaving(true);
+    const { error } = await supabase.from('revenues').insert({
+      client_id: id,
+      service_type: chargeForm.service_type as never,
+      amount: Number(chargeForm.amount),
+      received_at: chargeForm.received_at,
+      notes: chargeForm.notes || null,
+    });
+    setChargeSaving(false);
+    if (error) { toast.error('Erro: ' + error.message); return; }
+    toast.success('Receita lançada!');
+    setChargeOpen(false);
+    setChargeForm({ service_type: 'regularizacao', amount: '', received_at: new Date().toISOString().slice(0, 10), notes: '' });
+    loadFinancials();
+  }
+
   useEffect(() => {
     loadClient();
     loadDocs();
@@ -179,6 +216,7 @@ export default function ClientDetails() {
     loadRegularizations();
     loadRegTypes();
     loadGenDocs();
+    loadFinancials();
   }, [id]);
 
   useEffect(() => {
@@ -373,6 +411,7 @@ export default function ClientDetails() {
           <TabsTrigger value="history">Histórico</TabsTrigger>
           {client.type === 'investor' && <TabsTrigger value="properties">Imóveis Vinculados</TabsTrigger>}
           <TabsTrigger value="regularizations">Regularizações</TabsTrigger>
+          <TabsTrigger value="financial">Financeiro</TabsTrigger>
           <TabsTrigger value="generated_docs">Documentos Gerados</TabsTrigger>
         </TabsList>
 
@@ -645,7 +684,79 @@ export default function ClientDetails() {
             </Card>
           ))}
         </TabsContent>
+
+        {/* FINANCIAL TAB */}
+        <TabsContent value="financial" className="space-y-4">
+          {(() => {
+            const totalRecebido = finRevenues.reduce((s, r) => s + Number(r.amount), 0);
+            const comissoesPagas = finCommissions.filter(c => c.status === 'paid').reduce((s, c) => s + Number(c.amount), 0);
+            const comissoesPendentes = finCommissions.filter(c => c.status !== 'paid').reduce((s, c) => s + Number(c.amount), 0);
+            const SERVICE_LABELS: Record<string, string> = { regularizacao: 'Regularização', venda_plataforma: 'Venda Plataforma', consultoria: 'Consultoria', outro: 'Outro' };
+            const timeline = [
+              ...finRevenues.map(r => ({ kind: 'Receita', date: r.received_at, value: Number(r.amount), label: SERVICE_LABELS[r.service_type] || r.service_type })),
+              ...finCommissions.map(c => ({ kind: 'Comissão', date: c.paid_at || c.created_at, value: Number(c.amount), label: c.status === 'paid' ? 'paga' : 'pendente' })),
+            ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+            return (
+              <>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold">Financeiro do cliente</h3>
+                  <Button size="sm" onClick={() => setChargeOpen(true)}><Plus className="mr-1 h-4 w-4" /> Lançar receita</Button>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <StatCard label="Total recebido" value={formatCurrency(totalRecebido)} />
+                  <StatCard label="Comissões pagas" value={formatCurrency(comissoesPagas)} />
+                  <StatCard label="Comissões pendentes" value={formatCurrency(comissoesPendentes)} />
+                </div>
+                {timeline.length === 0 ? (
+                  <Card><CardContent className="p-6 text-center text-muted-foreground">Nenhum lançamento financeiro para este cliente</CardContent></Card>
+                ) : (
+                  <Card>
+                    <CardContent className="p-0 divide-y">
+                      {timeline.map((t, i) => (
+                        <div key={i} className="flex items-center justify-between p-4">
+                          <div>
+                            <p className="font-medium">{t.kind} <span className="text-sm text-muted-foreground">• {t.label}</span></p>
+                            <p className="text-xs text-muted-foreground">{t.date ? new Date(t.date).toLocaleDateString('pt-BR') : '-'}</p>
+                          </div>
+                          <span className={`font-mono font-medium ${t.kind === 'Comissão' ? 'text-muted-foreground' : 'text-foreground'}`}>{formatCurrency(t.value)}</span>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            );
+          })()}
+        </TabsContent>
       </Tabs>
+
+      {/* Lançar receita (cobrança) Drawer */}
+      <Drawer open={chargeOpen} onOpenChange={setChargeOpen} title="Lançar receita" description="Registra uma receita vinculada a este cliente.">
+        <form onSubmit={handleCreateCharge} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Tipo de serviço</Label>
+            <Select value={chargeForm.service_type} onValueChange={(v) => setChargeForm(p => ({ ...p, service_type: v }))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="regularizacao">Regularização</SelectItem>
+                <SelectItem value="venda_plataforma">Venda Plataforma</SelectItem>
+                <SelectItem value="consultoria">Consultoria</SelectItem>
+                <SelectItem value="outro">Outro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2"><Label>Valor (R$) *</Label><Input type="number" step="0.01" value={chargeForm.amount} onChange={(e) => setChargeForm(p => ({ ...p, amount: e.target.value }))} required /></div>
+            <div className="space-y-2"><Label>Data</Label><Input type="date" value={chargeForm.received_at} onChange={(e) => setChargeForm(p => ({ ...p, received_at: e.target.value }))} /></div>
+          </div>
+          <div className="space-y-2"><Label>Observação</Label><Input value={chargeForm.notes} onChange={(e) => setChargeForm(p => ({ ...p, notes: e.target.value }))} /></div>
+          <div className="flex justify-end gap-2 border-t border-cream-200 pt-4">
+            <Button type="button" variant="outline" onClick={() => setChargeOpen(false)}>Cancelar</Button>
+            <Button type="submit" disabled={chargeSaving}>{chargeSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Lançar</Button>
+          </div>
+        </form>
+      </Drawer>
 
       {/* New Regularization Dialog */}
       <Dialog open={newRegOpen} onOpenChange={setNewRegOpen}>
