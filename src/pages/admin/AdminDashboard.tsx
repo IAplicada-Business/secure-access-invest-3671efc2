@@ -132,8 +132,23 @@ export default function AdminDashboard() {
         .not('status', 'in', '("concluida","arquivada")');
       const activeReg = regProcs?.length || 0;
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      // Count stagnant: active processes created > 7 days ago (simple heuristic)
-      const stagnant = regProcs?.filter(r => r.created_at < sevenDaysAgo).length || 0;
+      // Estagnado = sem atividade nos últimos 7 dias. Atividade = última interação
+      // (MAX(interaction_date) em regularization_interactions); se não houver
+      // nenhuma interação, usa created_at como referência.
+      let stagnant = 0;
+      if (regProcs && regProcs.length > 0) {
+        const procIds = regProcs.map(r => r.id);
+        const { data: regInteractions } = await supabase
+          .from('regularization_interactions')
+          .select('process_id, interaction_date')
+          .in('process_id', procIds);
+        const lastActivity = new Map<string, string>();
+        regInteractions?.forEach(i => {
+          const cur = lastActivity.get(i.process_id);
+          if (!cur || i.interaction_date > cur) lastActivity.set(i.process_id, i.interaction_date);
+        });
+        stagnant = regProcs.filter(r => (lastActivity.get(r.id) ?? r.created_at) < sevenDaysAgo).length;
+      }
 
       setStats({
         totalProperties: total,
