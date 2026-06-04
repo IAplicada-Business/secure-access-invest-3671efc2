@@ -29,6 +29,8 @@ interface KanbanBoardProps {
   cards: KanbanCard[];
   /** Chamado quando um card é solto em outra coluna. */
   onMove: (cardId: string, toColumnId: string) => void;
+  /** Texto exibido (sutil) quando uma coluna não tem cards. */
+  emptyHint?: string;
   className?: string;
 }
 
@@ -77,7 +79,7 @@ function DroppableColumn({ column, children }: { column: KanbanColumn; children:
  * Kanban genérico com drag-and-drop (@dnd-kit/core).
  * Usado pelo CRM agora; reutilizável para o funil de ativos depois.
  */
-export function KanbanBoard({ columns, cards, onMove, className }: KanbanBoardProps) {
+export function KanbanBoard({ columns, cards, onMove, emptyHint, className }: KanbanBoardProps) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   function handleDragEnd(event: DragEndEvent) {
@@ -94,15 +96,18 @@ export function KanbanBoard({ columns, cards, onMove, className }: KanbanBoardPr
   return (
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
       <div className={cn('flex gap-4 overflow-x-auto pb-2', className)}>
-        {columns.map((column) => (
-          <DroppableColumn key={column.id} column={column}>
-            {cards
-              .filter((c) => c.columnId === column.id)
-              .map((card) => (
-                <DraggableCard key={card.id} card={card} />
-              ))}
-          </DroppableColumn>
-        ))}
+        {columns.map((column) => {
+          const colCards = cards.filter((c) => c.columnId === column.id);
+          return (
+            <DroppableColumn key={column.id} column={column}>
+              {colCards.length === 0 && emptyHint ? (
+                <p className="px-2 py-6 text-center text-xs text-ink-300">{emptyHint}</p>
+              ) : (
+                colCards.map((card) => <DraggableCard key={card.id} card={card} />)
+              )}
+            </DroppableColumn>
+          );
+        })}
       </div>
     </DndContext>
   );
