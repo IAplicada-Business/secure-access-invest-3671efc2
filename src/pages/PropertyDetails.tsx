@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Property, Setting } from '@/types/database';
 import { formatCurrency, calculateAppreciation } from '@/lib/formatCurrency';
+import { DEFAULT_WHATSAPP } from '@/hooks/useWhatsappNumber';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { 
@@ -57,7 +58,7 @@ export default function PropertyDetails() {
   const { token, propertyId } = useParams<{ token: string; propertyId: string }>();
   const navigate = useNavigate();
   const [property, setProperty] = useState<Property | null>(null);
-  const [whatsappNumber, setWhatsappNumber] = useState('5511999999999');
+  const [whatsappNumber, setWhatsappNumber] = useState(DEFAULT_WHATSAPP);
   const [greetingName, setGreetingName] = useState('Olá Juliê!');
   const [loading, setLoading] = useState(true);
   const startTimeRef = useRef<number>(Date.now());
