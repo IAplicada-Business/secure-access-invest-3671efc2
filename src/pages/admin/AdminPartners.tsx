@@ -232,10 +232,10 @@ export default function AdminPartners() {
             {form.type === 'corretor_autonomo' && (
               <div className="space-y-2">
                 <Label>Imobiliária vinculada</Label>
-                <Select value={form.parent_partner_id} onValueChange={(v) => setForm(p => ({ ...p, parent_partner_id: v }))}>
+                <Select value={form.parent_partner_id || 'none'} onValueChange={(v) => setForm(p => ({ ...p, parent_partner_id: v === 'none' ? '' : v }))}>
                   <SelectTrigger><SelectValue placeholder="Selecione uma imobiliária..." /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhuma</SelectItem>
+                    <SelectItem value="none">Nenhuma</SelectItem>
                     {agencies.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
