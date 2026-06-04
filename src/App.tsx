@@ -8,7 +8,6 @@ import NotFound from "./pages/NotFound";
 import Catalog from "./pages/Catalog";
 import PropertyDetails from "./pages/PropertyDetails";
 import InvalidLink from "./pages/InvalidLink";
-import AdminLogin from "./pages/admin/AdminLogin";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProperties from "./pages/admin/AdminProperties";
@@ -47,7 +46,6 @@ const App = () => (
           <Route path="/submit/:token" element={<PropertySubmission />} />
           
           {/* Admin Routes */}
-          <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
             <Route path="imoveis" element={<AdminProperties />} />

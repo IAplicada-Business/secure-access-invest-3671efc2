@@ -1,6 +1,4 @@
 import logoFull from '@/assets/logo-full.png';
-import logoTight from '@/assets/logo-jmobi-tight.png';
-import logoIconJ from '@/assets/logo-icon-j.png';
 import { cn } from '@/lib/utils';
 
 interface LogoProps {
@@ -9,8 +7,11 @@ interface LogoProps {
   variant?: 'full' | 'compact' | 'icon';
 }
 
-export function Logo({ className = '', alt = 'JMobi', variant = 'full' }: LogoProps) {
-  const src = variant === 'compact' ? logoTight : variant === 'icon' ? logoIconJ : logoFull;
+export function Logo({ className = '', alt = 'Tijolo em Capital', variant = 'full' }: LogoProps) {
+  // Todas as variantes usam o logo principal por ora; o rebranding completo
+  // (logos próprias em public/image) é tratado no Prompt 07.
+  void variant;
+  const src = logoFull;
 
   return (
     <span className={cn('relative inline-block overflow-hidden h-16 w-44', className)} aria-label={alt}>

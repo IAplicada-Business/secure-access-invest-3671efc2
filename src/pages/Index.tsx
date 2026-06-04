@@ -9,7 +9,6 @@ import { Loader2, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ownerPhoto from '@/assets/owner-photo.jpg';
 import logoFull from '@/assets/logo-full.png';
-import logoIcon from '@/assets/logo-icon.png';
 
 export default function Index() {
   const navigate = useNavigate();
@@ -113,8 +112,8 @@ export default function Index() {
           {/* Logo icon */}
           <div className="flex justify-center mb-10">
             <img
-              src={logoIcon}
-              alt="J. Imobi"
+              src={logoFull}
+              alt="Tijolo em Capital"
               className="h-20 w-auto"
             />
           </div>
@@ -123,7 +122,7 @@ export default function Index() {
           <div className="lg:hidden flex justify-center mb-4">
             <img
               src={logoFull}
-              alt="J. Imobi Gestão e Negócios"
+              alt="Tijolo em Capital"
               className="h-10 w-auto"
             />
           </div>
