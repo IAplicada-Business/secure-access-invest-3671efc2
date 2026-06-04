@@ -1,25 +1,29 @@
-import logoFull from '@/assets/logo-full.png';
 import { cn } from '@/lib/utils';
 
 interface LogoProps {
   className?: string;
   alt?: string;
-  variant?: 'full' | 'compact' | 'icon';
+  /**
+   * Qual arte da marca usar:
+   * - 'color' (padrão): logo colorida — para fundos claros.
+   * - 'gold': monocromática dourada — para fundos escuros.
+   * - 'dark': monocromática escura.
+   */
+  tone?: 'color' | 'gold' | 'dark';
 }
 
-export function Logo({ className = '', alt = 'Tijolo em Capital', variant = 'full' }: LogoProps) {
-  // Todas as variantes usam o logo principal por ora; o rebranding completo
-  // (logos próprias em public/image) é tratado no Prompt 07.
-  void variant;
-  const src = logoFull;
+const SRC: Record<NonNullable<LogoProps['tone']>, string> = {
+  color: '/image/logo-color.png',
+  gold: '/image/logo-color-alt.png',
+  dark: '/image/logo-mono-dark.png',
+};
 
+export function Logo({ className = '', alt = 'Tijolo em Capital', tone = 'color' }: LogoProps) {
   return (
-    <span className={cn('relative inline-block overflow-hidden h-16 w-44', className)} aria-label={alt}>
-      <img
-        src={src}
-        alt={alt}
-        className="h-full w-full object-contain object-center"
-      />
-    </span>
+    <img
+      src={SRC[tone]}
+      alt={alt}
+      className={cn('inline-block object-contain object-left', className)}
+    />
   );
 }

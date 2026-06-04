@@ -281,7 +281,7 @@ export default function PropertyDetails() {
               <ArrowLeft className="h-5 w-5" />
               <span className="hidden sm:inline">Voltar ao catálogo</span>
             </Link>
-            <Logo className="h-8" />
+            <Logo className="h-12 w-auto" />
           </div>
         </div>
       </header>
