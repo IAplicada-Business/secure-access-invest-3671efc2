@@ -55,7 +55,7 @@ export default function AdminLayout() {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        navigate('/admin/login');
+        navigate('/');
         return;
       }
 
@@ -70,7 +70,7 @@ export default function AdminLayout() {
       if (roleError || !roleData) {
         toast.error('Acesso negado. Você não tem permissão de administrador.');
         await supabase.auth.signOut();
-        navigate('/admin/login');
+        navigate('/');
         return;
       }
 
@@ -81,7 +81,7 @@ export default function AdminLayout() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
-        navigate('/admin/login');
+        navigate('/');
       }
     });
 
@@ -91,7 +91,7 @@ export default function AdminLayout() {
   async function handleLogout() {
     await supabase.auth.signOut();
     toast.success('Logout realizado com sucesso');
-    navigate('/admin/login');
+    navigate('/');
   }
 
   if (loading) {

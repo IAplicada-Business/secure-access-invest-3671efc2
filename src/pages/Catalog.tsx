@@ -54,14 +54,14 @@ export default function Catalog() {
         .single();
 
       if (linkError || !linkData) {
-        setError('Este link não está mais disponível. Entre em contato com a JMob.');
+        setError('Este link não está mais disponível. Entre em contato com a Tijolo em Capital.');
         setLoading(false);
         return;
       }
 
       // Check expiration
       if (linkData.expires_at && new Date(linkData.expires_at) < new Date()) {
-        setError('Este link expirou. Entre em contato com a JMob para obter um novo.');
+        setError('Este link expirou. Entre em contato com a Tijolo em Capital para obter um novo.');
         setLoading(false);
         return;
       }
@@ -307,7 +307,7 @@ export default function Catalog() {
         <div className="container mx-auto px-4 text-center">
           <Logo className="mx-auto mb-4 h-8" />
           <p className="text-sm text-white/70">
-            © {new Date().getFullYear()} JMob Gestão e Negócios. Todos os direitos reservados.
+            © {new Date().getFullYear()} Tijolo em Capital. Todos os direitos reservados.
           </p>
         </div>
       </footer>

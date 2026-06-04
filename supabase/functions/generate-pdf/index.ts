@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
 
       // Footer text
       const dateStr = new Date().toLocaleDateString("pt-BR");
-      const footerLeft = `J.Imobi  •  ${dateStr}`;
+      const footerLeft = `Tijolo em Capital  •  ${dateStr}`;
       const footerRight = `${pageNum} / ${totalPages}`;
       page.drawText(footerLeft, {
         x: marginLeft,

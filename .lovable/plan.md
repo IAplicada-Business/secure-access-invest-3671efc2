@@ -1,5 +1,5 @@
 
-# Sprint 1: Melhorias no Catalogo de Imoveis JMob
+# Sprint 1: Melhorias no Catalogo de Imoveis Tijolo em Capital
 
 Este plano abrange tres blocos principais de funcionalidades: novos campos e filtros, melhorias na pagina de detalhes, e rastreamento avancado de interesse.
 

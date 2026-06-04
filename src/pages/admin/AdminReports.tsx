@@ -487,7 +487,7 @@ Comissão pendente: ${formatCurrency(reportPartner.commission_pending)}
 ---
 
 **Observações:**
-Relatório gerado automaticamente pelo sistema J.Imobi.`;
+Relatório gerado automaticamente pelo sistema Tijolo em Capital.`;
                     }
 
                     const { data, error } = await supabase.functions.invoke('generate-pdf', {

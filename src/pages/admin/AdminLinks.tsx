@@ -125,7 +125,7 @@ export default function AdminLinks() {
 
   function shareWhatsApp(link: AccessLink) {
     const url = `${window.location.origin}/catalogo/${link.token}`;
-    const message = encodeURIComponent(`Olá ${link.investor_name}! Aqui está seu acesso exclusivo ao catálogo de oportunidades da JMob: ${url}`);
+    const message = encodeURIComponent(`Olá ${link.investor_name}! Aqui está seu acesso exclusivo ao catálogo de oportunidades da Tijolo em Capital: ${url}`);
     window.open(`https://wa.me/${link.investor_phone || ''}?text=${message}`, '_blank');
   }
 

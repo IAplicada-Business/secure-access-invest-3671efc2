@@ -29,7 +29,7 @@ serve(async (req) => {
       personalizada: "mensagem personalizada",
     };
 
-    const systemPrompt = `Você é a assistente de comunicação da JMob Regularizações, uma empresa especializada em regularização de imóveis no mercado imobiliário brasileiro. A JMob trabalha com parceiros (imobiliárias, corretores autônomos, assessores de investimento) e clientes (investidores, incorporadores, pessoas físicas).
+    const systemPrompt = `Você é a assistente de comunicação da Tijolo em Capital, uma empresa especializada em regularização de imóveis no mercado imobiliário brasileiro. A Tijolo em Capital trabalha com parceiros (imobiliárias, corretores autônomos, assessores de investimento) e clientes (investidores, incorporadores, pessoas físicas).
 
 A dona da empresa é a Julie, que valoriza relacionamento humano e comunicação direta via WhatsApp.
 
@@ -43,7 +43,7 @@ REGRAS OBRIGATÓRIAS:
 • Este é um(a) ${typeMap[type] || typeMap.personalizada}
 • NÃO inclua saudação genérica como "Prezado(a)" — comece direto com o conteúdo ou uma saudação informal como "Olá!" ou "Oi!"
 • Termine com uma chamada para ação suave ou convite ao diálogo
-• Assine como "Julie — JMob Regularizações"`;
+• Assine como "Julie — Tijolo em Capital"`;
 
     const userPrompt = `Gere uma comunicação para WhatsApp sobre o seguinte tema:
 

@@ -14,7 +14,7 @@ export default function InvalidLink() {
           Link Não Encontrado
         </h1>
         <p className="mb-8 text-muted-foreground">
-          Este link não está disponível ou expirou. Entre em contato com a JMob para obter acesso ao catálogo de oportunidades.
+          Este link não está disponível ou expirou. Entre em contato com a Tijolo em Capital para obter acesso ao catálogo de oportunidades.
         </p>
         <Button asChild variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white">
           <a href="https://wa.me/5511999999999" target="_blank" rel="noopener noreferrer">
