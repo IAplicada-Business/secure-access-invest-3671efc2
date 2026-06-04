@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { Loader2, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ownerPhoto from '@/assets/owner-photo.jpg';
-import logoFull from '@/assets/logo-full.png';
+import { Logo } from '@/components/Logo';
 
 export default function Index() {
   const navigate = useNavigate();
@@ -109,22 +109,9 @@ export default function Index() {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="w-full max-w-sm"
         >
-          {/* Logo icon */}
+          {/* Logo */}
           <div className="flex justify-center mb-10">
-            <img
-              src={logoFull}
-              alt="Tijolo em Capital"
-              className="h-20 w-auto"
-            />
-          </div>
-
-          {/* Mobile-only full logo */}
-          <div className="lg:hidden flex justify-center mb-4">
-            <img
-              src={logoFull}
-              alt="Tijolo em Capital"
-              className="h-10 w-auto"
-            />
+            <Logo className="h-20 w-auto" />
           </div>
 
           <div className="text-center mb-8">

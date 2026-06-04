@@ -113,7 +113,7 @@ export default function AdminLayout() {
           <div className="flex h-16 items-center justify-between gap-4">
             {/* Logo */}
             <Link to="/admin" className="flex-shrink-0">
-              <Logo variant="icon" className="h-12 w-12" />
+              <Logo className="h-10 w-auto" />
             </Link>
 
             {/* Desktop Navigation - Dropdowns */}
