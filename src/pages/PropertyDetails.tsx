@@ -58,6 +58,7 @@ export default function PropertyDetails() {
   const navigate = useNavigate();
   const [property, setProperty] = useState<Property | null>(null);
   const [whatsappNumber, setWhatsappNumber] = useState('5511999999999');
+  const [greetingName, setGreetingName] = useState('Olá Juliê!');
   const [loading, setLoading] = useState(true);
   const startTimeRef = useRef<number>(Date.now());
   const pageViewIdRef = useRef<string | null>(null);
@@ -132,6 +133,17 @@ export default function PropertyDetails() {
 
       if (settingData) {
         setWhatsappNumber(settingData.value);
+      }
+
+      // Load saudação dinâmica (settings.greeting_name); mantém o default se não existir
+      const { data: greetingData } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'greeting_name')
+        .maybeSingle();
+
+      if (greetingData?.value) {
+        setGreetingName(greetingData.value);
       }
 
       // Create page view record
@@ -243,7 +255,7 @@ export default function PropertyDetails() {
   const riskInfo = property.risk_level ? riskConfig[property.risk_level] : null;
 
   const whatsappMessage = encodeURIComponent(
-    `Olá Juliê! Vi o imóvel "${property.title}" no catálogo e gostei. Podemos conversar?`
+    `${greetingName} Vi o imóvel "${property.title}" no catálogo e gostei. Podemos conversar?`
   );
 
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
