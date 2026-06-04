@@ -25,6 +25,9 @@ export function FinanceOverview() {
   const [previousRevenue, setPreviousRevenue] = useState(0);
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [clientTypeData, setClientTypeData] = useState<ClientTypeData[]>([]);
+  const [serviceTypeData, setServiceTypeData] = useState<ClientTypeData[]>([]);
+  const [imobiliariaRanking, setImobiliariaRanking] = useState<ClientTypeData[]>([]);
+  const [includeCommissions, setIncludeCommissions] = useState(true);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -109,10 +112,43 @@ export function FinanceOverview() {
       setClientTypeData(Object.entries(typeTotals).map(([name, value]) => ({ name, value })));
     }
 
+    // Revenue by service type ("origem")
+    const { data: revByService } = await supabase.from('revenues').select('amount, service_type');
+    const serviceLabels: Record<string, string> = {
+      regularizacao: 'Regularização', venda_plataforma: 'Venda Plataforma',
+      consultoria: 'Consultoria', outro: 'Outro',
+    };
+    const svcTotals: Record<string, number> = {};
+    revByService?.forEach(r => {
+      const label = serviceLabels[r.service_type] || r.service_type;
+      svcTotals[label] = (svcTotals[label] || 0) + Number(r.amount);
+    });
+    setServiceTypeData(Object.entries(svcTotals).map(([name, value]) => ({ name, value })));
+
+    // Ranking de imobiliárias: agrega receita pela imobiliária do parceiro
+    // (parent_partner_id; se o parceiro for a própria imobiliária ou autônomo, usa o nome dele).
+    const { data: revByPartner } = await supabase.from('revenues').select('amount, partner_id').not('partner_id', 'is', null);
+    const { data: allPartners } = await supabase.from('partners').select('id, name, parent_partner_id');
+    if (revByPartner && revByPartner.length > 0) {
+      const pMap = new Map((allPartners ?? []).map(p => [p.id, p]));
+      const agg: Record<string, number> = {};
+      revByPartner.forEach(r => {
+        const p = r.partner_id ? pMap.get(r.partner_id) : null;
+        if (!p) return;
+        const parent = p.parent_partner_id ? pMap.get(p.parent_partner_id) : null;
+        const key = parent?.name ?? p.name;
+        agg[key] = (agg[key] || 0) + Number(r.amount);
+      });
+      setImobiliariaRanking(
+        Object.entries(agg).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 5),
+      );
+    }
+
     setLoading(false);
   }
 
-  const netProfit = currentRevenue - currentExpenses - pendingCommissions;
+  const netProfit = currentRevenue - currentExpenses - (includeCommissions ? pendingCommissions : 0);
+  const maxRanking = Math.max(1, ...imobiliariaRanking.map(r => r.value));
 
   if (loading) {
     return <div className="text-center py-12 text-muted-foreground">Carregando...</div>;
@@ -145,6 +181,13 @@ export function FinanceOverview() {
             <div className={`text-xl sm:text-2xl font-bold ${netProfit >= 0 ? 'text-primary' : 'text-destructive'}`}>
               {formatCurrency(netProfit)}
             </div>
+            <button
+              type="button"
+              onClick={() => setIncludeCommissions(v => !v)}
+              className="mt-1 text-[11px] text-muted-foreground underline-offset-2 hover:underline"
+            >
+              {includeCommissions ? 'descontando comissões' : 'sem descontar comissões'}
+            </button>
           </CardContent>
         </Card>
         <Card>
@@ -206,6 +249,60 @@ export function FinanceOverview() {
               </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-[300px] text-muted-foreground">Sem dados para exibir</div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Ranking de imobiliárias + Receita por origem */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Ranking de Imobiliárias</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {imobiliariaRanking.length > 0 ? (
+              <div className="space-y-3">
+                {imobiliariaRanking.map((r) => (
+                  <div key={r.name} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="truncate font-medium text-foreground">{r.name}</span>
+                      <span className="font-mono text-muted-foreground">{formatCurrency(r.value)}</span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${(r.value / maxRanking) * 100}%`, background: 'linear-gradient(90deg, hsl(41,46%,68%), hsl(41,46%,52%))' }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-[200px] text-muted-foreground">Sem receitas vinculadas a parceiros</div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Receita por Origem (serviço)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {serviceTypeData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={260}>
+                <PieChart>
+                  <Pie data={serviceTypeData} cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                    {serviceTypeData.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[260px] text-muted-foreground">Sem dados para exibir</div>
             )}
           </CardContent>
         </Card>
