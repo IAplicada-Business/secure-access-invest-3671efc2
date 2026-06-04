@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { calculateAppreciation } from '@/lib/formatCurrency';
+import { useWhatsappNumber } from '@/hooks/useWhatsappNumber';
 
 type SortOption = 'recent' | 'appreciation' | 'lowest_investment' | 'highest_investment';
 
@@ -31,7 +32,8 @@ export default function Catalog() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+  const whatsappNumber = useWhatsappNumber();
+
   // Filters and sorting
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const [filterType, setFilterType] = useState<string>('all');
@@ -162,7 +164,7 @@ export default function Catalog() {
             {error}
           </p>
           <Button asChild className="bg-charcoal text-white hover:bg-charcoal-light">
-            <a href="https://wa.me/5511999999999" target="_blank" rel="noopener noreferrer">
+            <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noopener noreferrer">
               Entrar em Contato
             </a>
           </Button>
