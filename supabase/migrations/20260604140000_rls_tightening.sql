@@ -59,6 +59,7 @@ CREATE POLICY "Admins can view page_views" ON public.page_views
 -- (ex.: whatsapp_number).
 -- =========================================================
 DROP POLICY IF EXISTS "Authenticated users can manage settings" ON public.settings;
+DROP POLICY IF EXISTS "Admins can manage settings" ON public.settings;
 CREATE POLICY "Admins can manage settings" ON public.settings
   FOR ALL TO authenticated
   USING (public.has_role(auth.uid(), 'admin'))
