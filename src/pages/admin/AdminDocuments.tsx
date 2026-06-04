@@ -14,6 +14,7 @@ import {
   Dialog, DialogContent,
 } from '@/components/ui/dialog';
 import { Loader2, Plus, FileText, Download, Archive, Search, Eye, Pencil } from 'lucide-react';
+import { EmptyState } from '@/components/ui-system';
 import { toast } from 'sonner';
 import DocumentWizard from '@/components/documents/DocumentWizard';
 import SignContractDialog from '@/components/documents/SignContractDialog';
@@ -240,7 +241,7 @@ export default function AdminDocuments() {
               {loading ? (
                 <TableRow><TableCell colSpan={6} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum documento encontrado</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="p-0"><EmptyState icon={FileText} title="Nenhum documento encontrado" body="Gere um documento ou ajuste os filtros." /></TableCell></TableRow>
               ) : filtered.map(doc => (
                 <TableRow key={doc.id}>
                   <TableCell>

@@ -17,9 +17,10 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Plus, Loader2, MessageCircle, Search, Eye } from 'lucide-react';
+import { Plus, Loader2, MessageCircle, Search, Eye, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatCurrency';
+import { EmptyState } from '@/components/ui-system';
 
 const TYPE_LABELS: Record<PartnerType, string> = {
   imobiliaria: 'Imobiliária',
@@ -166,7 +167,7 @@ export default function AdminPartners() {
               {loading ? (
                 <TableRow><TableCell colSpan={6} className="text-center py-8"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum parceiro encontrado</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="p-0"><EmptyState icon={Users} title="Nenhum parceiro encontrado" body="Cadastre um parceiro ou ajuste os filtros." /></TableCell></TableRow>
               ) : filtered.map((partner) => (
                 <TableRow key={partner.id}>
                   <TableCell className="font-medium">{partner.name}</TableCell>
