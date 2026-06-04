@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -180,6 +181,19 @@ export default function AdminSettings() {
   return (
     <div className="space-y-6">
       <h1 className="font-display text-2xl font-bold">Configurações</h1>
+
+      {/* Dados Iniciais */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Plus className="h-5 w-5 text-primary" />
+              <div><CardTitle>Dados Iniciais</CardTitle><CardDescription>Cadastre rapidamente parceiros, receitas e despesas para os painéis deixarem de ficar vazios</CardDescription></div>
+            </div>
+            <Button asChild size="sm"><Link to="/admin/configuracoes/seed">Abrir</Link></Button>
+          </div>
+        </CardHeader>
+      </Card>
 
       {/* WhatsApp */}
       <Card>
