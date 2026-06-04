@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import { tokens } from "./src/lib/design-tokens";
 
 export default {
   darkMode: ["class"],
@@ -16,6 +17,10 @@ export default {
       fontFamily: {
         sans: ['Montserrat', 'sans-serif'],
         display: ['Playfair Display', 'serif'],
+        // Design System (Tijolo em Capital) — usados pelos componentes ui-system.
+        'ds-display': tokens.font.display,
+        'ds-body': tokens.font.body,
+        'ds-mono': tokens.font.mono,
       },
       colors: {
         border: "hsl(var(--border))",
@@ -56,6 +61,30 @@ export default {
           light: "hsl(var(--gold-light))",
           dark: "hsl(var(--gold-dark))",
         },
+        // Design System (Tijolo em Capital) — paleta editorial-imobiliária.
+        brand: {
+          gold: tokens.color.brand.gold,
+          goldSoft: tokens.color.brand.goldSoft,
+          goldDeep: tokens.color.brand.goldDeep,
+        },
+        ink: {
+          900: tokens.color.ink[900],
+          700: tokens.color.ink[700],
+          500: tokens.color.ink[500],
+          300: tokens.color.ink[300],
+        },
+        cream: {
+          50: tokens.color.neutral[50],
+          100: tokens.color.neutral[100],
+          200: tokens.color.neutral[200],
+          300: tokens.color.neutral[300],
+        },
+        semantic: {
+          success: tokens.color.semantic.success,
+          warning: tokens.color.semantic.warning,
+          danger: tokens.color.semantic.danger,
+          info: tokens.color.semantic.info,
+        },
         charcoal: {
           DEFAULT: "hsl(var(--charcoal))",
           light: "hsl(var(--charcoal-light))",
@@ -75,11 +104,21 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        // Design System — extras sem colidir com os existentes.
+        'ds-sm': tokens.radius.sm,
+        'ds-md': tokens.radius.md,
+        'ds-lg': tokens.radius.lg,
+        'ds-xl': tokens.radius.xl,
+        'ds-pill': tokens.radius.pill,
       },
       boxShadow: {
         'card': 'var(--shadow-card)',
         'card-hover': 'var(--shadow-card-hover)',
         'gold': 'var(--shadow-gold)',
+        // Design System — elevação editorial.
+        'ds-sm': tokens.shadow.sm,
+        'ds-md': tokens.shadow.md,
+        'ds-lg': tokens.shadow.lg,
       },
       keyframes: {
         "accordion-down": {
