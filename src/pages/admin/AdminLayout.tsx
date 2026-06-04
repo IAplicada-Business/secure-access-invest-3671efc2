@@ -18,7 +18,8 @@ import {
   ChevronDown,
   DollarSign,
   FileText,
-  MessageSquare
+  MessageSquare,
+  KanbanSquare
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -208,13 +209,19 @@ export default function AdminLayout() {
                 {/* CRM dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className={cn(navLinkClasses(isGroupActive(['/admin/clientes', '/admin/parceiros'])), "gap-1.5")}>
+                    <button className={cn(navLinkClasses(isGroupActive(['/admin/crm', '/admin/clientes', '/admin/parceiros'])), "gap-1.5")}>
                       <Users className="h-4 w-4" />
                       CRM
                       <ChevronDown className="h-3 w-3 opacity-60" />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/crm" className="flex items-center gap-2">
+                        <KanbanSquare className="h-4 w-4" />
+                        Funil (Kanban)
+                      </Link>
+                    </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link to="/admin/clientes" className="flex items-center gap-2">
                         <Users className="h-4 w-4" />
@@ -297,6 +304,9 @@ export default function AdminLayout() {
               </Link>
               <Link to="/admin/documentos" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 pl-12 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
                 <FileText className="h-4 w-4" />Documentos
+              </Link>
+              <Link to="/admin/crm" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                <KanbanSquare className="h-5 w-5" />CRM (Funil)
               </Link>
               <Link to="/admin/clientes" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
                 <Users className="h-5 w-5" />Clientes
