@@ -21,15 +21,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Plus, 
-  Search, 
-  Pencil, 
-  Trash2, 
-  Eye, 
+import {
+  Plus,
+  Search,
+  Pencil,
+  Trash2,
+  Eye,
   EyeOff,
-  Archive
+  Archive,
+  Loader2,
+  Building2
 } from 'lucide-react';
+import { EmptyState } from '@/components/ui-system';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -185,13 +188,13 @@ export default function AdminProperties() {
             {loading ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-8">
-                  Carregando...
+                  <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ) : filteredProperties.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  Nenhum imóvel encontrado
+                <TableCell colSpan={5} className="p-0">
+                  <EmptyState icon={Building2} title="Nenhum imóvel encontrado" body="Cadastre um imóvel ou ajuste os filtros." />
                 </TableCell>
               </TableRow>
             ) : (
