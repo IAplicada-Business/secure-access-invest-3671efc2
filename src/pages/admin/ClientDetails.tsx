@@ -661,10 +661,10 @@ export default function ClientDetails() {
               </div>
               <div className="space-y-2">
                 <Label>Indicado por (parceiro)</Label>
-                <Select value={editForm.partner_id || ''} onValueChange={(v) => setEditForm(p => ({ ...p, partner_id: v || null }))}>
+                <Select value={editForm.partner_id || 'none'} onValueChange={(v) => setEditForm(p => ({ ...p, partner_id: v === 'none' ? null : v }))}>
                   <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum / Texto livre</SelectItem>
+                    <SelectItem value="none">Nenhum / Texto livre</SelectItem>
                     {partners.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
