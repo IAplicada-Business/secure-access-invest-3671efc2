@@ -19,7 +19,9 @@ import {
 } from '@/components/ui/dialog';
 import {
   ArrowLeft, MessageCircle, Pencil, Loader2, Upload, Download, Trash2,
-  Clock, Plus, Building2, Eye, ClipboardList, FileText
+  Clock, Plus, Building2, Eye, ClipboardList, FileText,
+  ExternalLink, FolderPlus, Instagram, Phone, Users, CalendarDays, Globe, HelpCircle, MapPin,
+  type LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -28,13 +30,36 @@ const STATUS_LABELS: Record<ClientStatus, string> = { prospect: 'Prospect', acti
 const INTERACTION_LABELS: Record<InteractionType, string> = { meeting: 'Reunião', whatsapp: 'WhatsApp', email: 'E-mail', call: 'Ligação', other: 'Outro' };
 const DOC_LABELS: Record<DocumentCategory, string> = { rg: 'RG', cpf: 'CPF', matricula: 'Matrícula', contract: 'Contrato', proposal: 'Proposta', other: 'Outro' };
 
+// Campos novos (6B) ainda não estão no types.ts gerado — tipo local + cast.
+interface ClientExt extends Client {
+  canal_entrada: string | null;
+  canal_entrada_detalhe: string | null;
+  cidade: string | null;
+  drive_link: string | null;
+  observacoes: string | null;
+  tags: string[] | null;
+}
+
+const CANAL: Record<string, { label: string; icon: LucideIcon }> = {
+  instagram: { label: 'Instagram', icon: Instagram },
+  indicacao: { label: 'Indicação', icon: Users },
+  corretor: { label: 'Corretor', icon: Phone },
+  evento: { label: 'Evento', icon: CalendarDays },
+  organico: { label: 'Orgânico', icon: Globe },
+  outro: { label: 'Outro', icon: HelpCircle },
+};
+
+function clientInitials(name: string): string {
+  return name.trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() ?? '').join('');
+}
+
 export default function ClientDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [client, setClient] = useState<Client | null>(null);
+  const [client, setClient] = useState<ClientExt | null>(null);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
-  const [editForm, setEditForm] = useState<Partial<Client>>({});
+  const [editForm, setEditForm] = useState<Partial<ClientExt>>({});
   const [saving, setSaving] = useState(false);
 
   // Documents
@@ -76,8 +101,8 @@ export default function ClientDetails() {
     if (!id) return;
     const { data, error } = await supabase.from('clients').select('*').eq('id', id).single();
     if (error || !data) { toast.error('Cliente não encontrado'); navigate('/admin/clientes'); return; }
-    setClient(data as Client);
-    setEditForm(data as Client);
+    setClient(data as unknown as ClientExt);
+    setEditForm(data as unknown as ClientExt);
     setLoading(false);
   }
 
@@ -164,7 +189,7 @@ export default function ClientDetails() {
     e.preventDefault();
     setSaving(true);
     const selectedPartner = partners.find(p => p.id === editForm.partner_id);
-    const { error } = await supabase.from('clients').update({
+    const payload = {
       name: editForm.name,
       type: editForm.type,
       cpf_cnpj: editForm.cpf_cnpj || null,
@@ -174,8 +199,15 @@ export default function ClientDetails() {
       partner_id: editForm.partner_id || null,
       partner_name: selectedPartner ? selectedPartner.name : (editForm.partner_name || null),
       status: editForm.status,
-      notes: editForm.notes || null,
-    }).eq('id', id!);
+      cidade: editForm.cidade || null,
+      canal_entrada: editForm.canal_entrada || null,
+      canal_entrada_detalhe: editForm.canal_entrada_detalhe || null,
+      drive_link: editForm.drive_link || null,
+      tags: editForm.tags ?? [],
+      observacoes: editForm.observacoes || null,
+    };
+    // Campos novos ainda não estão no tipo Update gerado — cast pontual.
+    const { error } = await supabase.from('clients').update(payload as never).eq('id', id!);
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
     toast.success('Cliente atualizado!');
     setEditOpen(false);
@@ -288,6 +320,52 @@ export default function ClientDetails() {
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Button>
 
+      {/* HERO */}
+      <div className="flex flex-col gap-4 rounded-ds-lg border border-cream-200 bg-white p-5 font-ds-body sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-4">
+          <span className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-ds-pill bg-brand-goldSoft/40 text-2xl font-semibold text-brand-goldDeep">
+            {clientInitials(client.name) || '–'}
+          </span>
+          <div className="space-y-2">
+            <h1 className="font-ds-display text-3xl font-semibold tracking-[-0.02em] text-ink-900">{client.name}</h1>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-500">
+              {client.canal_entrada && (() => {
+                const Icon = CANAL[client.canal_entrada]?.icon ?? HelpCircle;
+                return (
+                  <span className="inline-flex items-center gap-1">
+                    <Icon className="h-3.5 w-3.5 text-brand-goldDeep" />
+                    {CANAL[client.canal_entrada]?.label ?? client.canal_entrada}
+                  </span>
+                );
+              })()}
+              {client.cidade && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{client.cidade}</span>}
+              <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />desde {new Date(client.created_at).toLocaleDateString('pt-BR')}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Badge className="bg-brand-goldSoft/30 text-brand-goldDeep">{TYPE_LABELS[client.type]}</Badge>
+              {(client.tags ?? []).map(t => <Badge key={t} variant="outline" className="text-xs">{t}</Badge>)}
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-shrink-0 flex-wrap gap-2">
+          {client.drive_link ? (
+            <Button variant="outline" size="sm" asChild>
+              <a href={client.drive_link} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-1 h-3.5 w-3.5" /> Abrir Drive</a>
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" onClick={() => { setEditForm(client); setEditOpen(true); }}>
+              <FolderPlus className="mr-1 h-3.5 w-3.5" /> Adicionar Drive
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={() => { setEditForm(client); setEditOpen(true); }}>
+            <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
+          </Button>
+          <Button size="sm" onClick={() => { const msg = encodeURIComponent(`Olá ${client.name}!`); window.open(`https://wa.me/${client.phone}?text=${msg}`, '_blank'); }}>
+            <MessageCircle className="mr-1 h-3.5 w-3.5" /> WhatsApp
+          </Button>
+        </div>
+      </div>
+
       <Tabs defaultValue="summary">
         <TabsList>
           <TabsTrigger value="summary">Resumo</TabsTrigger>
@@ -301,16 +379,8 @@ export default function ClientDetails() {
         {/* SUMMARY TAB */}
         <TabsContent value="summary" className="space-y-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-xl">{client.name}</CardTitle>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => { setEditForm(client); setEditOpen(true); }}>
-                  <Pencil className="mr-1 h-3 w-3" /> Editar
-                </Button>
-                <Button size="sm" onClick={() => { const msg = encodeURIComponent(`Olá ${client.name}!`); window.open(`https://wa.me/${client.phone}?text=${msg}`, '_blank'); }}>
-                  <MessageCircle className="mr-1 h-3 w-3" /> WhatsApp
-                </Button>
-              </div>
+            <CardHeader>
+              <CardTitle className="text-lg">Sobre</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -319,7 +389,22 @@ export default function ClientDetails() {
                 <div><span className="text-sm text-muted-foreground">Telefone</span><p className="font-medium">{client.phone}</p></div>
                 <div><span className="text-sm text-muted-foreground">E-mail</span><p className="font-medium">{client.email || '-'}</p></div>
                 <div><span className="text-sm text-muted-foreground">CPF/CNPJ</span><p className="font-medium">{client.cpf_cnpj || '-'}</p></div>
-                <div><span className="text-sm text-muted-foreground">Origem</span><p className="font-medium">{client.origin || '-'}</p></div>
+                <div><span className="text-sm text-muted-foreground">Cidade</span><p className="font-medium">{client.cidade || '-'}</p></div>
+                <div>
+                  <span className="text-sm text-muted-foreground">Canal de entrada</span>
+                  <p className="font-medium">
+                    {client.canal_entrada ? (CANAL[client.canal_entrada]?.label ?? client.canal_entrada) : '-'}
+                    {client.canal_entrada_detalhe ? ` (${client.canal_entrada_detalhe})` : ''}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">Drive</span>
+                  <p className="font-medium">
+                    {client.drive_link
+                      ? <a href={client.drive_link} target="_blank" rel="noopener noreferrer" className="text-primary underline">abrir pasta</a>
+                      : '-'}
+                  </p>
+                </div>
               </div>
               {(client.partner_name || client.partner_id) && (
                 <Card className="mt-4 border-primary/20 bg-primary/5">
@@ -335,10 +420,18 @@ export default function ClientDetails() {
                   </CardContent>
                 </Card>
               )}
-              {client.notes && (
+              {(client.observacoes || client.notes) && (
                 <div className="mt-4 p-3 rounded-lg bg-muted">
                   <span className="text-sm text-muted-foreground">Observações</span>
-                  <p className="mt-1 whitespace-pre-wrap">{client.notes}</p>
+                  <p className="mt-1 whitespace-pre-wrap">{client.observacoes || client.notes}</p>
+                </div>
+              )}
+              {(client.tags ?? []).length > 0 && (
+                <div className="mt-4">
+                  <span className="text-sm text-muted-foreground">Tags</span>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {(client.tags ?? []).map(t => <Badge key={t} variant="outline">{t}</Badge>)}
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -676,9 +769,41 @@ export default function ClientDetails() {
                 <Input value={editForm.partner_name || ''} onChange={(e) => setEditForm(p => ({ ...p, partner_name: e.target.value }))} />
               </div>
             )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Cidade</Label>
+                <Input value={editForm.cidade || ''} onChange={(e) => setEditForm(p => ({ ...p, cidade: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>Canal de entrada</Label>
+                <Select value={editForm.canal_entrada || 'none'} onValueChange={(v) => setEditForm(p => ({ ...p, canal_entrada: v === 'none' ? null : v }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Não informado</SelectItem>
+                    {Object.entries(CANAL).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Detalhe do canal</Label>
+              <Input value={editForm.canal_entrada_detalhe || ''} onChange={(e) => setEditForm(p => ({ ...p, canal_entrada_detalhe: e.target.value }))} placeholder="Ex: quem indicou, qual evento..." />
+            </div>
+            <div className="space-y-2">
+              <Label>Link do Drive</Label>
+              <Input value={editForm.drive_link || ''} onChange={(e) => setEditForm(p => ({ ...p, drive_link: e.target.value }))} placeholder="https://drive.google.com/..." />
+            </div>
+            <div className="space-y-2">
+              <Label>Tags (separadas por vírgula)</Label>
+              <Input
+                value={(editForm.tags ?? []).join(', ')}
+                onChange={(e) => setEditForm(p => ({ ...p, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) }))}
+                placeholder="vip, recorrente"
+              />
+            </div>
             <div className="space-y-2">
               <Label>Observações</Label>
-              <Textarea value={editForm.notes || ''} onChange={(e) => setEditForm(p => ({ ...p, notes: e.target.value }))} rows={3} />
+              <Textarea value={editForm.observacoes || ''} onChange={(e) => setEditForm(p => ({ ...p, observacoes: e.target.value }))} rows={3} />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
