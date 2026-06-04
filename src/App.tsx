@@ -27,6 +27,7 @@ import AdminCommunications from "./pages/admin/AdminCommunications";
 import RegularizationDetails from "./pages/admin/RegularizationDetails";
 import AdminDesignSystem from "./pages/admin/AdminDesignSystem";
 import AdminCrmKanban from "./pages/admin/AdminCrmKanban";
+import AdminRegularizacoes from "./pages/admin/AdminRegularizacoes";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +60,7 @@ const App = () => (
             <Route path="financeiro" element={<AdminFinanceiro />} />
             <Route path="documentos" element={<AdminDocuments />} />
             <Route path="comunicacoes" element={<AdminCommunications />} />
+            <Route path="regularizacoes" element={<AdminRegularizacoes />} />
             <Route path="regularizacoes/:id" element={<RegularizationDetails />} />
             <Route path="clientes" element={<AdminClients />} />
             <Route path="crm" element={<AdminCrmKanban />} />
