@@ -109,8 +109,8 @@ export default function ClientDetails() {
     if (!id) return;
     const { data, error } = await supabase.from('clients').select('*').eq('id', id).single();
     if (error || !data) { toast.error('Cliente não encontrado'); navigate('/admin/clientes'); return; }
-    setClient(data as unknown as ClientExt);
-    setEditForm(data as unknown as ClientExt);
+    setClient(data);
+    setEditForm(data);
     setLoading(false);
   }
 
@@ -244,8 +244,7 @@ export default function ClientDetails() {
       tags: editForm.tags ?? [],
       observacoes: editForm.observacoes || null,
     };
-    // Campos novos ainda não estão no tipo Update gerado — cast pontual.
-    const { error } = await supabase.from('clients').update(payload as never).eq('id', id!);
+    const { error } = await supabase.from('clients').update(payload).eq('id', id!);
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
     toast.success('Cliente atualizado!');
     setEditOpen(false);

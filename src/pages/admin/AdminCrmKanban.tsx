@@ -77,9 +77,9 @@ export default function AdminCrmKanban() {
       .select('*')
       .order('created_at', { ascending: false });
     if (error) { toast.error('Erro ao carregar clientes'); setLoading(false); return; }
-    const list = ((data ?? []) as unknown as CrmClient[]).map(c => ({
+    const list: CrmClient[] = (data ?? []).map(c => ({
       ...c,
-      crm_stage: (c.crm_stage ?? 'chegou') as CrmStage,
+      crm_stage: c.crm_stage ?? 'chegou',
     }));
     setClients(list);
 
@@ -113,8 +113,7 @@ export default function AdminCrmKanban() {
     setClients(cs => cs.map(c => (c.id === cardId ? { ...c, crm_stage: toColumnId as CrmStage } : c)));
     const { error } = await supabase
       .from('clients')
-      // crm_stage ainda não está no tipo Update gerado — cast pontual.
-      .update({ crm_stage: toColumnId } as never)
+      .update({ crm_stage: toColumnId as CrmStage })
       .eq('id', cardId);
     if (error) {
       setClients(prev);

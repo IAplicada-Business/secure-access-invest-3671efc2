@@ -130,45 +130,69 @@ export type Database = {
       }
       clients: {
         Row: {
+          canal_entrada: string | null
+          canal_entrada_detalhe: string | null
+          cidade: string | null
           cpf_cnpj: string | null
           created_at: string
+          crm_stage: Database["public"]["Enums"]["crm_stage_enum"]
+          crm_stage_changed_at: string | null
+          drive_link: string | null
           email: string | null
           id: string
           name: string
           notes: string | null
+          observacoes: string | null
           origin: string | null
           partner_id: string | null
           partner_name: string | null
           phone: string
           status: Database["public"]["Enums"]["client_status"]
+          tags: string[]
           type: Database["public"]["Enums"]["client_type"]
         }
         Insert: {
+          canal_entrada?: string | null
+          canal_entrada_detalhe?: string | null
+          cidade?: string | null
           cpf_cnpj?: string | null
           created_at?: string
+          crm_stage?: Database["public"]["Enums"]["crm_stage_enum"]
+          crm_stage_changed_at?: string | null
+          drive_link?: string | null
           email?: string | null
           id?: string
           name: string
           notes?: string | null
+          observacoes?: string | null
           origin?: string | null
           partner_id?: string | null
           partner_name?: string | null
           phone: string
           status?: Database["public"]["Enums"]["client_status"]
+          tags?: string[]
           type?: Database["public"]["Enums"]["client_type"]
         }
         Update: {
+          canal_entrada?: string | null
+          canal_entrada_detalhe?: string | null
+          cidade?: string | null
           cpf_cnpj?: string | null
           created_at?: string
+          crm_stage?: Database["public"]["Enums"]["crm_stage_enum"]
+          crm_stage_changed_at?: string | null
+          drive_link?: string | null
           email?: string | null
           id?: string
           name?: string
           notes?: string | null
+          observacoes?: string | null
           origin?: string | null
           partner_id?: string | null
           partner_name?: string | null
           phone?: string
           status?: Database["public"]["Enums"]["client_status"]
+          tags?: string[]
           type?: Database["public"]["Enums"]["client_type"]
         }
         Relationships: [
@@ -177,6 +201,41 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_stage_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          client_id: string
+          from_stage: Database["public"]["Enums"]["crm_stage_enum"] | null
+          id: string
+          to_stage: Database["public"]["Enums"]["crm_stage_enum"] | null
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          client_id: string
+          from_stage?: Database["public"]["Enums"]["crm_stage_enum"] | null
+          id?: string
+          to_stage?: Database["public"]["Enums"]["crm_stage_enum"] | null
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          client_id?: string
+          from_stage?: Database["public"]["Enums"]["crm_stage_enum"] | null
+          id?: string
+          to_stage?: Database["public"]["Enums"]["crm_stage_enum"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_stage_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
@@ -1145,6 +1204,7 @@ export type Database = {
       client_status: "prospect" | "active" | "completed"
       client_type: "investor" | "incorporator" | "individual"
       commission_status: "pending" | "paid"
+      crm_stage_enum: "chegou" | "ligacao" | "fechou_contrato" | "perdido"
       communication_audience:
         | "all_partners"
         | "partner_type"
@@ -1328,6 +1388,7 @@ export const Constants = {
       client_status: ["prospect", "active", "completed"],
       client_type: ["investor", "incorporator", "individual"],
       commission_status: ["pending", "paid"],
+      crm_stage_enum: ["chegou", "ligacao", "fechou_contrato", "perdido"],
       communication_audience: [
         "all_partners",
         "partner_type",
