@@ -64,7 +64,7 @@ export default function AdminPartners() {
       .select('*')
       .order('created_at', { ascending: false });
     if (error) { toast.error('Erro ao carregar parceiros'); return; }
-    const list = (data || []) as unknown as Partner[];
+    const list = data || [];
     setPartners(list);
     setAgencies(list.filter(p => p.type === 'imobiliaria'));
     setLoading(false);
@@ -87,7 +87,7 @@ export default function AdminPartners() {
       notes: form.notes || null,
       status: form.status,
       parent_partner_id: form.parent_partner_id || null,
-    } as any);
+    });
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
     toast.success('Parceiro cadastrado!');
     setDialogOpen(false);

@@ -175,7 +175,7 @@ export default function ClientDetails() {
       partner_name: selectedPartner ? selectedPartner.name : (editForm.partner_name || null),
       status: editForm.status,
       notes: editForm.notes || null,
-    } as any).eq('id', id!);
+    }).eq('id', id!);
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
     toast.success('Cliente atualizado!');
     setEditOpen(false);
