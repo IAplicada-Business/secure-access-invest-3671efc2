@@ -47,7 +47,7 @@ const ORIGIN_OPTIONS = [
 
 export default function AdminClients() {
   const [clients, setClients] = useState<Client[]>([]);
-  const [partners, setPartners] = useState<Partner[]>([]);
+  const [partners, setPartners] = useState<Pick<Partner, 'id' | 'name'>[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -65,13 +65,13 @@ export default function AdminClients() {
       .select('*')
       .order('created_at', { ascending: false });
     if (error) { toast.error('Erro ao carregar clientes'); return; }
-    setClients((data as unknown as Client[]) || []);
+    setClients(data || []);
     setLoading(false);
   }
 
   async function loadPartners() {
     const { data } = await supabase.from('partners').select('id, name').eq('status', 'active').order('name');
-    setPartners((data || []) as unknown as Partner[]);
+    setPartners(data || []);
   }
 
   useEffect(() => { loadClients(); loadPartners(); }, []);
@@ -91,7 +91,7 @@ export default function AdminClients() {
       partner_name: selectedPartner ? selectedPartner.name : (form.partner_name || null),
       status: form.status,
       notes: form.notes || null,
-    } as any);
+    });
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
     toast.success('Cliente cadastrado!');
     setDialogOpen(false);

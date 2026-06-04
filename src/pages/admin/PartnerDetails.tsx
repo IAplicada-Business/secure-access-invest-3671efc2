@@ -103,7 +103,7 @@ export default function PartnerDetails() {
       notes: editForm.notes || null,
       status: editForm.status,
       parent_partner_id: editForm.parent_partner_id || null,
-    } as any).eq('id', id!);
+    }).eq('id', id!);
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
     toast.success('Parceiro atualizado!');
     setEditOpen(false);
@@ -120,7 +120,7 @@ export default function PartnerDetails() {
       type: intForm.type,
       note: intForm.note,
       interaction_date: intForm.interaction_date,
-    } as any);
+    });
     if (error) { toast.error('Erro: ' + error.message); setIntSaving(false); return; }
     toast.success('Interação registrada!');
     setIntForm({ type: 'whatsapp', note: '', interaction_date: new Date().toISOString().slice(0, 16) });

@@ -170,7 +170,7 @@ export default function AdminCommunications() {
       .select('*')
       .order('created_at', { ascending: false });
     if (error) { toast.error('Erro ao carregar comunicações'); return; }
-    setCommunications((data || []) as unknown as Communication[]);
+    setCommunications(data || []);
     setLoading(false);
   }, []);
 
@@ -304,7 +304,7 @@ export default function AdminCommunications() {
           audience_type: wizardAudience,
           audience_filter: wizardAudience === 'partner_type' ? wizardPartnerType : null,
           status: 'pronta' as CommunicationStatus,
-        } as any)
+        })
         .select()
         .single();
 
@@ -313,7 +313,7 @@ export default function AdminCommunications() {
       // Insert recipients
       if (selectedContacts.length > 0) {
         const recipientRows = selectedContacts.map(c => ({
-          communication_id: (comm as any).id,
+          communication_id: comm.id,
           contact_type: c.type,
           contact_id: c.id,
           contact_name: c.name,
@@ -321,7 +321,7 @@ export default function AdminCommunications() {
         }));
         const { error: recError } = await supabase
           .from('communication_recipients')
-          .insert(recipientRows as any);
+          .insert(recipientRows);
         if (recError) throw recError;
       }
 
@@ -357,7 +357,7 @@ export default function AdminCommunications() {
       .select('*')
       .eq('communication_id', comm.id)
       .order('contact_name');
-    setViewRecipients((data || []) as unknown as Recipient[]);
+    setViewRecipients(data || []);
     setViewOpen(true);
   };
 
@@ -365,7 +365,7 @@ export default function AdminCommunications() {
     const now = new Date().toISOString();
     const { error } = await supabase
       .from('communication_recipients')
-      .update({ sent_at: now } as any)
+      .update({ sent_at: now })
       .eq('id', recipient.id!);
     if (error) { toast.error('Erro ao marcar como enviado'); return; }
 
@@ -388,7 +388,7 @@ export default function AdminCommunications() {
     // Check if all sent
     const updated = viewRecipients.map(r => r.id === recipient.id ? { ...r, sent_at: now } : r);
     if (updated.every(r => r.sent_at)) {
-      await supabase.from('communications').update({ status: 'enviada' } as any).eq('id', viewComm!.id);
+      await supabase.from('communications').update({ status: 'enviada' }).eq('id', viewComm!.id);
       fetchCommunications();
     }
 
@@ -422,7 +422,7 @@ export default function AdminCommunications() {
         audience_type: comm.audience_type,
         audience_filter: comm.audience_filter,
         status: 'rascunho' as CommunicationStatus,
-      } as any);
+      });
     if (error) { toast.error('Erro ao duplicar'); return; }
     toast.success('Comunicação duplicada');
     fetchCommunications();

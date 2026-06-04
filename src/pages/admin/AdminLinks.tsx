@@ -52,20 +52,20 @@ export default function AdminLinks() {
   async function loadLinks() {
     const { data, error } = await supabase.from('access_links').select('*').order('created_at', { ascending: false });
     if (error) { toast.error('Erro ao carregar links'); return; }
-    setLinks((data as AccessLink[]) || []);
+    setLinks(data || []);
     setLoading(false);
   }
 
   async function loadSubLinks() {
     const { data, error } = await supabase.from('submission_links').select('*').order('created_at', { ascending: false });
     if (error) { toast.error('Erro ao carregar links de submissão'); return; }
-    setSubLinks((data as SubmissionLink[]) || []);
+    setSubLinks(data || []);
     setSubLoading(false);
   }
 
   async function loadClients() {
     const { data } = await supabase.from('clients').select('*').eq('type', 'investor').order('name');
-    setClients((data as Client[]) || []);
+    setClients(data || []);
   }
 
   useEffect(() => { loadLinks(); loadSubLinks(); loadClients(); }, []);
@@ -80,7 +80,7 @@ export default function AdminLinks() {
       investor_phone: form.investor_phone || null,
       expires_at: form.expires_at || null,
       client_id: form.client_id || null,
-    } as any);
+    });
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
     toast.success('Link criado!');
     setDialogOpen(false);
