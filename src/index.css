@@ -4,6 +4,31 @@
 
 /* JMob Premium Design System - Black, White, Gold */
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap');
+/* Design System (Tijolo em Capital) — fontes editoriais (Fraunces / Geist / JetBrains Mono) */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* Design System (Tijolo em Capital) — variáveis de cor/motion.
+   Fonte de verdade: src/lib/design-tokens.ts (mantidas em sincronia). */
+:root {
+  --color-brand-gold: #C9A961;
+  --color-brand-gold-soft: #E1C68C;
+  --color-brand-gold-deep: #9C7C3E;
+  --color-ink-900: #1B1B1B;
+  --color-ink-700: #3D3D3D;
+  --color-ink-500: #5C5C5C;
+  --color-ink-300: #8E8E8E;
+  --color-neutral-50: #FAFAF7;
+  --color-neutral-100: #F4F2EC;
+  --color-neutral-200: #E8E4D7;
+  --color-neutral-300: #D6D1BD;
+  --color-semantic-success: #5C8A4F;
+  --color-semantic-warning: #C68F3E;
+  --color-semantic-danger: #A8463A;
+  --color-semantic-info: #3C6789;
+  --ds-motion-fast: 150ms ease-out;
+  --ds-motion-base: 240ms ease-out;
+  --ds-motion-lush: 420ms cubic-bezier(.22,.61,.36,1);
+}
 
 @layer base {
   :root {

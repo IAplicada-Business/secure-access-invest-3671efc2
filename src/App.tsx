@@ -26,6 +26,7 @@ import AdminFinanceiro from "./pages/admin/AdminFinanceiro";
 import AdminDocuments from "./pages/admin/AdminDocuments";
 import AdminCommunications from "./pages/admin/AdminCommunications";
 import RegularizationDetails from "./pages/admin/RegularizationDetails";
+import AdminDesignSystem from "./pages/admin/AdminDesignSystem";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +65,8 @@ const App = () => (
             <Route path="clientes/:id" element={<ClientDetails />} />
             <Route path="parceiros" element={<AdminPartners />} />
             <Route path="parceiros/:id" element={<PartnerDetails />} />
+            {/* Oculto no menu — galeria do Design System */}
+            <Route path="design-system" element={<AdminDesignSystem />} />
           </Route>
           
           <Route path="*" element={<NotFound />} />
