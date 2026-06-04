@@ -358,10 +358,10 @@ export default function PartnerDetails() {
             {editForm.type === 'corretor_autonomo' && (
               <div className="space-y-2">
                 <Label>Imobiliária vinculada</Label>
-                <Select value={editForm.parent_partner_id || ''} onValueChange={(v) => setEditForm(p => ({ ...p, parent_partner_id: v || null }))}>
+                <Select value={editForm.parent_partner_id || 'none'} onValueChange={(v) => setEditForm(p => ({ ...p, parent_partner_id: v === 'none' ? null : v }))}>
                   <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhuma</SelectItem>
+                    <SelectItem value="none">Nenhuma</SelectItem>
                     {agencies.filter(a => a.id !== id).map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
