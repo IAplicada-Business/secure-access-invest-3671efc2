@@ -46,38 +46,38 @@ export default function PartnerDetails() {
   const [intForm, setIntForm] = useState({ type: 'whatsapp' as InteractionType, note: '', interaction_date: new Date().toISOString().slice(0, 16) });
   const [intSaving, setIntSaving] = useState(false);
   // Agencies for edit form
-  const [agencies, setAgencies] = useState<Partner[]>([]);
+  const [agencies, setAgencies] = useState<Pick<Partner, 'id' | 'name'>[]>([]);
 
   async function loadPartner() {
     if (!id) return;
     const { data, error } = await supabase.from('partners').select('*').eq('id', id).single();
     if (error || !data) { toast.error('Parceiro não encontrado'); navigate('/admin/parceiros'); return; }
-    setPartner(data as unknown as Partner);
-    setEditForm(data as unknown as Partner);
+    setPartner(data);
+    setEditForm(data);
     setLoading(false);
   }
 
   async function loadSubPartners() {
     if (!id) return;
     const { data } = await supabase.from('partners').select('*').eq('parent_partner_id', id).order('name');
-    setSubPartners((data || []) as unknown as Partner[]);
+    setSubPartners(data || []);
   }
 
   async function loadClients() {
     if (!id) return;
     const { data } = await supabase.from('clients').select('*').eq('partner_id', id).order('created_at', { ascending: false });
-    setClients((data || []) as unknown as Client[]);
+    setClients(data || []);
   }
 
   async function loadInteractions() {
     if (!id) return;
     const { data } = await supabase.from('partner_interactions').select('*').eq('partner_id', id).order('interaction_date', { ascending: false });
-    setInteractions((data || []) as unknown as PartnerInteraction[]);
+    setInteractions((data || []).map(i => ({ ...i, type: i.type as InteractionType })));
   }
 
   async function loadAgencies() {
     const { data } = await supabase.from('partners').select('id, name').eq('type', 'imobiliaria');
-    setAgencies((data || []) as unknown as Partner[]);
+    setAgencies(data || []);
   }
 
   useEffect(() => {

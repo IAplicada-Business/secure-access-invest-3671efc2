@@ -79,7 +79,7 @@ export default function RegularizationDetails() {
     if (!id) return;
     const { data: proc } = await supabase.from('regularization_processes').select('*').eq('id', id).single();
     if (!proc) { toast.error('Processo não encontrado'); navigate('/admin/clientes'); return; }
-    setProcess(proc as unknown as Process);
+    setProcess(proc);
 
     // Load type name
     if (proc.type_id) {
@@ -93,13 +93,13 @@ export default function RegularizationDetails() {
     }
 
     const { data: ci } = await supabase.from('regularization_checklist_items').select('*').eq('process_id', id).order('id');
-    setItems((ci || []) as unknown as ChecklistItem[]);
+    setItems(ci || []);
 
     const { data: d } = await supabase.from('regularization_documents').select('*').eq('process_id', id).order('uploaded_at', { ascending: false });
-    setDocs((d || []) as unknown as RegDoc[]);
+    setDocs(d || []);
 
     const { data: int } = await supabase.from('regularization_interactions').select('*').eq('process_id', id).order('interaction_date', { ascending: false });
-    setInteractions((int || []) as unknown as Interaction[]);
+    setInteractions(int || []);
 
     setLoading(false);
   }
