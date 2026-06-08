@@ -55,18 +55,16 @@ export default function AdminUsuarios() {
       return;
     }
     setSaving(true);
-    const { data, error } = await supabase.functions.invoke('admin-create-user', {
-      body: {
-        email: form.email.trim(),
-        password: form.password,
-        name: form.name.trim() || form.email.trim(),
-        is_admin: form.is_admin,
-        screens: form.is_admin ? [] : form.screens,
-      },
+    const { error } = await supabase.rpc('admin_create_user', {
+      p_email: form.email.trim(),
+      p_password: form.password,
+      p_name: form.name.trim() || form.email.trim(),
+      p_is_admin: form.is_admin,
+      p_screens: form.is_admin ? [] : form.screens,
     });
     setSaving(false);
-    if (error || (data && data.error)) {
-      toast.error('Erro: ' + (data?.error || error?.message || 'falha ao criar usuário'));
+    if (error) {
+      toast.error('Erro: ' + (error.message || 'falha ao criar usuário'));
       return;
     }
     toast.success('Usuário criado! Entregue a senha provisória para ele trocar depois.');

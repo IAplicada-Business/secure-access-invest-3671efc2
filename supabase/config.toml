@@ -5,6 +5,3 @@ verify_jwt = false
 
 [functions.generate-communication]
 verify_jwt = false
-
-[functions.admin-create-user]
-verify_jwt = false
