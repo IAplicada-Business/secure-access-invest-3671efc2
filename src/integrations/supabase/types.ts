@@ -1248,6 +1248,14 @@ export type Database = {
         }
         Returns: string
       }
+      admin_delete_user: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
+      admin_set_password: {
+        Args: { p_user_id: string; p_password: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
