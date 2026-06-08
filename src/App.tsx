@@ -29,6 +29,7 @@ import AdminDesignSystem from "./pages/admin/AdminDesignSystem";
 import AdminCrmKanban from "./pages/admin/AdminCrmKanban";
 import AdminRegularizacoes from "./pages/admin/AdminRegularizacoes";
 import AdminDadosIniciais from "./pages/admin/AdminDadosIniciais";
+import AdminUsuarios from "./pages/admin/AdminUsuarios";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,7 @@ const App = () => (
             <Route path="relatorios" element={<AdminReports />} />
             <Route path="configuracoes" element={<AdminSettings />} />
             <Route path="configuracoes/seed" element={<AdminDadosIniciais />} />
+            <Route path="usuarios" element={<AdminUsuarios />} />
             <Route path="submissoes" element={<AdminSubmissions />} />
             <Route path="financeiro" element={<AdminFinanceiro />} />
             <Route path="documentos" element={<AdminDocuments />} />

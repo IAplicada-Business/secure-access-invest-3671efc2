@@ -240,6 +240,45 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          name: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id: string
+          name?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string | null
+        }
+        Relationships: []
+      }
+      user_screen_permissions: {
+        Row: {
+          created_at: string
+          screen: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          screen: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          screen?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       commissions: {
         Row: {
           amount: number
