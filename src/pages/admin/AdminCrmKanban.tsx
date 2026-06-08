@@ -90,8 +90,8 @@ export default function AdminCrmKanban() {
     if (error) { toast.error('Erro ao carregar clientes'); setLoading(false); return; }
     const list: CrmClient[] = (data ?? []).map(c => ({
       ...c,
-      crm_stage: c.crm_stage ?? 'contato',
-    }));
+      crm_stage: (c.crm_stage ?? 'contato') as CrmStage,
+    })) as CrmClient[];
     setClients(list);
 
     // Último contato = MAX(interaction_date) por cliente.
