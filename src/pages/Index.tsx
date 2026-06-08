@@ -111,7 +111,7 @@ export default function Index() {
         >
           {/* Logo */}
           <div className="flex justify-center mb-4">
-            <Logo className="h-16 w-auto sm:h-20" />
+            <Logo className="h-12 w-auto sm:h-14" />
           </div>
 
           <div className="text-center mb-8">
