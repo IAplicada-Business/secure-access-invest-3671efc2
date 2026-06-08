@@ -110,8 +110,8 @@ export default function Index() {
           className="w-full max-w-sm"
         >
           {/* Logo */}
-          <div className="flex justify-center mb-10">
-            <Logo className="h-20 w-auto" />
+          <div className="flex justify-center mb-4">
+            <Logo className="h-16 w-auto sm:h-20" />
           </div>
 
           <div className="text-center mb-8">
