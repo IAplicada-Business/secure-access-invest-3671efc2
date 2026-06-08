@@ -133,9 +133,12 @@ export type Database = {
           canal_entrada: string | null
           canal_entrada_detalhe: string | null
           cidade: string | null
+          cnpj: string | null
           cpf_cnpj: string | null
           created_at: string
           crm_stage: Database["public"]["Enums"]["crm_stage_enum"]
+          data_nascimento: string | null
+          endereco: string | null
           crm_stage_changed_at: string | null
           drive_link: string | null
           email: string | null
@@ -155,7 +158,10 @@ export type Database = {
           canal_entrada?: string | null
           canal_entrada_detalhe?: string | null
           cidade?: string | null
+          cnpj?: string | null
           cpf_cnpj?: string | null
+          data_nascimento?: string | null
+          endereco?: string | null
           created_at?: string
           crm_stage?: Database["public"]["Enums"]["crm_stage_enum"]
           crm_stage_changed_at?: string | null
@@ -177,7 +183,10 @@ export type Database = {
           canal_entrada?: string | null
           canal_entrada_detalhe?: string | null
           cidade?: string | null
+          cnpj?: string | null
           cpf_cnpj?: string | null
+          data_nascimento?: string | null
+          endereco?: string | null
           created_at?: string
           crm_stage?: Database["public"]["Enums"]["crm_stage_enum"]
           crm_stage_changed_at?: string | null
@@ -1243,7 +1252,14 @@ export type Database = {
       client_status: "prospect" | "active" | "completed"
       client_type: "investor" | "incorporator" | "individual"
       commission_status: "pending" | "paid"
-      crm_stage_enum: "chegou" | "ligacao" | "fechou_contrato" | "perdido"
+      crm_stage_enum:
+        | "contato"
+        | "agendar_reuniao"
+        | "envio_proposta"
+        | "follow_up"
+        | "fechamento"
+        | "aguardando_pagamento"
+        | "perdido"
       communication_audience:
         | "all_partners"
         | "partner_type"
@@ -1427,7 +1443,15 @@ export const Constants = {
       client_status: ["prospect", "active", "completed"],
       client_type: ["investor", "incorporator", "individual"],
       commission_status: ["pending", "paid"],
-      crm_stage_enum: ["chegou", "ligacao", "fechou_contrato", "perdido"],
+      crm_stage_enum: [
+        "contato",
+        "agendar_reuniao",
+        "envio_proposta",
+        "follow_up",
+        "fechamento",
+        "aguardando_pagamento",
+        "perdido",
+      ],
       communication_audience: [
         "all_partners",
         "partner_type",

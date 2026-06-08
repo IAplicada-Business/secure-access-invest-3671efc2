@@ -36,6 +36,9 @@ interface ClientExt extends Client {
   canal_entrada: string | null;
   canal_entrada_detalhe: string | null;
   cidade: string | null;
+  cnpj: string | null;
+  data_nascimento: string | null;
+  endereco: string | null;
   drive_link: string | null;
   observacoes: string | null;
   tags: string[] | null;
@@ -231,6 +234,9 @@ export default function ClientDetails() {
       name: editForm.name,
       type: editForm.type,
       cpf_cnpj: editForm.cpf_cnpj || null,
+      cnpj: editForm.cnpj || null,
+      data_nascimento: editForm.data_nascimento || null,
+      endereco: editForm.endereco || null,
       phone: editForm.phone,
       email: editForm.email || null,
       origin: editForm.origin || null,
@@ -426,7 +432,10 @@ export default function ClientDetails() {
                 <div><span className="text-sm text-muted-foreground">Status</span><p><Badge className={client.status === 'active' ? 'bg-primary/10 text-primary' : ''}>{STATUS_LABELS[client.status]}</Badge></p></div>
                 <div><span className="text-sm text-muted-foreground">Telefone</span><p className="font-medium">{client.phone}</p></div>
                 <div><span className="text-sm text-muted-foreground">E-mail</span><p className="font-medium">{client.email || '-'}</p></div>
-                <div><span className="text-sm text-muted-foreground">CPF/CNPJ</span><p className="font-medium">{client.cpf_cnpj || '-'}</p></div>
+                <div><span className="text-sm text-muted-foreground">CPF</span><p className="font-medium">{client.cpf_cnpj || '-'}</p></div>
+                <div><span className="text-sm text-muted-foreground">CNPJ</span><p className="font-medium">{client.cnpj || '-'}</p></div>
+                <div><span className="text-sm text-muted-foreground">Aniversário</span><p className="font-medium">{client.data_nascimento ? new Date(client.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</p></div>
+                <div><span className="text-sm text-muted-foreground">Endereço</span><p className="font-medium">{client.endereco || '-'}</p></div>
                 <div><span className="text-sm text-muted-foreground">Cidade</span><p className="font-medium">{client.cidade || '-'}</p></div>
                 <div>
                   <span className="text-sm text-muted-foreground">Canal de entrada</span>
@@ -853,9 +862,25 @@ export default function ClientDetails() {
                 <Input type="email" value={editForm.email || ''} onChange={(e) => setEditForm(p => ({ ...p, email: e.target.value }))} />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>CPF/CNPJ</Label>
-              <Input value={editForm.cpf_cnpj || ''} onChange={(e) => setEditForm(p => ({ ...p, cpf_cnpj: e.target.value }))} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>CPF</Label>
+                <Input value={editForm.cpf_cnpj || ''} onChange={(e) => setEditForm(p => ({ ...p, cpf_cnpj: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>CNPJ (opcional)</Label>
+                <Input value={editForm.cnpj || ''} onChange={(e) => setEditForm(p => ({ ...p, cnpj: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Aniversário</Label>
+                <Input type="date" value={editForm.data_nascimento || ''} onChange={(e) => setEditForm(p => ({ ...p, data_nascimento: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>Endereço</Label>
+                <Input value={editForm.endereco || ''} onChange={(e) => setEditForm(p => ({ ...p, endereco: e.target.value }))} placeholder="Rua, número, bairro" />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
