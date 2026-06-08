@@ -13,14 +13,25 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { PageHeader, KanbanBoard, type KanbanColumn, type KanbanCard } from '@/components/ui-system';
 
-// Etapas REAIS do funil de vendas da Juliê (áudio 04/06):
-//   Chegou · Ligação · Fechou Contrato  (+ Perdido, lateral)
-type CrmStage = 'chegou' | 'ligacao' | 'fechou_contrato' | 'perdido';
+// Etapas do funil de vendas:
+//   Contato · Agendar reunião · Envio de proposta · Follow Up ·
+//   Fechamento · Aguardando pagamento  (+ Perdido, lateral)
+type CrmStage =
+  | 'contato'
+  | 'agendar_reuniao'
+  | 'envio_proposta'
+  | 'follow_up'
+  | 'fechamento'
+  | 'aguardando_pagamento'
+  | 'perdido';
 
 const STAGES: KanbanColumn[] = [
-  { id: 'chegou', title: 'Chegou', accentClassName: 'bg-cream-50' },
-  { id: 'ligacao', title: 'Ligação', accentClassName: 'bg-cream-50 border-t-2 border-brand-gold/50' },
-  { id: 'fechou_contrato', title: 'Fechou Contrato', accentClassName: 'bg-brand-goldSoft/20' },
+  { id: 'contato', title: 'Contato', accentClassName: 'bg-cream-50' },
+  { id: 'agendar_reuniao', title: 'Agendar reunião' },
+  { id: 'envio_proposta', title: 'Envio de proposta' },
+  { id: 'follow_up', title: 'Follow Up' },
+  { id: 'fechamento', title: 'Fechamento', accentClassName: 'bg-brand-goldSoft/20' },
+  { id: 'aguardando_pagamento', title: 'Aguardando pagamento', accentClassName: 'bg-brand-goldSoft/30 border-t-2 border-brand-gold/50' },
   { id: 'perdido', title: 'Perdido', accentClassName: 'bg-ink-300/10' },
 ];
 
@@ -79,7 +90,7 @@ export default function AdminCrmKanban() {
     if (error) { toast.error('Erro ao carregar clientes'); setLoading(false); return; }
     const list: CrmClient[] = (data ?? []).map(c => ({
       ...c,
-      crm_stage: c.crm_stage ?? 'chegou',
+      crm_stage: c.crm_stage ?? 'contato',
     }));
     setClients(list);
 

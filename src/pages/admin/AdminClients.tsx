@@ -56,8 +56,8 @@ function initials(name: string): string {
 }
 
 const emptyForm = {
-  name: '', type: 'investor' as ClientType, cpf_cnpj: '', phone: '', email: '',
-  cidade: '', canal_entrada: '', canal_entrada_detalhe: '',
+  name: '', type: 'investor' as ClientType, cpf_cnpj: '', cnpj: '', phone: '', email: '',
+  data_nascimento: '', endereco: '', cidade: '', canal_entrada: '', canal_entrada_detalhe: '',
   partner_id: '', partner_name: '', status: 'prospect' as ClientStatus,
   drive_link: '', tags: '', observacoes: '',
 };
@@ -109,8 +109,11 @@ export default function AdminClients() {
       name: form.name,
       type: form.type,
       cpf_cnpj: form.cpf_cnpj || null,
+      cnpj: form.cnpj || null,
       phone: form.phone,
       email: form.email || null,
+      data_nascimento: form.data_nascimento || null,
+      endereco: form.endereco || null,
       cidade: form.cidade || null,
       canal_entrada: form.canal_entrada || null,
       canal_entrada_detalhe: form.canal_entrada_detalhe || null,
@@ -319,8 +322,18 @@ export default function AdminClients() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>CPF/CNPJ</Label>
+                <Label>CPF</Label>
                 <Input value={form.cpf_cnpj} onChange={(e) => setForm(p => ({ ...p, cpf_cnpj: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>CNPJ (opcional)</Label>
+                <Input value={form.cnpj} onChange={(e) => setForm(p => ({ ...p, cnpj: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>Aniversário</Label>
+                <Input type="date" value={form.data_nascimento} onChange={(e) => setForm(p => ({ ...p, data_nascimento: e.target.value }))} />
               </div>
             </div>
           </section>
@@ -334,13 +347,17 @@ export default function AdminClients() {
                 <Input value={form.phone} onChange={(e) => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="5511999999999" required />
               </div>
               <div className="space-y-2">
-                <Label>Cidade</Label>
-                <Input value={form.cidade} onChange={(e) => setForm(p => ({ ...p, cidade: e.target.value }))} />
+                <Label>E-mail</Label>
+                <Input type="email" value={form.email} onChange={(e) => setForm(p => ({ ...p, email: e.target.value }))} />
               </div>
             </div>
             <div className="space-y-2">
-              <Label>E-mail</Label>
-              <Input type="email" value={form.email} onChange={(e) => setForm(p => ({ ...p, email: e.target.value }))} />
+              <Label>Endereço</Label>
+              <Input value={form.endereco} onChange={(e) => setForm(p => ({ ...p, endereco: e.target.value }))} placeholder="Rua, número, bairro" />
+            </div>
+            <div className="space-y-2">
+              <Label>Cidade</Label>
+              <Input value={form.cidade} onChange={(e) => setForm(p => ({ ...p, cidade: e.target.value }))} />
             </div>
           </section>
 
