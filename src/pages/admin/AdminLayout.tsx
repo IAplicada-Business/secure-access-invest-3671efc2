@@ -20,7 +20,8 @@ import {
   FileText,
   MessageSquare,
   KanbanSquare,
-  ClipboardList
+  ClipboardList,
+  UserCog
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -261,11 +262,25 @@ export default function AdminLayout() {
             <div className="flex items-center gap-1">
               <NotificationBell />
               
-              <Button variant="ghost" size="icon" asChild className="text-muted-foreground hover:text-foreground">
-                <Link to="/admin/configuracoes">
-                  <Settings className="h-5 w-5" />
-                </Link>
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                    <Settings className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin/configuracoes" className="flex items-center gap-2">
+                      <Settings className="h-4 w-4" /> Configurações
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin/usuarios" className="flex items-center gap-2">
+                      <UserCog className="h-4 w-4" /> Usuários
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -326,6 +341,9 @@ export default function AdminLayout() {
               </Link>
               <Link to="/admin/configuracoes" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
                 <Settings className="h-5 w-5" />Configurações
+              </Link>
+              <Link to="/admin/usuarios" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                <UserCog className="h-5 w-5" />Usuários
               </Link>
             </nav>
           </div>
