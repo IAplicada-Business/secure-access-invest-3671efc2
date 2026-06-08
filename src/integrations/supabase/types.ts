@@ -133,12 +133,15 @@ export type Database = {
           canal_entrada: string | null
           canal_entrada_detalhe: string | null
           cidade: string | null
+          cnpj: string | null
           cpf_cnpj: string | null
           created_at: string
           crm_stage: Database["public"]["Enums"]["crm_stage_enum"]
           crm_stage_changed_at: string | null
+          data_nascimento: string | null
           drive_link: string | null
           email: string | null
+          endereco: string | null
           id: string
           name: string
           notes: string | null
@@ -155,12 +158,15 @@ export type Database = {
           canal_entrada?: string | null
           canal_entrada_detalhe?: string | null
           cidade?: string | null
+          cnpj?: string | null
           cpf_cnpj?: string | null
           created_at?: string
           crm_stage?: Database["public"]["Enums"]["crm_stage_enum"]
           crm_stage_changed_at?: string | null
+          data_nascimento?: string | null
           drive_link?: string | null
           email?: string | null
+          endereco?: string | null
           id?: string
           name: string
           notes?: string | null
@@ -177,12 +183,15 @@ export type Database = {
           canal_entrada?: string | null
           canal_entrada_detalhe?: string | null
           cidade?: string | null
+          cnpj?: string | null
           cpf_cnpj?: string | null
           created_at?: string
           crm_stage?: Database["public"]["Enums"]["crm_stage_enum"]
           crm_stage_changed_at?: string | null
+          data_nascimento?: string | null
           drive_link?: string | null
           email?: string | null
+          endereco?: string | null
           id?: string
           name?: string
           notes?: string | null
@@ -1267,7 +1276,17 @@ export type Database = {
       communication_status: "rascunho" | "pronta" | "enviada"
       communication_tone: "informativo" | "comercial" | "relacionamento"
       communication_type: "newsletter" | "aviso" | "oferta" | "personalizada"
-      crm_stage_enum: "chegou" | "ligacao" | "fechou_contrato" | "perdido"
+      crm_stage_enum:
+        | "chegou"
+        | "ligacao"
+        | "fechou_contrato"
+        | "perdido"
+        | "contato"
+        | "agendar_reuniao"
+        | "envio_proposta"
+        | "follow_up"
+        | "fechamento"
+        | "aguardando_pagamento"
       document_template_status: "ativo" | "rascunho"
       document_template_type: "proposta" | "contrato" | "relatorio"
       expense_category:
@@ -1452,7 +1471,18 @@ export const Constants = {
       communication_status: ["rascunho", "pronta", "enviada"],
       communication_tone: ["informativo", "comercial", "relacionamento"],
       communication_type: ["newsletter", "aviso", "oferta", "personalizada"],
-      crm_stage_enum: ["chegou", "ligacao", "fechou_contrato", "perdido"],
+      crm_stage_enum: [
+        "chegou",
+        "ligacao",
+        "fechou_contrato",
+        "perdido",
+        "contato",
+        "agendar_reuniao",
+        "envio_proposta",
+        "follow_up",
+        "fechamento",
+        "aguardando_pagamento",
+      ],
       document_template_status: ["ativo", "rascunho"],
       document_template_type: ["proposta", "contrato", "relatorio"],
       expense_category: [
