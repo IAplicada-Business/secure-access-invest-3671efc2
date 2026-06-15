@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import {
   Plus, Loader2, MessageCircle, Search, ExternalLink,
-  Instagram, Phone, Users, CalendarDays, Globe, HelpCircle, Inbox, type LucideIcon,
+  Share2, Phone, Users, CalendarDays, Globe, HelpCircle, Inbox, type LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
 import { PageHeader, DataTable, EmptyState, Drawer } from '@/components/ui-system';
 
 const TYPE_LABELS: Record<ClientType, string> = {
-  investor: 'Investidor', incorporator: 'Incorporador', individual: 'Pessoa Física',
+  investor: 'Investidor', incorporator: 'Regularização', individual: 'Pessoa Física',
 };
 const STATUS_LABELS: Record<ClientStatus, string> = {
   prospect: 'Prospect', active: 'Ativo', completed: 'Concluído',
@@ -32,7 +32,7 @@ const STATUS_COLORS: Record<ClientStatus, string> = {
 };
 
 const CANAL: Record<string, { label: string; icon: LucideIcon }> = {
-  instagram: { label: 'Instagram', icon: Instagram },
+  redes_sociais: { label: 'Redes sociais', icon: Share2 },
   indicacao: { label: 'Indicação', icon: Users },
   corretor: { label: 'Corretor', icon: Phone },
   evento: { label: 'Evento', icon: CalendarDays },
@@ -253,7 +253,7 @@ export default function AdminClients() {
           <SelectContent>
             <SelectItem value="all">Todos os perfis</SelectItem>
             <SelectItem value="investor">Investidor</SelectItem>
-            <SelectItem value="incorporator">Incorporador</SelectItem>
+            <SelectItem value="incorporator">Regularização</SelectItem>
             <SelectItem value="individual">Pessoa Física</SelectItem>
           </SelectContent>
         </Select>
@@ -316,7 +316,7 @@ export default function AdminClients() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="investor">Investidor</SelectItem>
-                    <SelectItem value="incorporator">Incorporador</SelectItem>
+                    <SelectItem value="incorporator">Regularização</SelectItem>
                     <SelectItem value="individual">Pessoa Física</SelectItem>
                   </SelectContent>
                 </Select>

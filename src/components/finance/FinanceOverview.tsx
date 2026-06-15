@@ -102,7 +102,7 @@ export function FinanceOverview() {
       const { data: clients } = await supabase.from('clients').select('id, type').in('id', clientIds as string[]);
       const typeMap = new Map(clients?.map(c => [c.id, c.type]) || []);
       
-      const typeLabels: Record<string, string> = { investor: 'Investidor', incorporator: 'Incorporador', individual: 'Pessoa Física' };
+      const typeLabels: Record<string, string> = { investor: 'Investidor', incorporator: 'Regularização', individual: 'Pessoa Física' };
       const typeTotals: Record<string, number> = {};
       revenuesByClient.forEach(r => {
         const type = r.client_id ? (typeMap.get(r.client_id) || 'individual') : 'individual';

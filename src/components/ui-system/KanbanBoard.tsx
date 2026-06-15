@@ -31,6 +31,8 @@ interface KanbanBoardProps {
   onMove: (cardId: string, toColumnId: string) => void;
   /** Texto exibido (sutil) quando uma coluna não tem cards. */
   emptyHint?: string;
+  /** Altura mínima das colunas (ex.: 'min-h-[60vh]'). Default 'min-h-[120px]'. */
+  columnMinHeight?: string;
   className?: string;
 }
 
@@ -56,7 +58,7 @@ function DraggableCard({ card }: { card: KanbanCard }) {
   );
 }
 
-function DroppableColumn({ column, children }: { column: KanbanColumn; children: ReactNode }) {
+function DroppableColumn({ column, minHeight, children }: { column: KanbanColumn; minHeight: string; children: ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
   return (
     <div className="flex w-72 flex-shrink-0 flex-col">
@@ -64,7 +66,8 @@ function DroppableColumn({ column, children }: { column: KanbanColumn; children:
       <div
         ref={setNodeRef}
         className={cn(
-          'flex min-h-[120px] flex-1 flex-col gap-2 rounded-ds-md p-2 transition-colors duration-[240ms]',
+          'flex flex-1 flex-col gap-2 rounded-ds-md p-2 transition-colors duration-[240ms]',
+          minHeight,
           column.accentClassName ?? 'bg-cream-100',
           isOver && 'ring-2 ring-brand-gold/60',
         )}
@@ -79,7 +82,7 @@ function DroppableColumn({ column, children }: { column: KanbanColumn; children:
  * Kanban genérico com drag-and-drop (@dnd-kit/core).
  * Usado pelo CRM agora; reutilizável para o funil de ativos depois.
  */
-export function KanbanBoard({ columns, cards, onMove, emptyHint, className }: KanbanBoardProps) {
+export function KanbanBoard({ columns, cards, onMove, emptyHint, columnMinHeight = 'min-h-[120px]', className }: KanbanBoardProps) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   function handleDragEnd(event: DragEndEvent) {
@@ -99,7 +102,7 @@ export function KanbanBoard({ columns, cards, onMove, emptyHint, className }: Ka
         {columns.map((column) => {
           const colCards = cards.filter((c) => c.columnId === column.id);
           return (
-            <DroppableColumn key={column.id} column={column}>
+            <DroppableColumn key={column.id} column={column} minHeight={columnMinHeight}>
               {colCards.length === 0 && emptyHint ? (
                 <p className="px-2 py-6 text-center text-xs text-ink-300">{emptyHint}</p>
               ) : (

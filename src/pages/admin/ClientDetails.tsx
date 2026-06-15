@@ -21,12 +21,12 @@ import {
 import {
   ArrowLeft, MessageCircle, Pencil, Loader2, Upload, Download, Trash2,
   Clock, Plus, Building2, Eye, ClipboardList, FileText,
-  ExternalLink, FolderPlus, Instagram, Phone, Users, CalendarDays, Globe, HelpCircle, MapPin,
+  ExternalLink, FolderPlus, Share2, Phone, Users, CalendarDays, Globe, HelpCircle, MapPin,
   type LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const TYPE_LABELS: Record<ClientType, string> = { investor: 'Investidor', incorporator: 'Incorporador', individual: 'Pessoa Física' };
+const TYPE_LABELS: Record<ClientType, string> = { investor: 'Investidor', incorporator: 'Regularização', individual: 'Pessoa Física' };
 const STATUS_LABELS: Record<ClientStatus, string> = { prospect: 'Prospect', active: 'Ativo', completed: 'Concluído' };
 const INTERACTION_LABELS: Record<InteractionType, string> = { meeting: 'Reunião', whatsapp: 'WhatsApp', email: 'E-mail', call: 'Ligação', other: 'Outro' };
 const DOC_LABELS: Record<DocumentCategory, string> = { rg: 'RG', cpf: 'CPF', matricula: 'Matrícula', contract: 'Contrato', proposal: 'Proposta', other: 'Outro' };
@@ -45,7 +45,7 @@ interface ClientExt extends Client {
 }
 
 const CANAL: Record<string, { label: string; icon: LucideIcon }> = {
-  instagram: { label: 'Instagram', icon: Instagram },
+  redes_sociais: { label: 'Redes sociais', icon: Share2 },
   indicacao: { label: 'Indicação', icon: Users },
   corretor: { label: 'Corretor', icon: Phone },
   evento: { label: 'Evento', icon: CalendarDays },
@@ -835,7 +835,7 @@ export default function ClientDetails() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="investor">Investidor</SelectItem>
-                    <SelectItem value="incorporator">Incorporador</SelectItem>
+                    <SelectItem value="incorporator">Regularização</SelectItem>
                     <SelectItem value="individual">Pessoa Física</SelectItem>
                   </SelectContent>
                 </Select>
