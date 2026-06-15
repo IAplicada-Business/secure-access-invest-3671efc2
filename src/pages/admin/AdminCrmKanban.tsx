@@ -2,16 +2,29 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Search, Loader2, Instagram, Phone, Users, CalendarDays, HelpCircle, type LucideIcon } from 'lucide-react';
+import { Search, Loader2, Share2, Phone, Users, CalendarDays, Globe, HelpCircle, Plus, type LucideIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { PageHeader, KanbanBoard, type KanbanColumn, type KanbanCard } from '@/components/ui-system';
+import { PageHeader, KanbanBoard, Drawer, type KanbanColumn, type KanbanCard } from '@/components/ui-system';
+
+// Canais de entrada (como o lead chegou).
+const CANAL_OPTIONS: { value: string; label: string }[] = [
+  { value: 'redes_sociais', label: 'Redes sociais' },
+  { value: 'indicacao', label: 'Indicação' },
+  { value: 'corretor', label: 'Corretor' },
+  { value: 'evento', label: 'Evento' },
+  { value: 'organico', label: 'Orgânico' },
+  { value: 'outro', label: 'Outro' },
+];
+const CANAL_LABEL: Record<string, string> = Object.fromEntries(CANAL_OPTIONS.map(c => [c.value, c.label]));
 
 // Etapas do funil de vendas:
 //   Contato · Agendar reunião · Envio de proposta · Follow Up ·
@@ -37,7 +50,7 @@ const STAGES: KanbanColumn[] = [
 
 const TYPE_LABELS: Record<string, string> = {
   investor: 'Investidor',
-  incorporator: 'Incorporador',
+  incorporator: 'Regularização',
   individual: 'Pessoa Física',
 };
 
@@ -48,13 +61,13 @@ const TYPE_BADGE: Record<string, string> = {
   individual: 'bg-cream-200 text-ink-700 border-transparent',
 };
 
-// Ícone do canal de entrada (origin é texto livre por enquanto; canal_entrada
-// estruturado chega no Prompt 6B).
+// Ícone do canal de entrada.
 function channelIcon(origin: string | null): LucideIcon {
   const o = (origin ?? '').toLowerCase();
-  if (o.includes('instagram')) return Instagram;
+  if (o.includes('rede') || o.includes('instagram') || o.includes('social')) return Share2;
   if (o.includes('indica')) return Users;
   if (o.includes('evento')) return CalendarDays;
+  if (o.includes('organic') || o.includes('orgânic')) return Globe;
   if (o.includes('corretor') || o.includes('telefone') || o.includes('ligacao')) return Phone;
   return HelpCircle;
 }
@@ -81,6 +94,16 @@ export default function AdminCrmKanban() {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterChannel, setFilterChannel] = useState<string>('all');
+  const [partners, setPartners] = useState<{ id: string; name: string }[]>([]);
+
+  // Novo lead
+  const emptyLead = {
+    name: '', type: 'investor', cpf_cnpj: '', cnpj: '', phone: '', email: '',
+    data_nascimento: '', endereco: '', cidade: '', canal_entrada: '', canal_entrada_detalhe: '', partner_id: '',
+  };
+  const [leadOpen, setLeadOpen] = useState(false);
+  const [lead, setLead] = useState(emptyLead);
+  const [leadSaving, setLeadSaving] = useState(false);
 
   async function loadData() {
     const { data, error } = await supabase
@@ -102,7 +125,44 @@ export default function AdminCrmKanban() {
     const map: Record<string, string> = {};
     interactions?.forEach(i => { if (!map[i.client_id]) map[i.client_id] = i.interaction_date; });
     setLastContact(map);
+
+    const { data: ps } = await supabase.from('partners').select('id, name').eq('status', 'active').order('name');
+    setPartners(ps ?? []);
     setLoading(false);
+  }
+
+  async function handleCreateLead(e: React.FormEvent) {
+    e.preventDefault();
+    if (!lead.name.trim() || !lead.phone.trim()) {
+      toast.error('Informe ao menos nome e telefone.');
+      return;
+    }
+    setLeadSaving(true);
+    const selectedPartner = partners.find(p => p.id === lead.partner_id);
+    const { error } = await supabase.from('clients').insert({
+      name: lead.name.trim(),
+      type: lead.type as 'investor' | 'incorporator' | 'individual',
+      cpf_cnpj: lead.cpf_cnpj || null,
+      cnpj: lead.cnpj || null,
+      phone: lead.phone.trim(),
+      email: lead.email || null,
+      data_nascimento: lead.data_nascimento || null,
+      endereco: lead.endereco || null,
+      cidade: lead.cidade || null,
+      canal_entrada: lead.canal_entrada || null,
+      canal_entrada_detalhe: lead.canal_entrada_detalhe || null,
+      origin: lead.canal_entrada ? CANAL_LABEL[lead.canal_entrada] : null,
+      partner_id: lead.partner_id || null,
+      partner_name: selectedPartner ? selectedPartner.name : null,
+      crm_stage: 'contato',
+      status: 'prospect',
+    });
+    setLeadSaving(false);
+    if (error) { toast.error('Erro: ' + error.message); return; }
+    toast.success('Lead cadastrado em "Contato"!');
+    setLeadOpen(false);
+    setLead(emptyLead);
+    loadData();
   }
 
   useEffect(() => { loadData(); }, []);
@@ -191,6 +251,7 @@ export default function AdminCrmKanban() {
       <PageHeader
         title="CRM"
         subtitle="Funil de vendas (Kanban). Arraste os cards entre as etapas."
+        actions={<Button onClick={() => setLeadOpen(true)}><Plus className="mr-2 h-4 w-4" /> Novo lead</Button>}
       />
 
       <div className="flex flex-col gap-3 sm:flex-row">
@@ -209,7 +270,7 @@ export default function AdminCrmKanban() {
           <SelectContent>
             <SelectItem value="all">Todos os perfis</SelectItem>
             <SelectItem value="investor">Investidor</SelectItem>
-            <SelectItem value="incorporator">Incorporador</SelectItem>
+            <SelectItem value="incorporator">Regularização</SelectItem>
             <SelectItem value="individual">Pessoa Física</SelectItem>
           </SelectContent>
         </Select>
@@ -238,8 +299,67 @@ export default function AdminCrmKanban() {
           cards={cards}
           onMove={handleMove}
           emptyHint="Nenhum lead nesta etapa."
+          columnMinHeight="min-h-[calc(100vh-20rem)]"
         />
       )}
+
+      {/* Novo lead */}
+      <Drawer open={leadOpen} onOpenChange={setLeadOpen} title="Novo lead" description="Cadastra um lead direto na etapa Contato." className="w-full overflow-y-auto sm:max-w-md">
+        <form onSubmit={handleCreateLead} className="space-y-4 pb-4">
+          <div className="space-y-2"><Label>Nome *</Label><Input value={lead.name} onChange={(e) => setLead(p => ({ ...p, name: e.target.value }))} required /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Perfil</Label>
+              <Select value={lead.type} onValueChange={(v) => setLead(p => ({ ...p, type: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="investor">Investidor</SelectItem>
+                  <SelectItem value="incorporator">Regularização</SelectItem>
+                  <SelectItem value="individual">Pessoa Física</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2"><Label>CPF</Label><Input value={lead.cpf_cnpj} onChange={(e) => setLead(p => ({ ...p, cpf_cnpj: e.target.value }))} /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2"><Label>CNPJ (opcional)</Label><Input value={lead.cnpj} onChange={(e) => setLead(p => ({ ...p, cnpj: e.target.value }))} /></div>
+            <div className="space-y-2"><Label>Aniversário</Label><Input type="date" value={lead.data_nascimento} onChange={(e) => setLead(p => ({ ...p, data_nascimento: e.target.value }))} /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2"><Label>Telefone/WhatsApp *</Label><Input value={lead.phone} onChange={(e) => setLead(p => ({ ...p, phone: e.target.value }))} placeholder="5511999999999" required /></div>
+            <div className="space-y-2"><Label>E-mail</Label><Input type="email" value={lead.email} onChange={(e) => setLead(p => ({ ...p, email: e.target.value }))} /></div>
+          </div>
+          <div className="space-y-2"><Label>Endereço</Label><Input value={lead.endereco} onChange={(e) => setLead(p => ({ ...p, endereco: e.target.value }))} placeholder="Rua, número, bairro" /></div>
+          <div className="space-y-2"><Label>Cidade</Label><Input value={lead.cidade} onChange={(e) => setLead(p => ({ ...p, cidade: e.target.value }))} /></div>
+          <div className="space-y-2">
+            <Label>Como chegou até mim</Label>
+            <Select value={lead.canal_entrada || 'none'} onValueChange={(v) => setLead(p => ({ ...p, canal_entrada: v === 'none' ? '' : v }))}>
+              <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Não informado</SelectItem>
+                {CANAL_OPTIONS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          {(lead.canal_entrada === 'indicacao' || lead.canal_entrada === 'corretor') && (
+            <div className="space-y-2">
+              <Label>Imobiliária / parceiro que indicou</Label>
+              <Select value={lead.partner_id || 'none'} onValueChange={(v) => setLead(p => ({ ...p, partner_id: v === 'none' ? '' : v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  {partners.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <div className="space-y-2"><Label>Detalhe (opcional)</Label><Input value={lead.canal_entrada_detalhe} onChange={(e) => setLead(p => ({ ...p, canal_entrada_detalhe: e.target.value }))} placeholder="Ex: quem indicou, qual evento…" /></div>
+          <div className="flex justify-end gap-2 border-t border-cream-200 pt-4">
+            <Button type="button" variant="outline" onClick={() => setLeadOpen(false)}>Cancelar</Button>
+            <Button type="submit" disabled={leadSaving}>{leadSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Cadastrar lead</Button>
+          </div>
+        </form>
+      </Drawer>
     </div>
   );
 }
