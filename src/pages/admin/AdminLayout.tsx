@@ -199,10 +199,10 @@ export default function AdminLayout() {
                 )}
 
                 {/* Imóveis dropdown */}
-                {(can('imoveis') || can('submissoes')) && (
+                {(can('imoveis') || can('submissoes') || can('links')) && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className={cn(navLinkClasses(isGroupActive(['/admin/imoveis', '/admin/submissoes'])), "gap-1.5")}>
+                    <button className={cn(navLinkClasses(isGroupActive(['/admin/imoveis', '/admin/submissoes', '/admin/links'])), "gap-1.5")}>
                       <Building2 className="h-4 w-4" />
                       Imóveis
                       <ChevronDown className="h-3 w-3 opacity-60" />
@@ -225,16 +225,16 @@ export default function AdminLayout() {
                       </Link>
                     </DropdownMenuItem>
                     )}
+                    {can('links') && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/links" className="flex items-center gap-2">
+                        <LinkIcon className="h-4 w-4" />
+                        Links
+                      </Link>
+                    </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
-                )}
-
-                {/* Links */}
-                {can('links') && (
-                <Link to="/admin/links" className={navLinkClasses(isRouteActive('/admin/links'))}>
-                  <LinkIcon className="h-4 w-4" />
-                  Links
-                </Link>
                 )}
 
                 {/* Financeiro */}
@@ -406,8 +406,8 @@ export default function AdminLayout() {
               </Link>
               )}
               {can('links') && (
-              <Link to="/admin/links" onClick={() => setMobileMenuOpen(false)} className={mobileItem}>
-                <LinkIcon className="h-5 w-5" />Links
+              <Link to="/admin/links" onClick={() => setMobileMenuOpen(false)} className={mobileSub}>
+                <LinkIcon className="h-4 w-4" />Links
               </Link>
               )}
               {can('financeiro') && (

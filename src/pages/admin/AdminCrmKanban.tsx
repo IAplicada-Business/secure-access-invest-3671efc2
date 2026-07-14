@@ -135,6 +135,8 @@ export default function AdminCrmKanban() {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterChannel, setFilterChannel] = useState<string>('all');
+  const [filterYear, setFilterYear] = useState<string>('all');
+  const [filterPeriod, setFilterPeriod] = useState<'all' | '7d' | '30d' | '90d' | 'year'>('all');
   const [partners, setPartners] = useState<{ id: string; name: string }[]>([]);
   const [collapsedStages, setCollapsedStages] = useState<string[]>(() => loadCollapsedStages());
 
@@ -291,12 +293,34 @@ export default function AdminCrmKanban() {
     [clients],
   );
 
-  const filtered = useMemo(() => clients.filter(c => {
-    if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
-    if (filterType !== 'all' && c.type !== filterType) return false;
-    if (filterChannel !== 'all' && c.origin !== filterChannel) return false;
-    return true;
-  }), [clients, search, filterType, filterChannel]);
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    clients.forEach(c => {
+      const y = new Date(c.created_at).getFullYear();
+      if (!Number.isNaN(y)) years.add(y);
+    });
+    return [...years].sort((a, b) => b - a);
+  }, [clients]);
+
+  const filtered = useMemo(() => {
+    const now = Date.now();
+    const periodMs =
+      filterPeriod === '7d' ? 7 * 86400000
+        : filterPeriod === '30d' ? 30 * 86400000
+          : filterPeriod === '90d' ? 90 * 86400000
+            : filterPeriod === 'year' ? 365 * 86400000
+              : null;
+
+    return clients.filter(c => {
+      if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
+      if (filterType !== 'all' && c.type !== filterType) return false;
+      if (filterChannel !== 'all' && c.origin !== filterChannel) return false;
+      const entered = new Date(c.created_at);
+      if (filterYear !== 'all' && entered.getFullYear() !== Number(filterYear)) return false;
+      if (periodMs != null && now - entered.getTime() > periodMs) return false;
+      return true;
+    });
+  }, [clients, search, filterType, filterChannel, filterYear, filterPeriod]);
 
   const cards: KanbanCard[] = filtered.map(c => {
     const ChannelIcon = channelIcon(c.origin);
@@ -334,6 +358,8 @@ export default function AdminCrmKanban() {
                 {contact
                   ? `contato ${formatDistanceToNow(new Date(contact), { addSuffix: true, locale: ptBR })}`
                   : 'sem contato'}
+                {' · '}
+                entrou {new Date(c.created_at).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}
               </p>
             </div>
           </button>
@@ -463,6 +489,25 @@ export default function AdminCrmKanban() {
           <SelectContent>
             <SelectItem value="all">Todos os canais</SelectItem>
             {channels.map(ch => <SelectItem key={ch} value={ch}>{ch}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filterYear} onValueChange={setFilterYear}>
+          <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="Ano" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os anos</SelectItem>
+            {availableYears.map(y => (
+              <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterPeriod} onValueChange={(v) => setFilterPeriod(v as typeof filterPeriod)}>
+          <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="Entrada no funil" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Qualquer data</SelectItem>
+            <SelectItem value="7d">Entrou nos últimos 7 dias</SelectItem>
+            <SelectItem value="30d">Entrou nos últimos 30 dias</SelectItem>
+            <SelectItem value="90d">Entrou nos últimos 90 dias</SelectItem>
+            <SelectItem value="year">Entrou no último ano</SelectItem>
           </SelectContent>
         </Select>
       </div>
