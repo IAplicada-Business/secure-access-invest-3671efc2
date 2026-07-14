@@ -9,7 +9,9 @@ import {
   useSensors,
   closestCorners,
 } from '@dnd-kit/core';
+import { EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 export interface KanbanColumn {
   id: string;
@@ -33,6 +35,8 @@ interface KanbanBoardProps {
   emptyHint?: string;
   /** Altura mínima das colunas (ex.: 'min-h-[60vh]'). Default 'min-h-[120px]'. */
   columnMinHeight?: string;
+  /** Oculta a coluna do funil (persiste pelo consumidor). */
+  onHideColumn?: (columnId: string) => void;
   className?: string;
 }
 
@@ -58,11 +62,42 @@ function DraggableCard({ card }: { card: KanbanCard }) {
   );
 }
 
-function DroppableColumn({ column, minHeight, children }: { column: KanbanColumn; minHeight: string; children: ReactNode }) {
+function DroppableColumn({
+  column,
+  count,
+  minHeight,
+  onHide,
+  children,
+}: {
+  column: KanbanColumn;
+  count: number;
+  minHeight: string;
+  onHide?: () => void;
+  children: ReactNode;
+}) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
   return (
     <div className="flex w-72 flex-shrink-0 flex-col">
-      <h3 className="mb-3 px-1 font-ds-display text-base font-medium text-ink-900">{column.title}</h3>
+      <div className="mb-3 flex items-center justify-between gap-2 px-1">
+        <h3 className="font-ds-display text-base font-medium text-ink-900">
+          {column.title}
+          <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-ds-pill bg-ink-900/8 px-1.5 text-[11px] font-ds-mono text-ink-500">
+            {count}
+          </span>
+        </h3>
+        {onHide && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-ink-300 hover:text-ink-700"
+            title={`Ocultar etapa "${column.title}"`}
+            onClick={onHide}
+          >
+            <EyeOff className="h-3.5 w-3.5" />
+          </Button>
+        )}
+      </div>
       <div
         ref={setNodeRef}
         className={cn(
@@ -82,14 +117,27 @@ function DroppableColumn({ column, minHeight, children }: { column: KanbanColumn
  * Kanban genérico com drag-and-drop (@dnd-kit/core).
  * Usado pelo CRM agora; reutilizável para o funil de ativos depois.
  */
-export function KanbanBoard({ columns, cards, onMove, emptyHint, columnMinHeight = 'min-h-[120px]', className }: KanbanBoardProps) {
+export function KanbanBoard({
+  columns,
+  cards,
+  onMove,
+  emptyHint,
+  columnMinHeight = 'min-h-[120px]',
+  onHideColumn,
+  className,
+}: KanbanBoardProps) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over) return;
     const cardId = String(active.id);
-    const toColumnId = String(over.id);
+    let toColumnId = String(over.id);
+    // Se soltou em cima de outro card, resolve pela coluna dele.
+    if (!columns.some((col) => col.id === toColumnId)) {
+      const overCard = cards.find((c) => c.id === toColumnId);
+      if (overCard) toColumnId = overCard.columnId;
+    }
     const card = cards.find((c) => c.id === cardId);
     if (card && card.columnId !== toColumnId && columns.some((col) => col.id === toColumnId)) {
       onMove(cardId, toColumnId);
@@ -102,7 +150,13 @@ export function KanbanBoard({ columns, cards, onMove, emptyHint, columnMinHeight
         {columns.map((column) => {
           const colCards = cards.filter((c) => c.columnId === column.id);
           return (
-            <DroppableColumn key={column.id} column={column} minHeight={columnMinHeight}>
+            <DroppableColumn
+              key={column.id}
+              column={column}
+              count={colCards.length}
+              minHeight={columnMinHeight}
+              onHide={onHideColumn ? () => onHideColumn(column.id) : undefined}
+            >
               {colCards.length === 0 && emptyHint ? (
                 <p className="px-2 py-6 text-center text-xs text-ink-300">{emptyHint}</p>
               ) : (

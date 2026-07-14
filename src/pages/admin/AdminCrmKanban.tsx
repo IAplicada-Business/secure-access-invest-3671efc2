@@ -8,12 +8,33 @@ import { Badge } from '@/components/ui/badge';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Search, Loader2, Share2, Phone, Users, CalendarDays, Globe, HelpCircle, Plus, type LucideIcon } from 'lucide-react';
+import { Search, Loader2, Share2, Phone, Users, CalendarDays, Globe, HelpCircle, Plus, Columns3, Eye, EyeOff, type LucideIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { PageHeader, KanbanBoard, Drawer, type KanbanColumn, type KanbanCard } from '@/components/ui-system';
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
+
+const HIDDEN_STAGES_KEY = 'crm_hidden_stages';
+
+function loadHiddenStages(): string[] {
+  try {
+    const raw = localStorage.getItem(HIDDEN_STAGES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHiddenStages(ids: string[]) {
+  localStorage.setItem(HIDDEN_STAGES_KEY, JSON.stringify(ids));
+}
 
 // Canais de entrada (como o lead chegou).
 const CANAL_OPTIONS: { value: string; label: string }[] = [
@@ -95,6 +116,7 @@ export default function AdminCrmKanban() {
   const [filterType, setFilterType] = useState<string>('all');
   const [filterChannel, setFilterChannel] = useState<string>('all');
   const [partners, setPartners] = useState<{ id: string; name: string }[]>([]);
+  const [hiddenStages, setHiddenStages] = useState<string[]>(() => loadHiddenStages());
 
   // Novo lead
   const emptyLead = {
@@ -104,6 +126,45 @@ export default function AdminCrmKanban() {
   const [leadOpen, setLeadOpen] = useState(false);
   const [lead, setLead] = useState(emptyLead);
   const [leadSaving, setLeadSaving] = useState(false);
+
+  function setStageHidden(stageId: string, hidden: boolean) {
+    setHiddenStages(prev => {
+      const next = hidden
+        ? [...new Set([...prev, stageId])]
+        : prev.filter(id => id !== stageId);
+      // Nunca ocultar todas — pelo menos uma etapa visível.
+      if (hidden && next.length >= STAGES.length) {
+        toast.error('Mantenha ao menos uma etapa visível no funil.');
+        return prev;
+      }
+      saveHiddenStages(next);
+      return next;
+    });
+  }
+
+  function hideStage(stageId: string) {
+    if (hiddenStages.length >= STAGES.length - 1) {
+      toast.error('Mantenha ao menos uma etapa visível no funil.');
+      return;
+    }
+    const count = clients.filter(c => c.crm_stage === stageId).length;
+    setStageHidden(stageId, true);
+    const stage = STAGES.find(s => s.id === stageId);
+    toast.message(
+      count > 0
+        ? `"${stage?.title}" ocultada (${count} lead${count === 1 ? '' : 's'} nesta etapa).`
+        : `"${stage?.title}" ocultada.`,
+    );
+  }
+
+  function showStage(stageId: string) {
+    setStageHidden(stageId, false);
+  }
+
+  function showAllStages() {
+    setHiddenStages([]);
+    saveHiddenStages([]);
+  }
 
   async function loadData() {
     const { data, error } = await supabase
@@ -207,6 +268,21 @@ export default function AdminCrmKanban() {
     return true;
   }), [clients, search, filterType, filterChannel]);
 
+  const visibleStages = useMemo(
+    () => STAGES.filter(s => !hiddenStages.includes(s.id)),
+    [hiddenStages],
+  );
+
+  const hiddenStageMeta = useMemo(
+    () => STAGES
+      .filter(s => hiddenStages.includes(s.id))
+      .map(s => ({
+        ...s,
+        count: filtered.filter(c => c.crm_stage === s.id).length,
+      })),
+    [hiddenStages, filtered],
+  );
+
   const cards: KanbanCard[] = filtered.map(c => {
     const ChannelIcon = channelIcon(c.origin);
     const contact = lastContact[c.id] ?? c.created_at;
@@ -250,8 +326,70 @@ export default function AdminCrmKanban() {
     <div className="space-y-6 font-ds-body">
       <PageHeader
         title="CRM"
-        subtitle="Funil de vendas (Kanban). Arraste os cards entre as etapas."
-        actions={<Button onClick={() => setLeadOpen(true)}><Plus className="mr-2 h-4 w-4" /> Novo lead</Button>}
+        subtitle="Funil de vendas (Kanban). Arraste os cards entre as etapas. Oculte as que não estiver usando."
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline">
+                  <Columns3 className="mr-2 h-4 w-4" />
+                  Etapas
+                  {hiddenStages.length > 0 && (
+                    <Badge variant="secondary" className="ml-2 text-[10px]">
+                      {hiddenStages.length} ocultas
+                    </Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-80 p-3">
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-sm font-medium text-ink-900">Etapas do funil</p>
+                  {hiddenStages.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={showAllStages}
+                      className="text-xs text-brand-goldDeep hover:underline"
+                    >
+                      Mostrar todas
+                    </button>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  {STAGES.map(stage => {
+                    const count = clients.filter(c => c.crm_stage === stage.id).length;
+                    const visible = !hiddenStages.includes(stage.id);
+                    return (
+                      <div
+                        key={stage.id}
+                        className="flex items-center justify-between gap-3 rounded-ds-md border border-cream-200 px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-ink-900">{stage.title}</p>
+                          <p className="text-[11px] text-ink-300">
+                            {count} lead{count === 1 ? '' : 's'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {visible ? (
+                            <Eye className="h-3.5 w-3.5 text-ink-300" />
+                          ) : (
+                            <EyeOff className="h-3.5 w-3.5 text-ink-300" />
+                          )}
+                          <Switch
+                            checked={visible}
+                            onCheckedChange={(checked) => setStageHidden(stage.id, !checked)}
+                            aria-label={`${visible ? 'Ocultar' : 'Mostrar'} ${stage.title}`}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </PopoverContent>
+            </Popover>
+            <Button onClick={() => setLeadOpen(true)}><Plus className="mr-2 h-4 w-4" /> Novo lead</Button>
+          </div>
+        }
       />
 
       <div className="flex flex-col gap-3 sm:flex-row">
@@ -283,9 +421,28 @@ export default function AdminCrmKanban() {
         </Select>
       </div>
 
+      {hiddenStageMeta.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-ds-lg border border-cream-200 bg-cream-50 px-3 py-2">
+          <span className="text-xs font-medium text-ink-500">Etapas ocultas:</span>
+          {hiddenStageMeta.map(s => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => showStage(s.id)}
+              className="inline-flex items-center gap-1.5 rounded-ds-pill border border-cream-200 bg-white px-2.5 py-1 text-xs text-ink-700 transition-colors hover:border-brand-gold hover:text-brand-goldDeep"
+              title={`Mostrar "${s.title}"`}
+            >
+              <EyeOff className="h-3 w-3 text-ink-300" />
+              {s.title}
+              <span className="font-ds-mono text-ink-300">{s.count}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {loading ? (
         <div className="flex gap-4 overflow-x-auto pb-2">
-          {STAGES.map(s => (
+          {visibleStages.map(s => (
             <div key={s.id} className="w-72 flex-shrink-0 space-y-2">
               <div className="h-5 w-32 animate-pulse rounded bg-cream-200" />
               <div className="h-24 animate-pulse rounded-ds-lg bg-cream-100" />
@@ -295,9 +452,10 @@ export default function AdminCrmKanban() {
         </div>
       ) : (
         <KanbanBoard
-          columns={STAGES}
+          columns={visibleStages}
           cards={cards}
           onMove={handleMove}
+          onHideColumn={hideStage}
           emptyHint="Nenhum lead nesta etapa."
           columnMinHeight="min-h-[calc(100vh-20rem)]"
         />
