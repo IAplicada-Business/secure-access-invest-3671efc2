@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Search, Loader2, Share2, Phone, Users, CalendarDays, Globe, HelpCircle, Plus, Columns3, Eye, EyeOff, MoreVertical, Trash2, ExternalLink, type LucideIcon } from 'lucide-react';
+import { Search, Loader2, Share2, Phone, Users, CalendarDays, Globe, HelpCircle, Plus, Columns3, PanelLeftClose, PanelLeftOpen, MoreVertical, Trash2, ExternalLink, type LucideIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -32,11 +32,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-const HIDDEN_STAGES_KEY = 'crm_hidden_stages';
+const COLLAPSED_STAGES_KEY = 'crm_collapsed_stages';
+const LEGACY_HIDDEN_STAGES_KEY = 'crm_hidden_stages';
 
-function loadHiddenStages(): string[] {
+function loadCollapsedStages(): string[] {
   try {
-    const raw = localStorage.getItem(HIDDEN_STAGES_KEY);
+    const raw =
+      localStorage.getItem(COLLAPSED_STAGES_KEY) ??
+      localStorage.getItem(LEGACY_HIDDEN_STAGES_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
@@ -45,8 +48,10 @@ function loadHiddenStages(): string[] {
   }
 }
 
-function saveHiddenStages(ids: string[]) {
-  localStorage.setItem(HIDDEN_STAGES_KEY, JSON.stringify(ids));
+function saveCollapsedStages(ids: string[]) {
+  localStorage.setItem(COLLAPSED_STAGES_KEY, JSON.stringify(ids));
+  // Evita que o formato antigo continue divergindo.
+  localStorage.removeItem(LEGACY_HIDDEN_STAGES_KEY);
 }
 
 // Canais de entrada (como o lead chegou).
@@ -129,7 +134,7 @@ export default function AdminCrmKanban() {
   const [filterType, setFilterType] = useState<string>('all');
   const [filterChannel, setFilterChannel] = useState<string>('all');
   const [partners, setPartners] = useState<{ id: string; name: string }[]>([]);
-  const [hiddenStages, setHiddenStages] = useState<string[]>(() => loadHiddenStages());
+  const [collapsedStages, setCollapsedStages] = useState<string[]>(() => loadCollapsedStages());
 
   // Novo lead
   const emptyLead = {
@@ -142,43 +147,23 @@ export default function AdminCrmKanban() {
   const [deleteTarget, setDeleteTarget] = useState<CrmClient | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  function setStageHidden(stageId: string, hidden: boolean) {
-    setHiddenStages(prev => {
-      const next = hidden
+  function setStageCollapsed(stageId: string, collapsed: boolean) {
+    setCollapsedStages(prev => {
+      const next = collapsed
         ? [...new Set([...prev, stageId])]
         : prev.filter(id => id !== stageId);
-      // Nunca ocultar todas — pelo menos uma etapa visível.
-      if (hidden && next.length >= STAGES.length) {
-        toast.error('Mantenha ao menos uma etapa visível no funil.');
-        return prev;
-      }
-      saveHiddenStages(next);
+      saveCollapsedStages(next);
       return next;
     });
   }
 
-  function hideStage(stageId: string) {
-    if (hiddenStages.length >= STAGES.length - 1) {
-      toast.error('Mantenha ao menos uma etapa visível no funil.');
-      return;
-    }
-    const count = clients.filter(c => c.crm_stage === stageId).length;
-    setStageHidden(stageId, true);
-    const stage = STAGES.find(s => s.id === stageId);
-    toast.message(
-      count > 0
-        ? `"${stage?.title}" ocultada (${count} lead${count === 1 ? '' : 's'} nesta etapa).`
-        : `"${stage?.title}" ocultada.`,
-    );
+  function toggleStage(stageId: string) {
+    setStageCollapsed(stageId, !collapsedStages.includes(stageId));
   }
 
-  function showStage(stageId: string) {
-    setStageHidden(stageId, false);
-  }
-
-  function showAllStages() {
-    setHiddenStages([]);
-    saveHiddenStages([]);
+  function expandAllStages() {
+    setCollapsedStages([]);
+    saveCollapsedStages([]);
   }
 
   async function handleDeleteLead() {
@@ -297,21 +282,6 @@ export default function AdminCrmKanban() {
     return true;
   }), [clients, search, filterType, filterChannel]);
 
-  const visibleStages = useMemo(
-    () => STAGES.filter(s => !hiddenStages.includes(s.id)),
-    [hiddenStages],
-  );
-
-  const hiddenStageMeta = useMemo(
-    () => STAGES
-      .filter(s => hiddenStages.includes(s.id))
-      .map(s => ({
-        ...s,
-        count: filtered.filter(c => c.crm_stage === s.id).length,
-      })),
-    [hiddenStages, filtered],
-  );
-
   const cards: KanbanCard[] = filtered.map(c => {
     const ChannelIcon = channelIcon(c.origin);
     const contact = lastContact[c.id] ?? c.created_at;
@@ -383,7 +353,7 @@ export default function AdminCrmKanban() {
     <div className="space-y-6 font-ds-body">
       <PageHeader
         title="CRM"
-        subtitle="Funil de vendas (Kanban). Arraste os cards entre as etapas. Oculte as que não estiver usando."
+        subtitle="Funil de vendas (Kanban). Arraste os cards entre as etapas. Recolha as que não estiver usando."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Popover>
@@ -391,9 +361,9 @@ export default function AdminCrmKanban() {
                 <Button variant="outline">
                   <Columns3 className="mr-2 h-4 w-4" />
                   Etapas
-                  {hiddenStages.length > 0 && (
+                  {collapsedStages.length > 0 && (
                     <Badge variant="secondary" className="ml-2 text-[10px]">
-                      {hiddenStages.length} ocultas
+                      {collapsedStages.length} recolhidas
                     </Badge>
                   )}
                 </Button>
@@ -401,20 +371,20 @@ export default function AdminCrmKanban() {
               <PopoverContent align="end" className="w-80 p-3">
                 <div className="mb-3 flex items-center justify-between">
                   <p className="text-sm font-medium text-ink-900">Etapas do funil</p>
-                  {hiddenStages.length > 0 && (
+                  {collapsedStages.length > 0 && (
                     <button
                       type="button"
-                      onClick={showAllStages}
+                      onClick={expandAllStages}
                       className="text-xs text-brand-goldDeep hover:underline"
                     >
-                      Mostrar todas
+                      Expandir todas
                     </button>
                   )}
                 </div>
                 <div className="space-y-2">
                   {STAGES.map(stage => {
                     const count = clients.filter(c => c.crm_stage === stage.id).length;
-                    const visible = !hiddenStages.includes(stage.id);
+                    const expanded = !collapsedStages.includes(stage.id);
                     return (
                       <div
                         key={stage.id}
@@ -427,15 +397,15 @@ export default function AdminCrmKanban() {
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
-                          {visible ? (
-                            <Eye className="h-3.5 w-3.5 text-ink-300" />
+                          {expanded ? (
+                            <PanelLeftOpen className="h-3.5 w-3.5 text-ink-300" />
                           ) : (
-                            <EyeOff className="h-3.5 w-3.5 text-ink-300" />
+                            <PanelLeftClose className="h-3.5 w-3.5 text-ink-300" />
                           )}
                           <Switch
-                            checked={visible}
-                            onCheckedChange={(checked) => setStageHidden(stage.id, !checked)}
-                            aria-label={`${visible ? 'Ocultar' : 'Mostrar'} ${stage.title}`}
+                            checked={expanded}
+                            onCheckedChange={(checked) => setStageCollapsed(stage.id, !checked)}
+                            aria-label={`${expanded ? 'Recolher' : 'Expandir'} ${stage.title}`}
                           />
                         </div>
                       </div>
@@ -478,28 +448,9 @@ export default function AdminCrmKanban() {
         </Select>
       </div>
 
-      {hiddenStageMeta.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-ds-lg border border-cream-200 bg-cream-50 px-3 py-2">
-          <span className="text-xs font-medium text-ink-500">Etapas ocultas:</span>
-          {hiddenStageMeta.map(s => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => showStage(s.id)}
-              className="inline-flex items-center gap-1.5 rounded-ds-pill border border-cream-200 bg-white px-2.5 py-1 text-xs text-ink-700 transition-colors hover:border-brand-gold hover:text-brand-goldDeep"
-              title={`Mostrar "${s.title}"`}
-            >
-              <EyeOff className="h-3 w-3 text-ink-300" />
-              {s.title}
-              <span className="font-ds-mono text-ink-300">{s.count}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
       {loading ? (
         <div className="flex gap-4 overflow-x-auto pb-2">
-          {visibleStages.map(s => (
+          {STAGES.map(s => (
             <div key={s.id} className="w-72 flex-shrink-0 space-y-2">
               <div className="h-5 w-32 animate-pulse rounded bg-cream-200" />
               <div className="h-24 animate-pulse rounded-ds-lg bg-cream-100" />
@@ -509,10 +460,11 @@ export default function AdminCrmKanban() {
         </div>
       ) : (
         <KanbanBoard
-          columns={visibleStages}
+          columns={STAGES}
           cards={cards}
           onMove={handleMove}
-          onHideColumn={hideStage}
+          collapsedColumnIds={collapsedStages}
+          onToggleColumn={toggleStage}
           emptyHint="Nenhum lead nesta etapa."
           columnMinHeight="min-h-[calc(100vh-20rem)]"
         />
