@@ -14,6 +14,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { PageHeader, KanbanBoard, Drawer, type KanbanColumn, type KanbanCard } from '@/components/ui-system';
+import { shouldPromoteToClient, relationLabel, RELATION_BADGE, contactRelation } from '@/lib/contacts';
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from '@/components/ui/popover';
@@ -122,6 +123,7 @@ interface CrmClient {
   origin: string | null;
   created_at: string;
   crm_stage: CrmStage;
+  status: 'prospect' | 'active' | 'completed';
 }
 
 export default function AdminCrmKanban() {
@@ -185,10 +187,11 @@ export default function AdminCrmKanban() {
       .from('clients')
       .select('*')
       .order('created_at', { ascending: false });
-    if (error) { toast.error('Erro ao carregar clientes'); setLoading(false); return; }
+    if (error) { toast.error('Erro ao carregar contatos'); setLoading(false); return; }
     const list: CrmClient[] = (data ?? []).map(c => ({
       ...c,
       crm_stage: (c.crm_stage ?? 'contato') as CrmStage,
+      status: (c.status ?? 'prospect') as CrmClient['status'],
     })) as CrmClient[];
     setClients(list);
 
@@ -256,10 +259,19 @@ export default function AdminCrmKanban() {
 
   async function handleMove(cardId: string, toColumnId: string) {
     const prev = clients;
-    setClients(cs => cs.map(c => (c.id === cardId ? { ...c, crm_stage: toColumnId as CrmStage } : c)));
+    const current = clients.find(c => c.id === cardId);
+    const promote = shouldPromoteToClient(toColumnId) && current?.status === 'prospect';
+    setClients(cs => cs.map(c => (
+      c.id === cardId
+        ? { ...c, crm_stage: toColumnId as CrmStage, ...(promote ? { status: 'active' as const } : {}) }
+        : c
+    )));
     const { error } = await supabase
       .from('clients')
-      .update({ crm_stage: toColumnId as CrmStage })
+      .update({
+        crm_stage: toColumnId as CrmStage,
+        ...(promote ? { status: 'active' } : {}),
+      })
       .eq('id', cardId);
     if (error) {
       setClients(prev);
@@ -267,7 +279,11 @@ export default function AdminCrmKanban() {
       return;
     }
     const stage = STAGES.find(s => s.id === toColumnId);
-    toast.success(`Movido para "${stage?.title ?? toColumnId}"`);
+    toast.success(
+      promote
+        ? `Movido para "${stage?.title}" e convertido em cliente`
+        : `Movido para "${stage?.title}"`,
+    );
   }
 
   const channels = useMemo(
@@ -292,7 +308,7 @@ export default function AdminCrmKanban() {
         <div className="flex w-full items-start gap-2 text-left">
           <button
             type="button"
-            onClick={() => navigate(`/admin/clientes/${c.id}`)}
+            onClick={() => navigate(`/admin/contatos/${c.id}`)}
             className="flex min-w-0 flex-1 items-start gap-3 text-left"
           >
             <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-ds-pill bg-brand-goldSoft/40 text-xs font-semibold text-brand-goldDeep">
@@ -301,6 +317,9 @@ export default function AdminCrmKanban() {
             <div className="min-w-0 flex-1 space-y-1">
               <p className="truncate font-ds-display text-[15px] font-medium leading-tight text-ink-900">{c.name}</p>
               <div className="flex flex-wrap items-center gap-1.5">
+                <Badge className={cn('text-[10px]', RELATION_BADGE[contactRelation(c.status)])}>
+                  {relationLabel(c.status)}
+                </Badge>
                 <Badge className={cn('text-[10px]', TYPE_BADGE[c.type] ?? 'bg-cream-200 text-ink-700 border-transparent')}>
                   {TYPE_LABELS[c.type] ?? c.type}
                 </Badge>
@@ -333,7 +352,7 @@ export default function AdminCrmKanban() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem onClick={() => navigate(`/admin/clientes/${c.id}`)}>
+              <DropdownMenuItem onClick={() => navigate(`/admin/contatos/${c.id}`)}>
                 <ExternalLink className="mr-2 h-4 w-4" /> Abrir / editar
               </DropdownMenuItem>
               <DropdownMenuItem

@@ -163,7 +163,7 @@ export default function PartnerDetails() {
           <TabsList>
             <TabsTrigger value="summary">Resumo</TabsTrigger>
             {isAgency && <TabsTrigger value="brokers">Corretores Vinculados</TabsTrigger>}
-            <TabsTrigger value="clients">Clientes Gerados</TabsTrigger>
+            <TabsTrigger value="clients">Contatos gerados</TabsTrigger>
             <TabsTrigger value="history">Histórico</TabsTrigger>
           </TabsList>
         </div>
@@ -248,7 +248,7 @@ export default function PartnerDetails() {
                   <p className="text-sm text-muted-foreground">{c.phone} • {new Date(c.created_at).toLocaleDateString('pt-BR')}</p>
                 </div>
                 <Button variant="ghost" size="icon" asChild>
-                  <Link to={`/admin/clientes/${c.id}`}><Eye className="h-4 w-4" /></Link>
+                  <Link to={`/admin/contatos/${c.id}`}><Eye className="h-4 w-4" /></Link>
                 </Button>
               </CardContent>
             </Card>
