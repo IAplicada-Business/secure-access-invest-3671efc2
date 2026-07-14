@@ -47,6 +47,11 @@ export interface Property {
   has_planta: boolean;
   has_iptu: boolean;
   has_certidoes: boolean;
+  has_retrofit: boolean;
+  retrofit_investment: number | null;
+  retrofit_completion_time: string | null;
+  retrofit_appreciation: string | null;
+  retrofit_image: string | null;
 }
 
 export interface Client {

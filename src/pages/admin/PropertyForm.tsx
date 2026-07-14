@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -14,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Loader2, Upload, X, Save, Eye, ClipboardList, MessageCircle, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -41,6 +43,7 @@ export default function PropertyForm() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingRetrofit, setUploadingRetrofit] = useState(false);
   const [submission, setSubmission] = useState<PropertySubmission | null>(null);
 
   const [form, setForm] = useState({
@@ -68,6 +71,11 @@ export default function PropertyForm() {
     has_planta: false,
     has_iptu: false,
     has_certidoes: false,
+    has_retrofit: false,
+    retrofit_investment: '',
+    retrofit_completion_time: '',
+    retrofit_appreciation: '',
+    retrofit_image: '',
   });
 
   useEffect(() => {
@@ -115,6 +123,11 @@ export default function PropertyForm() {
       has_planta: property.has_planta || false,
       has_iptu: property.has_iptu || false,
       has_certidoes: property.has_certidoes || false,
+      has_retrofit: property.has_retrofit || false,
+      retrofit_investment: property.retrofit_investment?.toString() || '',
+      retrofit_completion_time: property.retrofit_completion_time || '',
+      retrofit_appreciation: property.retrofit_appreciation || '',
+      retrofit_image: property.retrofit_image || '',
     });
 
     // Fetch linked submission data
@@ -181,6 +194,36 @@ export default function PropertyForm() {
     setForm(prev => ({ ...prev, cover_image: url }));
   }
 
+  async function handleRetrofitUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingRetrofit(true);
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${crypto.randomUUID()}.${fileExt}`;
+    const filePath = `properties/retrofit/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('property-images')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      toast.error(`Erro ao enviar imagem do retrofit: ${file.name}`);
+      setUploadingRetrofit(false);
+      e.target.value = '';
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('property-images')
+      .getPublicUrl(filePath);
+
+    setForm(prev => ({ ...prev, retrofit_image: publicUrl }));
+    setUploadingRetrofit(false);
+    e.target.value = '';
+    toast.success('Imagem do retrofit enviada!');
+  }
+
   async function handleSubmit(e: React.FormEvent, publish = false) {
     e.preventDefault();
     setSaving(true);
@@ -210,6 +253,19 @@ export default function PropertyForm() {
       has_planta: form.has_planta,
       has_iptu: form.has_iptu,
       has_certidoes: form.has_certidoes,
+      has_retrofit: form.has_retrofit,
+      retrofit_investment: form.has_retrofit && form.retrofit_investment
+        ? parseFloat(form.retrofit_investment)
+        : null,
+      retrofit_completion_time: form.has_retrofit
+        ? (form.retrofit_completion_time || null)
+        : null,
+      retrofit_appreciation: form.has_retrofit
+        ? (form.retrofit_appreciation || null)
+        : null,
+      retrofit_image: form.has_retrofit
+        ? (form.retrofit_image || null)
+        : null,
     };
 
     let error;
@@ -551,6 +607,117 @@ export default function PropertyForm() {
                 </div>
               )}
             </CardContent>
+          </Card>
+
+          {/* Retrofit */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <CardTitle>Retrofit</CardTitle>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Inclua potencial de transformação do imóvel após obras
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="has_retrofit" className="text-sm font-medium">
+                    Incluir retrofit
+                  </Label>
+                  <Switch
+                    id="has_retrofit"
+                    checked={form.has_retrofit}
+                    onCheckedChange={(checked) => setForm(prev => ({ ...prev, has_retrofit: checked }))}
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            {form.has_retrofit && (
+              <CardContent className="space-y-6">
+                <Tabs defaultValue="investimento">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="investimento">Investimento</TabsTrigger>
+                    <TabsTrigger value="tempo">Tempo</TabsTrigger>
+                    <TabsTrigger value="valorizacao">Valorização</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="investimento" className="space-y-2 pt-4">
+                    <Label htmlFor="retrofit_investment">Valor aproximado de investimento (R$)</Label>
+                    <Input
+                      id="retrofit_investment"
+                      type="number"
+                      step="0.01"
+                      value={form.retrofit_investment}
+                      onChange={(e) => setForm(prev => ({ ...prev, retrofit_investment: e.target.value }))}
+                      placeholder="80000"
+                    />
+                  </TabsContent>
+                  <TabsContent value="tempo" className="space-y-2 pt-4">
+                    <Label htmlFor="retrofit_completion_time">Tempo de conclusão</Label>
+                    <Input
+                      id="retrofit_completion_time"
+                      value={form.retrofit_completion_time}
+                      onChange={(e) => setForm(prev => ({ ...prev, retrofit_completion_time: e.target.value }))}
+                      placeholder="Ex: 4 a 6 meses"
+                    />
+                  </TabsContent>
+                  <TabsContent value="valorizacao" className="space-y-2 pt-4">
+                    <Label htmlFor="retrofit_appreciation">Valorização</Label>
+                    <Input
+                      id="retrofit_appreciation"
+                      value={form.retrofit_appreciation}
+                      onChange={(e) => setForm(prev => ({ ...prev, retrofit_appreciation: e.target.value }))}
+                      placeholder="Ex: +35% ou R$ 120.000"
+                    />
+                  </TabsContent>
+                </Tabs>
+
+                <div className="space-y-3">
+                  <Label>Como o imóvel ficará após a transformação</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Uma única imagem mostrando o resultado esperado do retrofit
+                  </p>
+                  {form.retrofit_image ? (
+                    <div className="relative w-full max-w-md">
+                      <img
+                        src={form.retrofit_image}
+                        alt="Resultado do retrofit"
+                        className="aspect-video w-full rounded-lg object-cover ring-1 ring-border"
+                      />
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="destructive"
+                        className="absolute right-2 top-2 h-8 w-8"
+                        onClick={() => setForm(prev => ({ ...prev, retrofit_image: '' }))}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <label className="block max-w-md">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleRetrofitUpload}
+                        disabled={uploadingRetrofit}
+                      />
+                      <div className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border p-6 hover:border-primary transition-colors">
+                        {uploadingRetrofit ? (
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <>
+                            <Upload className="h-5 w-5 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">
+                              Enviar imagem do resultado
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </label>
+                  )}
+                </div>
+              </CardContent>
+            )}
           </Card>
 
           {/* Complementary Info - NEW SECTION */}
