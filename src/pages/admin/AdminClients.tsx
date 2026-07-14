@@ -12,7 +12,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  Plus, Loader2, MessageCircle, Search, ExternalLink,
+  Plus, Loader2, MessageCircle, Search, ExternalLink, Trash2, Pencil,
   Share2, Phone, Users, CalendarDays, Globe, HelpCircle, Inbox, type LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -20,6 +20,16 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { PageHeader, DataTable, EmptyState, Drawer } from '@/components/ui-system';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const TYPE_LABELS: Record<ClientType, string> = {
   investor: 'Investidor', incorporator: 'Regularização', individual: 'Pessoa Física',
@@ -76,6 +86,8 @@ export default function AdminClients() {
   const [filterCanal, setFilterCanal] = useState('all');
   const [filterTag, setFilterTag] = useState('all');
   const [form, setForm] = useState(emptyForm);
+  const [deleteTarget, setDeleteTarget] = useState<ClientExt | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function loadClients() {
     const { data, error } = await supabase
@@ -131,6 +143,20 @@ export default function AdminClients() {
     setDrawerOpen(false);
     setForm(emptyForm);
     setSaving(false);
+    loadClients();
+  }
+
+  async function handleDeleteClient() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const { error } = await supabase.from('clients').delete().eq('id', deleteTarget.id);
+    setDeleting(false);
+    if (error) {
+      toast.error('Erro ao excluir: ' + error.message);
+      return;
+    }
+    toast.success(`"${deleteTarget.name}" excluído.`);
+    setDeleteTarget(null);
     loadClients();
   }
 
@@ -225,9 +251,26 @@ export default function AdminClients() {
       id: 'acoes',
       header: '',
       cell: ({ row }) => (
-        <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-end gap-0.5" onClick={(e) => e.stopPropagation()}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(`/admin/clientes/${row.original.id}`)}
+            title="Abrir / editar"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
           <Button variant="ghost" size="icon" onClick={() => openWhatsApp(row.original.phone, row.original.name)} title="WhatsApp">
             <MessageCircle className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-destructive hover:text-destructive"
+            onClick={() => setDeleteTarget(row.original)}
+            title="Excluir cliente"
+          >
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       ),
@@ -430,6 +473,29 @@ export default function AdminClients() {
           </div>
         </form>
       </Drawer>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir cliente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso remove permanentemente <strong>{deleteTarget?.name}</strong> e os dados vinculados
+              (documentos, interações, histórico do funil). Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteClient}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

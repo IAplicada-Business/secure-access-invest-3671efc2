@@ -19,6 +19,16 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   ArrowLeft, MessageCircle, Pencil, Loader2, Upload, Download, Trash2,
   Clock, Plus, Building2, Eye, ClipboardList, FileText,
   ExternalLink, FolderPlus, Share2, Phone, Users, CalendarDays, Globe, HelpCircle, MapPin,
@@ -97,6 +107,8 @@ export default function ClientDetails() {
   const [chargeOpen, setChargeOpen] = useState(false);
   const [chargeForm, setChargeForm] = useState({ service_type: 'regularizacao', amount: '', received_at: new Date().toISOString().slice(0, 10), notes: '' });
   const [chargeSaving, setChargeSaving] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const REG_STATUS_LABELS: Record<string, string> = {
     nova: 'Nova', em_analise: 'Em Análise', proposta_enviada: 'Proposta Enviada',
@@ -354,6 +366,19 @@ export default function ClientDetails() {
     return `${mins}min`;
   }
 
+  async function handleDeleteClient() {
+    if (!client) return;
+    setDeleting(true);
+    const { error } = await supabase.from('clients').delete().eq('id', client.id);
+    setDeleting(false);
+    if (error) {
+      toast.error('Erro ao excluir: ' + error.message);
+      return;
+    }
+    toast.success(`"${client.name}" excluído.`);
+    navigate('/admin/clientes');
+  }
+
   if (loading) return <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   if (!client) return null;
 
@@ -405,6 +430,14 @@ export default function ClientDetails() {
           </Button>
           <Button size="sm" onClick={() => { const msg = encodeURIComponent(`Olá ${client.name}!`); window.open(`https://wa.me/${client.phone}?text=${msg}`, '_blank'); }}>
             <MessageCircle className="mr-1 h-3.5 w-3.5" /> WhatsApp
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 className="mr-1 h-3.5 w-3.5" /> Excluir
           </Button>
         </div>
       </div>
@@ -947,6 +980,29 @@ export default function ClientDetails() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir cliente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso remove permanentemente <strong>{client.name}</strong> e os dados vinculados
+              (documentos, interações, histórico do funil). Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteClient}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
