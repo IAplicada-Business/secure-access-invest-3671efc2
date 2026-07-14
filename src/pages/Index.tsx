@@ -69,7 +69,7 @@ export default function Index() {
         {/* Background Photo */}
         <img
           src={ownerPhoto}
-          alt="J. Imobi Gestão e Negócios"
+          alt="Tijolo em Capital"
           className="absolute inset-0 h-full w-full object-cover"
         />
         {/* Overlay */}

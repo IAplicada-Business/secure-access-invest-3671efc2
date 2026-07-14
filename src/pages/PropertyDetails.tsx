@@ -27,7 +27,8 @@ import {
   FileCheck,
   CheckCircle,
   XCircle,
-  Info
+  Info,
+  Sparkles,
 } from 'lucide-react';
 import { InvestmentAnalysis } from '@/components/InvestmentAnalysis';
 import useEmblaCarousel from 'embla-carousel-react';
@@ -237,7 +238,7 @@ export default function PropertyDetails() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="animate-pulse">
-          <Logo className="h-16 opacity-50" />
+          <Logo tone="gold" className="h-16 opacity-50" />
         </div>
       </div>
     );
@@ -281,7 +282,7 @@ export default function PropertyDetails() {
               <ArrowLeft className="h-5 w-5" />
               <span className="hidden sm:inline">Voltar ao catálogo</span>
             </Link>
-            <Logo className="h-12 w-auto" />
+            <Logo tone="gold" className="h-12 w-auto" />
           </div>
         </div>
       </header>
@@ -495,6 +496,59 @@ export default function PropertyDetails() {
                 ))}
               </div>
             </div>
+
+            {/* Retrofit */}
+            {property.has_retrofit && (
+              <div className="card-premium mb-6 p-6">
+                <div className="mb-4 flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <h2 className="font-display text-lg font-semibold text-foreground">
+                    Potencial de Retrofit
+                  </h2>
+                </div>
+
+                {property.retrofit_image && (
+                  <div className="mb-4 overflow-hidden rounded-xl">
+                    <img
+                      src={property.retrofit_image}
+                      alt="Como o imóvel ficará após a transformação"
+                      className="aspect-video w-full object-cover"
+                    />
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Visualização após a transformação
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {property.retrofit_investment != null && (
+                    <div className="rounded-lg bg-secondary p-4">
+                      <p className="text-sm text-muted-foreground">Investimento aproximado</p>
+                      <p className="font-display text-xl font-bold text-primary">
+                        {formatCurrency(property.retrofit_investment)}
+                      </p>
+                    </div>
+                  )}
+                  {property.retrofit_completion_time && (
+                    <div className="rounded-lg bg-secondary p-4">
+                      <p className="text-sm text-muted-foreground">Tempo de conclusão</p>
+                      <p className="font-display text-xl font-bold text-foreground">
+                        {property.retrofit_completion_time}
+                      </p>
+                    </div>
+                  )}
+                  {property.retrofit_appreciation && (
+                    <div className="rounded-lg bg-primary/10 p-4">
+                      <p className="text-sm text-muted-foreground">Valorização</p>
+                      <p className="font-display text-xl font-bold text-primary flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4" />
+                        {property.retrofit_appreciation}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Investment Analysis Section */}
             <InvestmentAnalysis property={property} />

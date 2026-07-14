@@ -144,7 +144,7 @@ export default function Catalog() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="animate-pulse">
-          <Logo className="h-16 opacity-50" />
+          <Logo tone="gold" className="h-16 opacity-50" />
         </div>
       </div>
     );
@@ -179,7 +179,7 @@ export default function Catalog() {
       <header className="border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Logo className="h-12 w-auto" />
+            <Logo tone="gold" className="h-12 w-auto" />
             <div className="text-right">
               <p className="text-xs text-muted-foreground">Acesso exclusivo para</p>
               <p className="font-medium text-foreground">{accessLink?.investor_name}</p>
@@ -307,7 +307,7 @@ export default function Catalog() {
       {/* Footer */}
       <footer className="border-t border-border bg-charcoal py-8">
         <div className="container mx-auto px-4 text-center">
-          <Logo className="mx-auto mb-4 h-8" />
+          <Logo tone="gold" className="mx-auto mb-4 h-8" />
           <p className="text-sm text-white/70">
             © {new Date().getFullYear()} Tijolo em Capital. Todos os direitos reservados.
           </p>
