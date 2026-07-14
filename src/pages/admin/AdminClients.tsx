@@ -146,7 +146,7 @@ export default function AdminClients() {
       tags,
       observacoes: form.observacoes || null,
     };
-    const { error } = await supabase.from('clients').insert(payload);
+    const { error } = await supabase.from('clients').insert(payload as any);
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
     toast.success(form.relation === 'client' ? 'Cliente cadastrado!' : 'Lead cadastrado!');
     setDrawerOpen(false);
