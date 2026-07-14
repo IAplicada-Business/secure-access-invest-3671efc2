@@ -7,7 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Building2,
   Eye,
-  Link as LinkIcon,
   Clock,
   Plus,
   TrendingUp,
@@ -23,13 +22,17 @@ import {
 import {
   Area,
   AreaChart,
+  Bar,
+  BarChart,
   CartesianGrid,
+  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
 import { cn } from '@/lib/utils';
+import { CRM_STAGE_LABELS, contactRelation } from '@/lib/contacts';
 
 interface DashboardStats {
   totalProperties: number;
@@ -39,6 +42,8 @@ interface DashboardStats {
   pendingReview: number;
   activeLinks: number;
   totalClients: number;
+  leadsCount: number;
+  clientsConverted: number;
   monthRevenue: number;
   monthExpenses: number;
   pendingCommissions: number;
@@ -63,6 +68,12 @@ interface DashboardStats {
   viewsByDay: Array<{ day: string; label: string; views: number }>;
   hotLeads: number;
   pipelineOpen: number;
+  pipelineByStage: Array<{ stage: string; label: string; count: number }>;
+  contactsByWeek: Array<{ week: string; label: string; leads: number; clients: number }>;
+  regByStatus: Array<{ status: string; label: string; count: number }>;
+  conversionRate: number;
+  avgWeeklyLeads: number;
+  projectedClients30d: number;
 }
 
 function formatTime(seconds: number): string {
@@ -117,7 +128,7 @@ export default function AdminDashboard() {
       ] = await Promise.all([
         supabase.from('properties').select('id, status, title, cover_image'),
         supabase.from('access_links').select('id', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('clients').select('id, crm_stage'),
+        supabase.from('clients').select('id, crm_stage, status, created_at'),
         supabase
           .from('page_views')
           .select('time_spent_seconds, viewed_at, access_link_id, property_id')
@@ -130,8 +141,7 @@ export default function AdminDashboard() {
         supabase.from('property_submissions').select('owner_name'),
         supabase
           .from('regularization_processes')
-          .select('id, status, created_at')
-          .not('status', 'in', '("concluida","arquivada")'),
+          .select('id, status, created_at'),
         supabase.from('revenues').select('amount').gte('received_at', monthStart).lte('received_at', monthEnd),
         supabase.from('revenues').select('amount').gte('received_at', prevStart).lte('received_at', prevEnd),
         supabase.from('expenses').select('amount').gte('expense_date', monthStart).lte('expense_date', monthEnd),
@@ -220,11 +230,23 @@ export default function AdminDashboard() {
         }
       }
 
-      const activeReg = regProcs?.length || 0;
+      const REG_STATUS_LABELS: Record<string, string> = {
+        nova: 'Nova',
+        em_analise: 'Em análise',
+        proposta_enviada: 'Proposta enviada',
+        em_execucao: 'Em execução',
+        concluida: 'Concluída',
+        arquivada: 'Arquivada',
+      };
+
+      const activeRegProcs = (regProcs || []).filter(
+        r => r.status !== 'concluida' && r.status !== 'arquivada',
+      );
+      const activeReg = activeRegProcs.length;
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       let stagnant = 0;
-      if (regProcs?.length) {
-        const procIds = regProcs.map(r => r.id);
+      if (activeRegProcs.length) {
+        const procIds = activeRegProcs.map(r => r.id);
         const { data: regInteractions } = await supabase
           .from('regularization_interactions')
           .select('process_id, interaction_date')
@@ -234,8 +256,79 @@ export default function AdminDashboard() {
           const cur = lastActivity.get(i.process_id);
           if (!cur || i.interaction_date > cur) lastActivity.set(i.process_id, i.interaction_date);
         });
-        stagnant = regProcs.filter(r => (lastActivity.get(r.id) ?? r.created_at) < sevenDaysAgo).length;
+        stagnant = activeRegProcs.filter(r => (lastActivity.get(r.id) ?? r.created_at) < sevenDaysAgo).length;
       }
+
+      const regStatusOrder = ['nova', 'em_analise', 'proposta_enviada', 'em_execucao', 'concluida', 'arquivada'];
+      const regCountMap = new Map<string, number>();
+      (regProcs || []).forEach(r => {
+        const s = r.status || 'nova';
+        regCountMap.set(s, (regCountMap.get(s) || 0) + 1);
+      });
+      const regByStatus = regStatusOrder
+        .filter(s => (regCountMap.get(s) || 0) > 0)
+        .map(s => ({
+          status: s,
+          label: REG_STATUS_LABELS[s] ?? s,
+          count: regCountMap.get(s) || 0,
+        }));
+
+      const PIPELINE_ORDER = [
+        'contato',
+        'agendar_reuniao',
+        'envio_proposta',
+        'follow_up',
+        'fechamento',
+        'aguardando_pagamento',
+        'perdido',
+      ];
+      const stageCount = new Map<string, number>();
+      PIPELINE_ORDER.forEach(s => stageCount.set(s, 0));
+      (clients || []).forEach(c => {
+        const s = c.crm_stage || 'contato';
+        stageCount.set(s, (stageCount.get(s) || 0) + 1);
+      });
+      const pipelineByStage = PIPELINE_ORDER.map(s => ({
+        stage: s,
+        label: CRM_STAGE_LABELS[s] ?? s,
+        count: stageCount.get(s) || 0,
+      }));
+
+      const leadsCount = (clients || []).filter(c => contactRelation(c.status) === 'lead').length;
+      const clientsConverted = (clients || []).filter(c => contactRelation(c.status) === 'client').length;
+      const conversionRate = (clients?.length || 0) > 0
+        ? Math.round((clientsConverted / (clients?.length || 1)) * 100)
+        : 0;
+
+      // Últimas 8 semanas — entrada de contatos (por created_at)
+      const contactsByWeek: DashboardStats['contactsByWeek'] = [];
+      for (let i = 7; i >= 0; i--) {
+        const start = new Date();
+        start.setHours(0, 0, 0, 0);
+        start.setDate(start.getDate() - ((start.getDay() + 6) % 7) - i * 7); // segunda da semana
+        const end = new Date(start);
+        end.setDate(end.getDate() + 7);
+        let leads = 0;
+        let clientsWeek = 0;
+        (clients || []).forEach(c => {
+          const created = new Date(c.created_at);
+          if (created < start || created >= end) return;
+          if (contactRelation(c.status) === 'client') clientsWeek += 1;
+          else leads += 1;
+        });
+        contactsByWeek.push({
+          week: start.toISOString().slice(0, 10),
+          label: start.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
+          leads,
+          clients: clientsWeek,
+        });
+      }
+
+      const last4 = contactsByWeek.slice(-4);
+      const avgWeeklyLeads = last4.length
+        ? last4.reduce((a, w) => a + w.leads + w.clients, 0) / last4.length
+        : 0;
+      const projectedClients30d = Math.round((avgWeeklyLeads * 4) * (conversionRate / 100));
 
       const dayMap = new Map<string, number>();
       for (let i = 29; i >= 0; i--) {
@@ -267,6 +360,8 @@ export default function AdminDashboard() {
         pendingReview,
         activeLinks: activeLinks || 0,
         totalClients: clients?.length || 0,
+        leadsCount,
+        clientsConverted,
         monthRevenue: (revenues || []).reduce((a, r) => a + Number(r.amount || 0), 0),
         monthExpenses: (expenses || []).reduce((a, r) => a + Number(r.amount || 0), 0),
         pendingCommissions: (pendComm || []).reduce((a, r) => a + Number(r.amount || 0), 0),
@@ -280,6 +375,12 @@ export default function AdminDashboard() {
         viewsByDay,
         hotLeads: hotLeads || 0,
         pipelineOpen,
+        pipelineByStage,
+        contactsByWeek,
+        regByStatus,
+        conversionRate,
+        avgWeeklyLeads: Math.round(avgWeeklyLeads * 10) / 10,
+        projectedClients30d,
       });
       setLoading(false);
     }
@@ -365,7 +466,7 @@ export default function AdminDashboard() {
                 {greeting()}
               </h1>
               <p className="text-sm text-ink-500">
-                Visão estratégica do negócio — financeiro, pendências e engajamento.
+                Visão do negócio em três lentes — estratégico, operacional e engajamento.
               </p>
             </div>
             <Button asChild>
@@ -583,76 +684,191 @@ export default function AdminDashboard() {
         </TabsContent>
 
         {/* ——— OPERACIONAL ——— */}
-        <TabsContent value="operacional" className="mt-0 space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { label: 'Rascunhos', value: stats.draftProperties, icon: Building2, href: '/admin/imoveis', warn: false },
-              { label: 'Regularizações ativas', value: stats.activeRegularizations, icon: ClipboardList, href: '/admin/regularizacoes', warn: stats.stagnantRegularizations > 0 },
-              { label: 'Links de investidor', value: stats.activeLinks, icon: LinkIcon, href: '/admin/links', warn: false },
-              { label: 'Aguardando avaliação', value: stats.pendingReview, icon: Inbox, href: '/admin/submissoes', warn: stats.pendingReview > 0 },
-            ].map(item => (
-              <Link
-                key={item.label}
-                to={item.href}
-                className={cn(
-                  'flex items-center gap-4 rounded-ds-xl border bg-white p-4 transition hover:shadow-ds-md',
-                  item.warn ? 'border-semantic-warning/40 bg-semantic-warning/5' : 'border-cream-200',
-                )}
-              >
-                <span className={cn(
-                  'flex h-11 w-11 items-center justify-center rounded-ds-lg',
-                  item.warn ? 'bg-semantic-warning/15 text-semantic-warning' : 'bg-cream-100 text-brand-goldDeep',
-                )}>
-                  <item.icon className="h-5 w-5" />
-                </span>
-                <div>
-                  <p className="text-xs text-ink-300">{item.label}</p>
-                  <p className="font-ds-mono text-2xl font-semibold text-ink-900">{item.value}</p>
-                </div>
-              </Link>
-            ))}
+        <TabsContent value="operacional" className="space-y-6">
+          {/* KPIs operacionais densos */}
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-ds-xl border border-cream-200 bg-white p-5">
+              <p className="text-sm text-ink-500">Leads no pipeline</p>
+              <p className="mt-2 font-ds-mono text-2xl font-semibold text-ink-900">{stats.leadsCount}</p>
+              <p className="mt-1 text-xs text-ink-300">{stats.pipelineOpen} em etapas ativas</p>
+            </div>
+            <div className="rounded-ds-xl border border-cream-200 bg-white p-5">
+              <p className="text-sm text-ink-500">Taxa lead → cliente</p>
+              <p className="mt-2 font-ds-mono text-2xl font-semibold text-ink-900">{stats.conversionRate}%</p>
+              <p className="mt-1 text-xs text-ink-300">{stats.clientsConverted} clientes convertidos</p>
+            </div>
+            <div className="rounded-ds-xl border border-cream-200 bg-white p-5">
+              <p className="text-sm text-ink-500">Projeção 30 dias</p>
+              <p className="mt-2 font-ds-mono text-2xl font-semibold text-ink-900">
+                ~{stats.projectedClients30d}
+              </p>
+              <p className="mt-1 text-xs text-ink-300">
+                novas conversões se ritmo atual se mantiver ({stats.avgWeeklyLeads}/sem)
+              </p>
+            </div>
+            <div className={cn(
+              'rounded-ds-xl border bg-white p-5',
+              stats.stagnantRegularizations > 0 ? 'border-semantic-warning/40 bg-semantic-warning/5' : 'border-cream-200',
+            )}>
+              <p className="text-sm text-ink-500">Reg. estagnadas</p>
+              <p className="mt-2 font-ds-mono text-2xl font-semibold text-ink-900">{stats.stagnantRegularizations}</p>
+              <p className="mt-1 text-xs text-ink-300">{stats.activeRegularizations} ativas no total</p>
+            </div>
           </div>
 
+          {/* Pipeline + tendência */}
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="rounded-ds-xl border border-cream-200 bg-white p-5">
-              <h2 className="font-ds-display text-lg font-medium text-ink-900">Fila operacional</h2>
-              <p className="mb-4 text-xs text-ink-300">Onde investir tempo hoje</p>
-              <div className="space-y-2">
-                <Link to="/admin/crm" className="flex items-center justify-between rounded-ds-lg border border-cream-200 px-3 py-3 text-sm hover:bg-cream-50">
-                  <span>Leads no CRM</span>
-                  <span className="font-ds-mono text-ink-900">{stats.pipelineOpen}</span>
-                </Link>
-                <Link to="/admin/regularizacoes" className="flex items-center justify-between rounded-ds-lg border border-cream-200 px-3 py-3 text-sm hover:bg-cream-50">
-                  <span>Regularizações estagnadas</span>
-                  <span className="font-ds-mono text-ink-900">{stats.stagnantRegularizations}</span>
-                </Link>
-                <Link to="/admin/contatos" className="flex items-center justify-between rounded-ds-lg border border-cream-200 px-3 py-3 text-sm hover:bg-cream-50">
-                  <span>Proprietários sem cadastro</span>
-                  <span className="font-ds-mono text-ink-900">{stats.unregisteredOwners}</span>
-                </Link>
-                <Link to="/admin/financeiro" className="flex items-center justify-between rounded-ds-lg border border-cream-200 px-3 py-3 text-sm hover:bg-cream-50">
-                  <span>Comissões pendentes</span>
-                  <span className="font-ds-mono text-ink-900">{formatCurrency(stats.pendingCommissions)}</span>
-                </Link>
+              <div className="mb-1 flex items-end justify-between gap-3">
+                <div>
+                  <h2 className="font-ds-display text-lg font-medium text-ink-900">Funil comercial</h2>
+                  <p className="text-xs text-ink-300">Distribuição de contatos por etapa</p>
+                </div>
+                <Button asChild variant="ghost" size="sm" className="h-8 text-xs">
+                  <Link to="/admin/crm">Abrir CRM <ArrowRight className="ml-1 h-3 w-3" /></Link>
+                </Button>
+              </div>
+              <div className="mt-4 h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={stats.pipelineByStage}
+                    layout="vertical"
+                    margin={{ top: 4, right: 12, left: 8, bottom: 4 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E8E4D7" horizontal={false} />
+                    <XAxis type="number" allowDecimals={false} tick={{ fill: '#8E8E8E', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis
+                      type="category"
+                      dataKey="label"
+                      width={118}
+                      tick={{ fill: '#5C5C5C', fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      contentStyle={{ borderRadius: 10, border: '1px solid #E8E4D7', fontSize: 12 }}
+                      formatter={(value: number) => [`${value} contato${value === 1 ? '' : 's'}`, 'Quantidade']}
+                    />
+                    <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={16}>
+                      {stats.pipelineByStage.map(row => (
+                        <Cell
+                          key={row.stage}
+                          fill={row.stage === 'perdido' ? '#A8463A' : row.stage === 'fechamento' || row.stage === 'aguardando_pagamento' ? '#C9A961' : '#E1C68C'}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
             <div className="rounded-ds-xl border border-cream-200 bg-white p-5">
-              <h2 className="font-ds-display text-lg font-medium text-ink-900">Atalhos</h2>
-              <p className="mb-4 text-xs text-ink-300">Ir direto ao módulo</p>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {[
-                  { to: '/admin/crm', label: 'Abrir CRM' },
-                  { to: '/admin/regularizacoes', label: 'Regularizações' },
-                  { to: '/admin/submissoes', label: 'Submissões' },
-                  { to: '/admin/links', label: 'Links de acesso' },
-                  { to: '/admin/financeiro', label: 'Financeiro' },
-                  { to: '/admin/relatorios', label: 'Relatórios' },
-                ].map(a => (
-                  <Button key={a.to} asChild variant="outline" className="justify-between">
-                    <Link to={a.to}>{a.label} <ArrowRight className="h-3.5 w-3.5" /></Link>
-                  </Button>
-                ))}
+              <div className="mb-1">
+                <h2 className="font-ds-display text-lg font-medium text-ink-900">Entrada de contatos</h2>
+                <p className="text-xs text-ink-300">Últimas 8 semanas — leads vs clientes cadastrados</p>
+              </div>
+              <div className="mt-4 h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={stats.contactsByWeek} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="opsLeadsFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#C9A961" stopOpacity={0.35} />
+                        <stop offset="100%" stopColor="#C9A961" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="opsClientsFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#1B1B1B" stopOpacity={0.18} />
+                        <stop offset="100%" stopColor="#1B1B1B" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E8E4D7" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fill: '#8E8E8E', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis allowDecimals={false} tick={{ fill: '#8E8E8E', fontSize: 11 }} axisLine={false} tickLine={false} width={28} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: 10, border: '1px solid #E8E4D7', fontSize: 12 }}
+                    />
+                    <Area type="monotone" dataKey="leads" name="Leads" stroke="#C9A961" strokeWidth={2.5} fill="url(#opsLeadsFill)" />
+                    <Area type="monotone" dataKey="clients" name="Clientes" stroke="#1B1B1B" strokeWidth={2} fill="url(#opsClientsFill)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          {/* Regularizações + leituras */}
+          <div className="grid gap-4 lg:grid-cols-5">
+            <div className="rounded-ds-xl border border-cream-200 bg-white p-5 lg:col-span-3">
+              <div className="mb-1 flex items-end justify-between gap-3">
+                <div>
+                  <h2 className="font-ds-display text-lg font-medium text-ink-900">Regularizações por status</h2>
+                  <p className="text-xs text-ink-300">Volume operacional do módulo jurídico</p>
+                </div>
+                <Button asChild variant="ghost" size="sm" className="h-8 text-xs">
+                  <Link to="/admin/regularizacoes">Ver módulo <ArrowRight className="ml-1 h-3 w-3" /></Link>
+                </Button>
+              </div>
+              {stats.regByStatus.length === 0 ? (
+                <p className="mt-8 text-center text-sm text-ink-300">Nenhum processo cadastrado.</p>
+              ) : (
+                <div className="mt-4 h-56 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={stats.regByStatus} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E8E4D7" vertical={false} />
+                      <XAxis dataKey="label" tick={{ fill: '#8E8E8E', fontSize: 11 }} axisLine={false} tickLine={false} interval={0} angle={-18} textAnchor="end" height={50} />
+                      <YAxis allowDecimals={false} tick={{ fill: '#8E8E8E', fontSize: 11 }} axisLine={false} tickLine={false} width={28} />
+                      <Tooltip
+                        contentStyle={{ borderRadius: 10, border: '1px solid #E8E4D7', fontSize: 12 }}
+                        formatter={(value: number) => [`${value} processo${value === 1 ? '' : 's'}`, 'Quantidade']}
+                      />
+                      <Bar dataKey="count" fill="#9C7C3E" radius={[6, 6, 0, 0]} barSize={28} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3 lg:col-span-2">
+              <div className="rounded-ds-xl border border-cream-200 bg-white p-5">
+                <h2 className="font-ds-display text-base font-medium text-ink-900">Leitura operacional</h2>
+                <ul className="mt-3 space-y-3 text-sm text-ink-700">
+                  <li className="flex gap-2">
+                    <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand-gold" />
+                    <span>
+                      {stats.pipelineByStage.find(s => s.stage === 'follow_up')?.count || 0} contatos em Follow Up
+                      e {stats.pipelineByStage.find(s => s.stage === 'envio_proposta')?.count || 0} com proposta enviada.
+                    </span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand-gold" />
+                    <span>
+                      Estoque de imóveis: {stats.draftProperties} rascunho{stats.draftProperties === 1 ? '' : 's'},{' '}
+                      {stats.pendingReview} aguardando avaliação, {stats.publishedProperties} publicados.
+                    </span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand-gold" />
+                    <span>
+                      {formatCurrency(stats.pendingCommissions)} em comissões pendentes ·{' '}
+                      {stats.unregisteredOwners} proprietário{stats.unregisteredOwners === 1 ? '' : 's'} sem cadastro em Contatos.
+                    </span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand-gold" />
+                    <span>
+                      Com a taxa atual de {stats.conversionRate}%, o ritmo de {stats.avgWeeklyLeads} contatos/semana
+                      aponta para cerca de {stats.projectedClients30d} novas conversões em 30 dias.
+                    </span>
+                  </li>
+                </ul>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Link to="/admin/submissoes" className="rounded-ds-xl border border-cream-200 bg-cream-50 px-4 py-3 hover:bg-cream-100">
+                  <p className="text-[11px] text-ink-300">Avaliação</p>
+                  <p className="font-ds-mono text-lg font-semibold text-ink-900">{stats.pendingReview}</p>
+                </Link>
+                <Link to="/admin/links" className="rounded-ds-xl border border-cream-200 bg-cream-50 px-4 py-3 hover:bg-cream-100">
+                  <p className="text-[11px] text-ink-300">Links ativos</p>
+                  <p className="font-ds-mono text-lg font-semibold text-ink-900">{stats.activeLinks}</p>
+                </Link>
               </div>
             </div>
           </div>
