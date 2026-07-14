@@ -78,7 +78,7 @@ export default function RegularizationDetails() {
   async function loadAll() {
     if (!id) return;
     const { data: proc } = await supabase.from('regularization_processes').select('*').eq('id', id).single();
-    if (!proc) { toast.error('Processo não encontrado'); navigate('/admin/clientes'); return; }
+    if (!proc) { toast.error('Processo não encontrado'); navigate('/admin/contatos'); return; }
     setProcess(proc);
 
     // Load type name

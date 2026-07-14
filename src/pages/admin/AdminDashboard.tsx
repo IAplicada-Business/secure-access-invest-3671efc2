@@ -334,7 +334,7 @@ export default function AdminDashboard() {
       tone: 'danger' as const,
     },
     stats.unregisteredOwners > 0 && {
-      href: '/admin/clientes',
+      href: '/admin/contatos',
       icon: Users,
       title: `${stats.unregisteredOwners} proprietário${stats.unregisteredOwners === 1 ? '' : 's'} sem cadastro`,
       body: 'Vindos de submissões',
@@ -477,7 +477,7 @@ export default function AdminDashboard() {
           {/* Snapshot útil do sistema (compacto, sem cards operacionais pesados) */}
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-ds-xl border border-cream-200 bg-cream-50 px-4 py-4">
-              <p className="text-xs text-ink-300">Clientes / leads no CRM</p>
+              <p className="text-xs text-ink-300">Contatos no CRM</p>
               <p className="mt-1 font-ds-mono text-xl font-semibold text-ink-900">{stats.totalClients}</p>
               <p className="text-xs text-ink-300">{stats.pipelineOpen} em etapas ativas</p>
             </div>
@@ -626,7 +626,7 @@ export default function AdminDashboard() {
                   <span>Regularizações estagnadas</span>
                   <span className="font-ds-mono text-ink-900">{stats.stagnantRegularizations}</span>
                 </Link>
-                <Link to="/admin/clientes" className="flex items-center justify-between rounded-ds-lg border border-cream-200 px-3 py-3 text-sm hover:bg-cream-50">
+                <Link to="/admin/contatos" className="flex items-center justify-between rounded-ds-lg border border-cream-200 px-3 py-3 text-sm hover:bg-cream-50">
                   <span>Proprietários sem cadastro</span>
                   <span className="font-ds-mono text-ink-900">{stats.unregisteredOwners}</span>
                 </Link>

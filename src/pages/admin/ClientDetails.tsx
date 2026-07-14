@@ -35,9 +35,15 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  contactRelation,
+  relationLabel,
+  RELATION_BADGE,
+  CRM_STAGE_LABELS,
+} from '@/lib/contacts';
 
 const TYPE_LABELS: Record<ClientType, string> = { investor: 'Investidor', incorporator: 'Regularização', individual: 'Pessoa Física' };
-const STATUS_LABELS: Record<ClientStatus, string> = { prospect: 'Prospect', active: 'Ativo', completed: 'Concluído' };
+const STATUS_LABELS: Record<ClientStatus, string> = { prospect: 'Lead', active: 'Cliente ativo', completed: 'Cliente concluído' };
 const INTERACTION_LABELS: Record<InteractionType, string> = { meeting: 'Reunião', whatsapp: 'WhatsApp', email: 'E-mail', call: 'Ligação', other: 'Outro' };
 const DOC_LABELS: Record<DocumentCategory, string> = { rg: 'RG', cpf: 'CPF', matricula: 'Matrícula', contract: 'Contrato', proposal: 'Proposta', other: 'Outro' };
 
@@ -52,6 +58,7 @@ interface ClientExt extends Client {
   drive_link: string | null;
   observacoes: string | null;
   tags: string[] | null;
+  crm_stage: string | null;
 }
 
 const CANAL: Record<string, { label: string; icon: LucideIcon }> = {
@@ -123,7 +130,7 @@ export default function ClientDetails() {
   async function loadClient() {
     if (!id) return;
     const { data, error } = await supabase.from('clients').select('*').eq('id', id).single();
-    if (error || !data) { toast.error('Cliente não encontrado'); navigate('/admin/clientes'); return; }
+    if (error || !data) { toast.error('Contato não encontrado'); navigate('/admin/contatos'); return; }
     setClient(data);
     setEditForm(data);
     setLoading(false);
@@ -264,7 +271,7 @@ export default function ClientDetails() {
     };
     const { error } = await supabase.from('clients').update(payload).eq('id', id!);
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
-    toast.success('Cliente atualizado!');
+    toast.success('Contato atualizado!');
     setEditOpen(false);
     setSaving(false);
     loadClient();
@@ -366,6 +373,20 @@ export default function ClientDetails() {
     return `${mins}min`;
   }
 
+  async function handlePromoteToClient() {
+    if (!client || !id) return;
+    const { error } = await supabase
+      .from('clients')
+      .update({ status: 'active', crm_stage: client.crm_stage === 'contato' || !client.crm_stage ? 'fechamento' : client.crm_stage })
+      .eq('id', id);
+    if (error) {
+      toast.error('Erro ao converter: ' + error.message);
+      return;
+    }
+    toast.success('Lead convertido em cliente.');
+    loadClient();
+  }
+
   async function handleDeleteClient() {
     if (!client) return;
     setDeleting(true);
@@ -376,7 +397,7 @@ export default function ClientDetails() {
       return;
     }
     toast.success(`"${client.name}" excluído.`);
-    navigate('/admin/clientes');
+    navigate('/admin/contatos');
   }
 
   if (loading) return <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
@@ -384,7 +405,7 @@ export default function ClientDetails() {
 
   return (
     <div className="space-y-6 font-ds-body">
-      <Button variant="ghost" onClick={() => navigate('/admin/clientes')} className="gap-2 -ml-2">
+      <Button variant="ghost" onClick={() => navigate('/admin/contatos')} className="gap-2 -ml-2">
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Button>
 
@@ -412,12 +433,25 @@ export default function ClientDetails() {
                   <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />desde {new Date(client.created_at).toLocaleDateString('pt-BR')}</span>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
+                  <Badge className={RELATION_BADGE[contactRelation(client.status)]}>
+                    {relationLabel(client.status)}
+                  </Badge>
                   <Badge className="bg-brand-goldSoft/30 text-brand-goldDeep">{TYPE_LABELS[client.type]}</Badge>
+                  {client.crm_stage && (
+                    <Badge variant="outline" className="text-xs">
+                      {CRM_STAGE_LABELS[client.crm_stage] ?? client.crm_stage}
+                    </Badge>
+                  )}
                   {(client.tags ?? []).map(t => <Badge key={t} variant="outline" className="text-xs">{t}</Badge>)}
                 </div>
               </div>
             </div>
             <div className="flex flex-shrink-0 flex-wrap gap-2">
+              {contactRelation(client.status) === 'lead' && (
+                <Button variant="outline" size="sm" onClick={handlePromoteToClient}>
+                  Converter em cliente
+                </Button>
+              )}
               {client.drive_link ? (
                 <Button variant="outline" size="sm" asChild>
                   <a href={client.drive_link} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-1 h-3.5 w-3.5" /> Abrir Drive</a>
@@ -463,7 +497,14 @@ export default function ClientDetails() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><span className="text-sm text-muted-foreground">Tipo</span><p className="font-medium">{TYPE_LABELS[client.type]}</p></div>
-                <div><span className="text-sm text-muted-foreground">Status</span><p><Badge className={client.status === 'active' ? 'bg-primary/10 text-primary' : ''}>{STATUS_LABELS[client.status]}</Badge></p></div>
+                <div>
+                  <span className="text-sm text-muted-foreground">Relação</span>
+                  <p>
+                    <Badge className={RELATION_BADGE[contactRelation(client.status)]}>
+                      {STATUS_LABELS[client.status]}
+                    </Badge>
+                  </p>
+                </div>
                 <div><span className="text-sm text-muted-foreground">Telefone</span><p className="font-medium">{client.phone}</p></div>
                 <div><span className="text-sm text-muted-foreground">E-mail</span><p className="font-medium">{client.email || '-'}</p></div>
                 <div><span className="text-sm text-muted-foreground">CPF</span><p className="font-medium">{client.cpf_cnpj || '-'}</p></div>
@@ -875,13 +916,13 @@ export default function ClientDetails() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Status</Label>
+                <Label>Relação</Label>
                 <Select value={editForm.status} onValueChange={(v) => setEditForm(p => ({ ...p, status: v as ClientStatus }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="prospect">Prospect</SelectItem>
-                    <SelectItem value="active">Ativo</SelectItem>
-                    <SelectItem value="completed">Concluído</SelectItem>
+                    <SelectItem value="prospect">Lead</SelectItem>
+                    <SelectItem value="active">Cliente ativo</SelectItem>
+                    <SelectItem value="completed">Cliente concluído</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

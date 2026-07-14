@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Catalog from "./pages/Catalog";
@@ -32,6 +32,11 @@ import AdminDadosIniciais from "./pages/admin/AdminDadosIniciais";
 import AdminUsuarios from "./pages/admin/AdminUsuarios";
 
 const queryClient = new QueryClient();
+
+function RedirectLegacyClientDetail() {
+  const { id } = useParams();
+  return <Navigate to={`/admin/contatos/${id}`} replace />;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -66,9 +71,11 @@ const App = () => (
             <Route path="comunicacoes" element={<AdminCommunications />} />
             <Route path="regularizacoes" element={<AdminRegularizacoes />} />
             <Route path="regularizacoes/:id" element={<RegularizationDetails />} />
-            <Route path="clientes" element={<AdminClients />} />
+            <Route path="contatos" element={<AdminClients />} />
+            <Route path="contatos/:id" element={<ClientDetails />} />
+            <Route path="clientes" element={<Navigate to="/admin/contatos" replace />} />
+            <Route path="clientes/:id" element={<RedirectLegacyClientDetail />} />
             <Route path="crm" element={<AdminCrmKanban />} />
-            <Route path="clientes/:id" element={<ClientDetails />} />
             <Route path="parceiros" element={<AdminPartners />} />
             <Route path="parceiros/:id" element={<PartnerDetails />} />
             {/* Oculto no menu — galeria do Design System */}

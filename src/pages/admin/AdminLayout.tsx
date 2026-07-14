@@ -288,7 +288,7 @@ export default function AdminLayout() {
                 {(can('crm') || can('clientes') || can('parceiros')) && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className={cn(navLinkClasses(isGroupActive(['/admin/crm', '/admin/clientes', '/admin/parceiros'])), "gap-1.5")}>
+                    <button className={cn(navLinkClasses(isGroupActive(['/admin/crm', '/admin/contatos', '/admin/clientes', '/admin/parceiros'])), "gap-1.5")}>
                       <Users className="h-4 w-4" />
                       CRM
                       <ChevronDown className="h-3 w-3 opacity-60" />
@@ -305,9 +305,9 @@ export default function AdminLayout() {
                     )}
                     {can('clientes') && (
                     <DropdownMenuItem asChild>
-                      <Link to="/admin/clientes" className="flex items-center gap-2">
+                      <Link to="/admin/contatos" className="flex items-center gap-2">
                         <Users className="h-4 w-4" />
-                        Clientes
+                        Contatos
                       </Link>
                     </DropdownMenuItem>
                     )}
@@ -436,8 +436,8 @@ export default function AdminLayout() {
               </Link>
               )}
               {can('clientes') && (
-              <Link to="/admin/clientes" onClick={() => setMobileMenuOpen(false)} className={mobileItem}>
-                <Users className="h-5 w-5" />Clientes
+              <Link to="/admin/contatos" onClick={() => setMobileMenuOpen(false)} className={mobileItem}>
+                <Users className="h-5 w-5" />Contatos
               </Link>
               )}
               {can('parceiros') && (
