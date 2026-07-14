@@ -377,7 +377,7 @@ export default function ClientDetails() {
     if (!client || !id) return;
     const { error } = await supabase
       .from('clients')
-      .update({ status: 'active', crm_stage: client.crm_stage === 'contato' || !client.crm_stage ? 'fechamento' : client.crm_stage })
+      .update({ status: 'active', crm_stage: (client.crm_stage === 'contato' || !client.crm_stage ? 'fechamento' : client.crm_stage) as 'fechamento' })
       .eq('id', id);
     if (error) {
       toast.error('Erro ao converter: ' + error.message);
