@@ -633,13 +633,17 @@ export default function PropertyForm() {
             </CardHeader>
             {form.has_retrofit && (
               <CardContent className="space-y-6">
-                <Tabs defaultValue="investimento">
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="investimento">Investimento</TabsTrigger>
-                    <TabsTrigger value="tempo">Tempo</TabsTrigger>
-                    <TabsTrigger value="valorizacao">Valorização</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="investimento" className="space-y-2 pt-4">
+                <Tabs defaultValue="investimento" className="space-y-0">
+                  <div>
+                    <p className="text-sm font-medium text-ink-900">Métricas do retrofit</p>
+                    <p className="text-xs text-ink-500">Investimento, prazo e valorização estimados</p>
+                    <TabsList className="mt-3">
+                      <TabsTrigger value="investimento">Investimento</TabsTrigger>
+                      <TabsTrigger value="tempo">Tempo</TabsTrigger>
+                      <TabsTrigger value="valorizacao">Valorização</TabsTrigger>
+                    </TabsList>
+                  </div>
+                  <TabsContent value="investimento" className="space-y-2">
                     <Label htmlFor="retrofit_investment">Valor aproximado de investimento (R$)</Label>
                     <Input
                       id="retrofit_investment"
@@ -650,7 +654,7 @@ export default function PropertyForm() {
                       placeholder="80000"
                     />
                   </TabsContent>
-                  <TabsContent value="tempo" className="space-y-2 pt-4">
+                  <TabsContent value="tempo" className="space-y-2">
                     <Label htmlFor="retrofit_completion_time">Tempo de conclusão</Label>
                     <Input
                       id="retrofit_completion_time"
@@ -659,7 +663,7 @@ export default function PropertyForm() {
                       placeholder="Ex: 4 a 6 meses"
                     />
                   </TabsContent>
-                  <TabsContent value="valorizacao" className="space-y-2 pt-4">
+                  <TabsContent value="valorizacao" className="space-y-2">
                     <Label htmlFor="retrofit_appreciation">Valorização</Label>
                     <Input
                       id="retrofit_appreciation"

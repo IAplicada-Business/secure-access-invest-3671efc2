@@ -357,7 +357,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6 font-ds-body">
-      <Tabs defaultValue="estrategico" className="space-y-6">
+      <Tabs defaultValue="estrategico" className="space-y-0">
         <div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="space-y-1">
@@ -372,25 +372,10 @@ export default function AdminDashboard() {
               <Link to="/admin/imoveis/novo"><Plus className="mr-2 h-4 w-4" /> Novo imóvel</Link>
             </Button>
           </div>
-          <TabsList className="mt-4 h-auto w-full justify-start gap-6 rounded-none border-b border-cream-200 bg-transparent p-0">
-            <TabsTrigger
-              value="estrategico"
-              className="rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 pt-1 text-sm font-medium text-ink-300 shadow-none data-[state=active]:border-brand-gold data-[state=active]:bg-transparent data-[state=active]:text-ink-900 data-[state=active]:shadow-none"
-            >
-              Estratégico
-            </TabsTrigger>
-            <TabsTrigger
-              value="operacional"
-              className="rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 pt-1 text-sm font-medium text-ink-300 shadow-none data-[state=active]:border-brand-gold data-[state=active]:bg-transparent data-[state=active]:text-ink-900 data-[state=active]:shadow-none"
-            >
-              Operacional
-            </TabsTrigger>
-            <TabsTrigger
-              value="engajamento"
-              className="rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 pt-1 text-sm font-medium text-ink-300 shadow-none data-[state=active]:border-brand-gold data-[state=active]:bg-transparent data-[state=active]:text-ink-900 data-[state=active]:shadow-none"
-            >
-              Engajamento
-            </TabsTrigger>
+          <TabsList>
+            <TabsTrigger value="estrategico">Estratégico</TabsTrigger>
+            <TabsTrigger value="operacional">Operacional</TabsTrigger>
+            <TabsTrigger value="engajamento">Engajamento</TabsTrigger>
           </TabsList>
         </div>
 

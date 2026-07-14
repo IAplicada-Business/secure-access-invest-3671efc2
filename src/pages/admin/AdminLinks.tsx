@@ -135,17 +135,23 @@ export default function AdminLinks() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="font-display text-2xl font-bold">Links de Acesso</h1>
-
-      <Tabs defaultValue="investors">
-        <TabsList className="flex flex-wrap h-auto">
-          <TabsTrigger value="investors">Investidores</TabsTrigger>
-          <TabsTrigger value="brokers" className="flex items-center gap-1.5">
-            <Inbox className="h-3.5 w-3.5" />
-            Corretores
-          </TabsTrigger>
-        </TabsList>
+    <div className="space-y-6 font-ds-body">
+      <Tabs defaultValue="investors" className="space-y-0">
+        <div>
+          <div className="space-y-1">
+            <h1 className="font-ds-display text-2xl font-semibold tracking-[-0.01em] text-ink-900 sm:text-3xl">
+              Links de Acesso
+            </h1>
+            <p className="text-sm text-ink-500">Links exclusivos para investidores e corretores.</p>
+          </div>
+          <TabsList>
+            <TabsTrigger value="investors">Investidores</TabsTrigger>
+            <TabsTrigger value="brokers">
+              <Inbox className="h-3.5 w-3.5" />
+              Corretores
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="investors" className="space-y-4">
           <div className="flex justify-end">
