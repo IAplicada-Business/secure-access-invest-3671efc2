@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Search, Loader2, Share2, Phone, Users, CalendarDays, Globe, HelpCircle, Plus, Columns3, Eye, EyeOff, type LucideIcon } from 'lucide-react';
+import { Search, Loader2, Share2, Phone, Users, CalendarDays, Globe, HelpCircle, Plus, Columns3, Eye, EyeOff, MoreVertical, Trash2, ExternalLink, type LucideIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -18,6 +18,19 @@ import {
   Popover, PopoverContent, PopoverTrigger,
 } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const HIDDEN_STAGES_KEY = 'crm_hidden_stages';
 
@@ -126,6 +139,8 @@ export default function AdminCrmKanban() {
   const [leadOpen, setLeadOpen] = useState(false);
   const [lead, setLead] = useState(emptyLead);
   const [leadSaving, setLeadSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<CrmClient | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   function setStageHidden(stageId: string, hidden: boolean) {
     setHiddenStages(prev => {
@@ -164,6 +179,20 @@ export default function AdminCrmKanban() {
   function showAllStages() {
     setHiddenStages([]);
     saveHiddenStages([]);
+  }
+
+  async function handleDeleteLead() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const { error } = await supabase.from('clients').delete().eq('id', deleteTarget.id);
+    setDeleting(false);
+    if (error) {
+      toast.error('Erro ao excluir: ' + error.message);
+      return;
+    }
+    toast.success(`Lead "${deleteTarget.name}" excluído.`);
+    setDeleteTarget(null);
+    setClients(cs => cs.filter(c => c.id !== deleteTarget.id));
   }
 
   async function loadData() {
@@ -290,34 +319,62 @@ export default function AdminCrmKanban() {
       id: c.id,
       columnId: c.crm_stage,
       content: (
-        <button
-          type="button"
-          onClick={() => navigate(`/admin/clientes/${c.id}`)}
-          className="flex w-full items-start gap-3 text-left"
-        >
-          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-ds-pill bg-brand-goldSoft/40 text-xs font-semibold text-brand-goldDeep">
-            {initials(c.name) || '–'}
-          </span>
-          <div className="min-w-0 flex-1 space-y-1">
-            <p className="truncate font-ds-display text-[15px] font-medium leading-tight text-ink-900">{c.name}</p>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Badge className={cn('text-[10px]', TYPE_BADGE[c.type] ?? 'bg-cream-200 text-ink-700 border-transparent')}>
-                {TYPE_LABELS[c.type] ?? c.type}
-              </Badge>
-              {c.origin && (
-                <span className="inline-flex items-center gap-1 text-[10px] text-ink-300">
-                  <ChannelIcon className="h-3 w-3" />
-                  {c.origin}
-                </span>
-              )}
+        <div className="flex w-full items-start gap-2 text-left">
+          <button
+            type="button"
+            onClick={() => navigate(`/admin/clientes/${c.id}`)}
+            className="flex min-w-0 flex-1 items-start gap-3 text-left"
+          >
+            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-ds-pill bg-brand-goldSoft/40 text-xs font-semibold text-brand-goldDeep">
+              {initials(c.name) || '–'}
+            </span>
+            <div className="min-w-0 flex-1 space-y-1">
+              <p className="truncate font-ds-display text-[15px] font-medium leading-tight text-ink-900">{c.name}</p>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge className={cn('text-[10px]', TYPE_BADGE[c.type] ?? 'bg-cream-200 text-ink-700 border-transparent')}>
+                  {TYPE_LABELS[c.type] ?? c.type}
+                </Badge>
+                {c.origin && (
+                  <span className="inline-flex items-center gap-1 text-[10px] text-ink-300">
+                    <ChannelIcon className="h-3 w-3" />
+                    {c.origin}
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-ink-300">
+                {contact
+                  ? `contato ${formatDistanceToNow(new Date(contact), { addSuffix: true, locale: ptBR })}`
+                  : 'sem contato'}
+              </p>
             </div>
-            <p className="text-[11px] text-ink-300">
-              {contact
-                ? `contato ${formatDistanceToNow(new Date(contact), { addSuffix: true, locale: ptBR })}`
-                : 'sem contato'}
-            </p>
-          </div>
-        </button>
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 flex-shrink-0 text-ink-300 hover:text-ink-700"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                title="Ações do lead"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={() => navigate(`/admin/clientes/${c.id}`)}>
+                <ExternalLink className="mr-2 h-4 w-4" /> Abrir / editar
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => setDeleteTarget(c)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> Excluir lead
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       ),
     };
   });
@@ -518,6 +575,29 @@ export default function AdminCrmKanban() {
           </div>
         </form>
       </Drawer>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir lead?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso remove permanentemente <strong>{deleteTarget?.name}</strong> do funil e do cadastro de clientes.
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteLead}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
