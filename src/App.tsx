@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import Index from "./pages/Index";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import Catalog from "./pages/Catalog";
 import PropertyDetails from "./pages/PropertyDetails";
@@ -46,6 +47,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/redefinir-senha" element={<ResetPassword />} />
           
           {/* Investor Catalog Routes */}
           <Route path="/catalogo/:token" element={<Catalog />} />
