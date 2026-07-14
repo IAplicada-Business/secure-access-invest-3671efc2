@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Building2,
@@ -490,97 +489,92 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Investidores recentes — só 4 + ver mais */}
-          <div>
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <h2 className="font-ds-display text-lg font-medium text-ink-900">Investidores recentes</h2>
-                <p className="text-xs text-ink-300">Últimos a acessar o catálogo</p>
+          {/* Investidores + imóveis — listas compactas lado a lado (sem vão lateral) */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-ds-xl border border-cream-200 bg-white">
+              <div className="flex items-center justify-between border-b border-cream-200 px-4 py-3">
+                <div>
+                  <h2 className="font-ds-display text-base font-medium text-ink-900">Investidores recentes</h2>
+                  <p className="text-[11px] text-ink-300">Últimos a acessar o catálogo</p>
+                </div>
+                <Button asChild variant="ghost" size="sm" className="h-8 text-xs">
+                  <Link to="/admin/relatorios">Ver mais <ArrowRight className="ml-1 h-3 w-3" /></Link>
+                </Button>
               </div>
-              <Button asChild variant="ghost" size="sm">
-                <Link to="/admin/relatorios">Ver mais <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
-              </Button>
-            </div>
-            {stats.recentViews.length === 0 ? (
-              <div className="rounded-ds-xl border border-dashed border-cream-200 bg-cream-50 px-4 py-8 text-center text-sm text-ink-300">
-                Nenhum acesso recente ainda.
-              </div>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                {stats.recentViews.slice(0, 4).map((view, idx) => (
-                  <div
-                    key={`${view.investor_name}-${idx}`}
-                    className="rounded-ds-xl border border-cream-200 bg-white p-4"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-ds-pill bg-brand-goldSoft/40 text-xs font-semibold text-brand-goldDeep">
+              {stats.recentViews.length === 0 ? (
+                <p className="px-4 py-6 text-center text-sm text-ink-300">Nenhum acesso recente.</p>
+              ) : (
+                <ul className="divide-y divide-cream-200">
+                  {stats.recentViews.slice(0, 4).map((view, idx) => (
+                    <li key={`${view.investor_name}-${idx}`} className="flex items-center gap-3 px-4 py-2.5">
+                      <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-ds-pill bg-brand-goldSoft/40 text-[10px] font-semibold text-brand-goldDeep">
                         {view.investor_name.slice(0, 2).toUpperCase()}
                       </span>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-ink-900">{view.investor_name}</p>
-                        <p className="truncate text-xs text-ink-300">{view.property_title}</p>
+                        <p className="truncate text-[11px] text-ink-300">{view.property_title}</p>
                       </div>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between text-[11px] text-ink-300">
-                      <span>{formatDate(view.viewed_at)}</span>
-                      <span className={cn(
-                        'inline-flex items-center gap-1 font-ds-mono',
-                        view.time_spent_seconds > 60 ? 'text-brand-goldDeep' : '',
-                      )}>
-                        <Clock className="h-3 w-3" />
-                        {formatTime(view.time_spent_seconds)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Imóveis em destaque — só no final */}
-          <div>
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <h2 className="font-ds-display text-lg font-medium text-ink-900">Imóveis em destaque</h2>
-                <p className="text-xs text-ink-300">Maior engajamento nos últimos 30 dias</p>
-              </div>
-              <Button asChild variant="ghost" size="sm">
-                <Link to="/admin/imoveis">Ver todos <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
-              </Button>
+                      <div className="flex-shrink-0 text-right text-[11px] text-ink-300">
+                        <p>{formatDate(view.viewed_at)}</p>
+                        <p className={cn(
+                          'inline-flex items-center gap-1 font-ds-mono',
+                          view.time_spent_seconds > 60 && 'text-brand-goldDeep',
+                        )}>
+                          <Clock className="h-3 w-3" />
+                          {formatTime(view.time_spent_seconds)}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
-            {stats.topProperties.length === 0 ? (
-              <div className="rounded-ds-xl border border-dashed border-cream-200 bg-cream-50 px-4 py-8 text-center text-sm text-ink-300">
-                Ainda sem visualizações suficientes para ranquear.
+
+            <div className="rounded-ds-xl border border-cream-200 bg-white">
+              <div className="flex items-center justify-between border-b border-cream-200 px-4 py-3">
+                <div>
+                  <h2 className="font-ds-display text-base font-medium text-ink-900">Imóveis em destaque</h2>
+                  <p className="text-[11px] text-ink-300">Maior engajamento (30 dias)</p>
+                </div>
+                <Button asChild variant="ghost" size="sm" className="h-8 text-xs">
+                  <Link to="/admin/imoveis">Ver todos <ArrowRight className="ml-1 h-3 w-3" /></Link>
+                </Button>
               </div>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                {stats.topProperties.map((p, idx) => (
-                  <Link
-                    key={p.property_id}
-                    to={`/admin/imoveis/${p.property_id}`}
-                    className="group overflow-hidden rounded-ds-xl border border-cream-200 bg-white transition hover:shadow-ds-md"
-                  >
-                    <div className="relative aspect-[16/9] bg-cream-100">
-                      {p.cover_image ? (
-                        <img src={p.cover_image} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-                      ) : (
-                        <div className="flex h-full items-center justify-center">
-                          <Building2 className="h-8 w-8 text-cream-300" />
+              {stats.topProperties.length === 0 ? (
+                <p className="px-4 py-6 text-center text-sm text-ink-300">Sem engajamento suficiente ainda.</p>
+              ) : (
+                <ul className="divide-y divide-cream-200">
+                  {stats.topProperties.map((p, idx) => (
+                    <li key={p.property_id}>
+                      <Link
+                        to={`/admin/imoveis/${p.property_id}`}
+                        className="flex items-center gap-3 px-4 py-2.5 transition hover:bg-cream-50"
+                      >
+                        <span className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-ds-md bg-cream-100">
+                          {p.cover_image ? (
+                            <img src={p.cover_image} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="flex h-full w-full items-center justify-center">
+                              <Building2 className="h-4 w-4 text-cream-300" />
+                            </span>
+                          )}
+                          <span className="absolute -left-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-ink-900 text-[9px] font-medium text-white">
+                            {idx + 1}
+                          </span>
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-ink-900">{p.title}</p>
+                          <p className="text-[11px] text-ink-300">
+                            {p.views} acesso{p.views === 1 ? '' : 's'} · {formatTime(p.time_spent)}
+                          </p>
                         </div>
-                      )}
-                      <Badge className="absolute left-2 top-2 border-0 bg-ink-900/80 text-white">#{idx + 1}</Badge>
-                    </div>
-                    <div className="space-y-1 p-3">
-                      <p className="truncate text-sm font-medium text-ink-900 group-hover:text-brand-goldDeep">{p.title}</p>
-                      <div className="flex justify-between text-[11px] text-ink-300">
-                        <span className="inline-flex items-center gap-1"><Eye className="h-3 w-3" />{p.views}</span>
-                        <span className="inline-flex items-center gap-1 text-brand-goldDeep"><Clock className="h-3 w-3" />{formatTime(p.time_spent)}</span>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
+                        <Eye className="h-3.5 w-3.5 flex-shrink-0 text-ink-300" />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         </TabsContent>
 
@@ -729,29 +723,32 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div>
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="font-ds-display text-lg font-medium text-ink-900">Investidores recentes</h2>
-              <Button asChild variant="ghost" size="sm">
-                <Link to="/admin/relatorios">Ver mais <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
+          <div className="rounded-ds-xl border border-cream-200 bg-white">
+            <div className="flex items-center justify-between border-b border-cream-200 px-4 py-3">
+              <h2 className="font-ds-display text-base font-medium text-ink-900">Investidores recentes</h2>
+              <Button asChild variant="ghost" size="sm" className="h-8 text-xs">
+                <Link to="/admin/relatorios">Ver mais <ArrowRight className="ml-1 h-3 w-3" /></Link>
               </Button>
             </div>
             {stats.recentViews.length === 0 ? (
-              <p className="rounded-ds-xl border border-dashed border-cream-200 px-4 py-8 text-center text-sm text-ink-300">
-                Nenhum acesso ainda.
-              </p>
+              <p className="px-4 py-6 text-center text-sm text-ink-300">Nenhum acesso ainda.</p>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <ul className="divide-y divide-cream-200">
                 {stats.recentViews.slice(0, 4).map((view, idx) => (
-                  <div key={`eng-${view.investor_name}-${idx}`} className="rounded-ds-xl border border-cream-200 bg-white p-4">
-                    <p className="truncate text-sm font-medium text-ink-900">{view.investor_name}</p>
-                    <p className="truncate text-xs text-ink-300">{view.property_title}</p>
-                    <p className="mt-2 text-[11px] text-ink-300">
+                  <li key={`eng-${view.investor_name}-${idx}`} className="flex items-center gap-3 px-4 py-2.5">
+                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-ds-pill bg-brand-goldSoft/40 text-[10px] font-semibold text-brand-goldDeep">
+                      {view.investor_name.slice(0, 2).toUpperCase()}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-ink-900">{view.investor_name}</p>
+                      <p className="truncate text-[11px] text-ink-300">{view.property_title}</p>
+                    </div>
+                    <span className="flex-shrink-0 text-[11px] text-ink-300">
                       {formatDate(view.viewed_at)} · {formatTime(view.time_spent_seconds)}
-                    </p>
-                  </div>
+                    </span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
           </div>
         </TabsContent>
