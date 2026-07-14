@@ -234,14 +234,20 @@ export default function AdminReports() {
   const totalCtaClicks = filteredViews.filter(v => v.has_cta_click).length;
 
   return (
-    <div className="space-y-6">
-      <h1 className="font-display text-2xl font-bold">Relatórios</h1>
-
-      <Tabs defaultValue="interest">
-        <TabsList className="flex flex-wrap h-auto">
-          <TabsTrigger value="interest">Interesse de Investidores</TabsTrigger>
-          <TabsTrigger value="partners">Performance de Parceiros</TabsTrigger>
-        </TabsList>
+    <div className="space-y-6 font-ds-body">
+      <Tabs defaultValue="interest" className="space-y-0">
+        <div>
+          <div className="space-y-1">
+            <h1 className="font-ds-display text-2xl font-semibold tracking-[-0.01em] text-ink-900 sm:text-3xl">
+              Relatórios
+            </h1>
+            <p className="text-sm text-ink-500">Interesse de investidores e performance de parceiros.</p>
+          </div>
+          <TabsList>
+            <TabsTrigger value="interest">Interesse de Investidores</TabsTrigger>
+            <TabsTrigger value="partners">Performance de Parceiros</TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* INTEREST TAB */}
         <TabsContent value="interest" className="space-y-6">

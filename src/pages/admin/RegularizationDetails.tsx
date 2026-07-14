@@ -211,28 +211,31 @@ export default function RegularizationDetails() {
   const totalItems = items.filter(i => i.status !== 'nao_se_aplica').length;
 
   return (
-    <div className="space-y-6">
-      <Button variant="ghost" onClick={() => navigate(-1)} className="gap-2">
+    <div className="space-y-6 font-ds-body">
+      <Button variant="ghost" onClick={() => navigate(-1)} className="gap-2 -ml-2">
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Button>
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <Tabs defaultValue="overview" className="space-y-0">
         <div>
-          <h1 className="font-display text-2xl font-bold">{process.title}</h1>
-          <p className="text-sm text-muted-foreground">
-            {clientName && `Cliente: ${clientName}`}{typeName && ` • Tipo: ${typeName}`}
-          </p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <h1 className="font-ds-display text-2xl font-semibold tracking-[-0.01em] text-ink-900 sm:text-3xl">
+                {process.title}
+              </h1>
+              <p className="text-sm text-ink-500">
+                {clientName && `Cliente: ${clientName}`}{typeName && ` • Tipo: ${typeName}`}
+              </p>
+            </div>
+            <Badge className={STATUS_COLORS[process.status]}>{STATUS_LABELS[process.status]}</Badge>
+          </div>
+          <TabsList>
+            <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+            <TabsTrigger value="checklist">Checklist {totalItems > 0 && `(${completedItems}/${totalItems})`}</TabsTrigger>
+            <TabsTrigger value="documents">Documentos</TabsTrigger>
+            <TabsTrigger value="history">Histórico</TabsTrigger>
+          </TabsList>
         </div>
-        <Badge className={STATUS_COLORS[process.status]}>{STATUS_LABELS[process.status]}</Badge>
-      </div>
-
-      <Tabs defaultValue="overview">
-        <TabsList>
-          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-          <TabsTrigger value="checklist">Checklist {totalItems > 0 && `(${completedItems}/${totalItems})`}</TabsTrigger>
-          <TabsTrigger value="documents">Documentos</TabsTrigger>
-          <TabsTrigger value="history">Histórico</TabsTrigger>
-        </TabsList>
 
         {/* OVERVIEW */}
         <TabsContent value="overview" className="space-y-4">

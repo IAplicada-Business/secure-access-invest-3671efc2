@@ -134,34 +134,44 @@ export default function PartnerDetails() {
   const isAgency = partner.type === 'imobiliaria';
 
   return (
-    <div className="space-y-6">
-      <Button variant="ghost" onClick={() => navigate('/admin/parceiros')} className="gap-2">
+    <div className="space-y-6 font-ds-body">
+      <Button variant="ghost" onClick={() => navigate('/admin/parceiros')} className="gap-2 -ml-2">
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Button>
 
-      <Tabs defaultValue="summary">
-        <TabsList>
-          <TabsTrigger value="summary">Resumo</TabsTrigger>
-          {isAgency && <TabsTrigger value="brokers">Corretores Vinculados</TabsTrigger>}
-          <TabsTrigger value="clients">Clientes Gerados</TabsTrigger>
-          <TabsTrigger value="history">Histórico</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="summary" className="space-y-0">
+        <div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <h1 className="font-ds-display text-2xl font-semibold tracking-[-0.01em] text-ink-900 sm:text-3xl">
+                {partner.name}
+              </h1>
+              <p className="text-sm text-ink-500">
+                {TYPE_LABELS[partner.type]}
+                {partner.status === 'active' ? ' · Ativo' : ' · Inativo'}
+              </p>
+            </div>
+            <div className="flex flex-shrink-0 flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={() => { setEditForm(partner); setEditOpen(true); }}>
+                <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
+              </Button>
+              <Button size="sm" onClick={() => { const msg = encodeURIComponent(`Olá ${partner.name}!`); window.open(`https://wa.me/${partner.phone}?text=${msg}`, '_blank'); }}>
+                <MessageCircle className="mr-1 h-3.5 w-3.5" /> WhatsApp
+              </Button>
+            </div>
+          </div>
+          <TabsList>
+            <TabsTrigger value="summary">Resumo</TabsTrigger>
+            {isAgency && <TabsTrigger value="brokers">Corretores Vinculados</TabsTrigger>}
+            <TabsTrigger value="clients">Clientes Gerados</TabsTrigger>
+            <TabsTrigger value="history">Histórico</TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* SUMMARY */}
         <TabsContent value="summary" className="space-y-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-xl">{partner.name}</CardTitle>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => { setEditForm(partner); setEditOpen(true); }}>
-                  <Pencil className="mr-1 h-3 w-3" /> Editar
-                </Button>
-                <Button size="sm" onClick={() => { const msg = encodeURIComponent(`Olá ${partner.name}!`); window.open(`https://wa.me/${partner.phone}?text=${msg}`, '_blank'); }}>
-                  <MessageCircle className="mr-1 h-3 w-3" /> WhatsApp
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><span className="text-sm text-muted-foreground">Tipo</span><p className="font-medium">{TYPE_LABELS[partner.type]}</p></div>
                 <div><span className="text-sm text-muted-foreground">Status</span><p><Badge className={partner.status === 'active' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}>{STATUS_LABELS[partner.status]}</Badge></p></div>

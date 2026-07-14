@@ -383,75 +383,76 @@ export default function ClientDetails() {
   if (!client) return null;
 
   return (
-    <div className="space-y-6">
-      <Button variant="ghost" onClick={() => navigate('/admin/clientes')} className="gap-2">
+    <div className="space-y-6 font-ds-body">
+      <Button variant="ghost" onClick={() => navigate('/admin/clientes')} className="gap-2 -ml-2">
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Button>
 
-      {/* HERO */}
-      <div className="flex flex-col gap-4 rounded-ds-lg border border-cream-200 bg-white p-5 font-ds-body sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-4">
-          <span className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-ds-pill bg-brand-goldSoft/40 text-2xl font-semibold text-brand-goldDeep">
-            {clientInitials(client.name) || '–'}
-          </span>
-          <div className="space-y-2">
-            <h1 className="font-ds-display text-3xl font-semibold tracking-[-0.02em] text-ink-900">{client.name}</h1>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-500">
-              {client.canal_entrada && (() => {
-                const Icon = CANAL[client.canal_entrada]?.icon ?? HelpCircle;
-                return (
-                  <span className="inline-flex items-center gap-1">
-                    <Icon className="h-3.5 w-3.5 text-brand-goldDeep" />
-                    {CANAL[client.canal_entrada]?.label ?? client.canal_entrada}
-                  </span>
-                );
-              })()}
-              {client.cidade && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{client.cidade}</span>}
-              <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />desde {new Date(client.created_at).toLocaleDateString('pt-BR')}</span>
+      <Tabs defaultValue="summary" className="space-y-0">
+        <div>
+          {/* HERO */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-start gap-4">
+              <span className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-ds-pill bg-brand-goldSoft/40 text-2xl font-semibold text-brand-goldDeep">
+                {clientInitials(client.name) || '–'}
+              </span>
+              <div className="space-y-2">
+                <h1 className="font-ds-display text-3xl font-semibold tracking-[-0.02em] text-ink-900">{client.name}</h1>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-500">
+                  {client.canal_entrada && (() => {
+                    const Icon = CANAL[client.canal_entrada]?.icon ?? HelpCircle;
+                    return (
+                      <span className="inline-flex items-center gap-1">
+                        <Icon className="h-3.5 w-3.5 text-brand-goldDeep" />
+                        {CANAL[client.canal_entrada]?.label ?? client.canal_entrada}
+                      </span>
+                    );
+                  })()}
+                  {client.cidade && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{client.cidade}</span>}
+                  <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />desde {new Date(client.created_at).toLocaleDateString('pt-BR')}</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Badge className="bg-brand-goldSoft/30 text-brand-goldDeep">{TYPE_LABELS[client.type]}</Badge>
+                  {(client.tags ?? []).map(t => <Badge key={t} variant="outline" className="text-xs">{t}</Badge>)}
+                </div>
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Badge className="bg-brand-goldSoft/30 text-brand-goldDeep">{TYPE_LABELS[client.type]}</Badge>
-              {(client.tags ?? []).map(t => <Badge key={t} variant="outline" className="text-xs">{t}</Badge>)}
+            <div className="flex flex-shrink-0 flex-wrap gap-2">
+              {client.drive_link ? (
+                <Button variant="outline" size="sm" asChild>
+                  <a href={client.drive_link} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-1 h-3.5 w-3.5" /> Abrir Drive</a>
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" onClick={() => { setEditForm(client); setEditOpen(true); }}>
+                  <FolderPlus className="mr-1 h-3.5 w-3.5" /> Adicionar Drive
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={() => { setEditForm(client); setEditOpen(true); }}>
+                <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
+              </Button>
+              <Button size="sm" onClick={() => { const msg = encodeURIComponent(`Olá ${client.name}!`); window.open(`https://wa.me/${client.phone}?text=${msg}`, '_blank'); }}>
+                <MessageCircle className="mr-1 h-3.5 w-3.5" /> WhatsApp
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setDeleteOpen(true)}
+              >
+                <Trash2 className="mr-1 h-3.5 w-3.5" /> Excluir
+              </Button>
             </div>
           </div>
+          <TabsList>
+            <TabsTrigger value="summary">Resumo</TabsTrigger>
+            <TabsTrigger value="documents">Documentos</TabsTrigger>
+            <TabsTrigger value="history">Histórico</TabsTrigger>
+            {client.type === 'investor' && <TabsTrigger value="properties">Imóveis Vinculados</TabsTrigger>}
+            <TabsTrigger value="regularizations">Regularizações</TabsTrigger>
+            <TabsTrigger value="financial">Financeiro</TabsTrigger>
+            <TabsTrigger value="generated_docs">Documentos Gerados</TabsTrigger>
+          </TabsList>
         </div>
-        <div className="flex flex-shrink-0 flex-wrap gap-2">
-          {client.drive_link ? (
-            <Button variant="outline" size="sm" asChild>
-              <a href={client.drive_link} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-1 h-3.5 w-3.5" /> Abrir Drive</a>
-            </Button>
-          ) : (
-            <Button variant="outline" size="sm" onClick={() => { setEditForm(client); setEditOpen(true); }}>
-              <FolderPlus className="mr-1 h-3.5 w-3.5" /> Adicionar Drive
-            </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={() => { setEditForm(client); setEditOpen(true); }}>
-            <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
-          </Button>
-          <Button size="sm" onClick={() => { const msg = encodeURIComponent(`Olá ${client.name}!`); window.open(`https://wa.me/${client.phone}?text=${msg}`, '_blank'); }}>
-            <MessageCircle className="mr-1 h-3.5 w-3.5" /> WhatsApp
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-            onClick={() => setDeleteOpen(true)}
-          >
-            <Trash2 className="mr-1 h-3.5 w-3.5" /> Excluir
-          </Button>
-        </div>
-      </div>
-
-      <Tabs defaultValue="summary">
-        <TabsList>
-          <TabsTrigger value="summary">Resumo</TabsTrigger>
-          <TabsTrigger value="documents">Documentos</TabsTrigger>
-          <TabsTrigger value="history">Histórico</TabsTrigger>
-          {client.type === 'investor' && <TabsTrigger value="properties">Imóveis Vinculados</TabsTrigger>}
-          <TabsTrigger value="regularizations">Regularizações</TabsTrigger>
-          <TabsTrigger value="financial">Financeiro</TabsTrigger>
-          <TabsTrigger value="generated_docs">Documentos Gerados</TabsTrigger>
-        </TabsList>
 
         {/* SUMMARY TAB */}
         <TabsContent value="summary" className="space-y-4">
