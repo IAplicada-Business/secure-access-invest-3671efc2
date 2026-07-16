@@ -63,16 +63,22 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>) {
   const pendComs = coms.filter((c: any) => c.status === "pendente");
   const paidComs = coms.filter((c: any) => c.status === "paga" || c.status === "pago");
 
+  const propStatus = countBy(props, "status");
+  const clientStages = countBy(cls, "crm_stage");
   return {
     imoveis: {
       total: props.length,
-      por_status: countBy(props, "status"),
+      publicados: propStatus["published"] || 0,
+      rascunhos: propStatus["draft"] || 0,
+      em_revisao: propStatus["pending_review"] || 0,
+      por_status: propStatus,
       por_retrofit_status: countBy(props, "retrofit_status"),
     },
     contatos: {
       total: cls.length,
+      leads_no_funil: cls.filter((c: any) => c.crm_stage && c.crm_stage !== "perdido" && c.crm_stage !== "fechou_contrato").length,
       por_tipo: countBy(cls, "type"),
-      funil_por_crm_stage: countBy(cls, "crm_stage"),
+      funil_por_crm_stage: clientStages,
       por_status: countBy(cls, "status"),
     },
     links_ativos: (accessLinks.data || []).length,
