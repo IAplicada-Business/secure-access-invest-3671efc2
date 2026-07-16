@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,170 +7,203 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+type ChatMessage = { role: "user" | "assistant"; content: string };
+
 const BRL = (n: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n || 0);
 
-function monthRange() {
+async function buildPlatformContext(admin: ReturnType<typeof createClient>) {
   const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
-  return { start, end };
-}
-
-function countBy<T extends Record<string, any>>(rows: T[], key: string) {
-  const map: Record<string, number> = {};
-  for (const r of rows || []) {
-    const k = String(r?.[key] ?? "—");
-    map[k] = (map[k] || 0) + 1;
-  }
-  return map;
-}
-
-async function buildSnapshot(admin: ReturnType<typeof createClient>) {
-  const { start, end } = monthRange();
-  const thirty = new Date(Date.now() - 30 * 864e5).toISOString();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
   const [
-    properties,
-    clients,
-    accessLinks,
-    pageViews,
-    revenues,
-    expenses,
-    commissions,
-    regs,
-    submissions,
+    { data: properties },
+    { data: clients },
+    { count: activeLinks },
+    { data: revenues },
+    { data: expenses },
+    { data: commissions },
+    { data: regs },
+    { count: monthViews },
+    { data: submissions },
   ] = await Promise.all([
-    admin.from("properties").select("id,status,retrofit_status,title,price"),
-    admin.from("clients").select("id,type,crm_stage,status"),
-    admin.from("access_links").select("id,active,expires_at").eq("active", true),
-    admin.from("page_views").select("id,created_at").gte("created_at", thirty),
-    admin.from("revenues").select("amount,received_at,status").gte("received_at", start).lt("received_at", end),
-    admin.from("expenses").select("amount,paid_at,status").gte("paid_at", start).lt("paid_at", end),
-    admin.from("commissions").select("id,amount,status"),
-    admin.from("regularization_processes").select("id,status"),
-    admin.from("property_submissions").select("id,created_at,status"),
+    admin.from("properties").select("id, status, title"),
+    admin.from("clients").select("id, status, crm_stage, type, name, created_at"),
+    admin.from("access_links").select("id", { count: "exact", head: true }).eq("is_active", true),
+    admin.from("revenues").select("amount, service_type").gte("received_at", monthStart).lte("received_at", monthEnd),
+    admin.from("expenses").select("amount").gte("expense_date", monthStart).lte("expense_date", monthEnd),
+    admin.from("commissions").select("amount, status, paid_at"),
+    admin.from("regularization_processes").select("id, status, title"),
+    admin
+      .from("page_views")
+      .select("id", { count: "exact", head: true })
+      .gte("viewed_at", thirtyDaysAgo),
+    admin.from("property_submissions").select("id, status").limit(200),
   ]);
 
-  const props = properties.data || [];
-  const cls = clients.data || [];
-  const revs = revenues.data || [];
-  const exps = expenses.data || [];
-  const coms = commissions.data || [];
+  const byStatus = (rows: Array<{ status: string | null }> | null) => {
+    const map: Record<string, number> = {};
+    (rows || []).forEach((r) => {
+      const s = r.status || "desconhecido";
+      map[s] = (map[s] || 0) + 1;
+    });
+    return map;
+  };
 
-  const sumRev = revs.reduce((a: number, r: any) => a + Number(r.amount || 0), 0);
-  const sumExp = exps.reduce((a: number, r: any) => a + Number(r.amount || 0), 0);
-  const pendComs = coms.filter((c: any) => c.status === "pendente");
-  const paidComs = coms.filter((c: any) => c.status === "paga" || c.status === "pago");
+  const stageCount: Record<string, number> = {};
+  (clients || []).forEach((c) => {
+    const s = c.crm_stage || "contato";
+    stageCount[s] = (stageCount[s] || 0) + 1;
+  });
 
-  const propStatus = countBy(props, "status");
-  const clientStages = countBy(cls, "crm_stage");
+  const leads = (clients || []).filter((c) => c.status === "prospect").length;
+  const converted = (clients || []).filter((c) => c.status === "active" || c.status === "completed").length;
+  const monthRevenue = (revenues || []).reduce((a, r) => a + Number(r.amount || 0), 0);
+  const monthExpenses = (expenses || []).reduce((a, r) => a + Number(r.amount || 0), 0);
+  const pendingComm = (commissions || [])
+    .filter((c) => c.status === "pending")
+    .reduce((a, c) => a + Number(c.amount || 0), 0);
+  const paidComm = (commissions || [])
+    .filter((c) => c.status === "paid")
+    .reduce((a, c) => a + Number(c.amount || 0), 0);
+  let retrofitSafe = 0;
+  {
+    const { data: retrofitRows, error: retrofitErr } = await admin
+      .from("properties")
+      .select("id")
+      .eq("has_retrofit", true);
+    if (!retrofitErr) retrofitSafe = retrofitRows?.length || 0;
+  }
+  const pendingReview = (properties || []).filter((p) => p.status === "pending_review").length;
+  const published = (properties || []).filter((p) => p.status === "published").length;
+  const activeRegs = (regs || []).filter((r) => !["concluida", "arquivada"].includes(r.status || "")).length;
+
+  const recentContacts = (clients || [])
+    .slice()
+    .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+    .slice(0, 8)
+    .map((c) => ({
+      name: c.name,
+      status: c.status,
+      stage: c.crm_stage,
+      type: c.type,
+    }));
+
   return {
+    gerado_em: now.toISOString(),
     imoveis: {
-      total: props.length,
-      publicados: propStatus["published"] || 0,
-      rascunhos: propStatus["draft"] || 0,
-      em_revisao: propStatus["pending_review"] || 0,
-      por_status: propStatus,
-      por_retrofit_status: countBy(props, "retrofit_status"),
+      total: properties?.length || 0,
+      por_status: byStatus(properties),
+      publicados: published,
+      aguardando_avaliacao: pendingReview,
+      com_retrofit: retrofitSafe,
     },
     contatos: {
-      total: cls.length,
-      leads_no_funil: cls.filter((c: any) => c.crm_stage && c.crm_stage !== "perdido" && c.crm_stage !== "fechou_contrato").length,
-      por_tipo: countBy(cls, "type"),
-      funil_por_crm_stage: clientStages,
-      por_status: countBy(cls, "status"),
+      total: clients?.length || 0,
+      leads,
+      clientes: converted,
+      funil_por_etapa: stageCount,
+      recentes: recentContacts,
     },
-    links_ativos: (accessLinks.data || []).length,
-    page_views_30d: (pageViews.data || []).length,
-    financeiro_mes_atual: {
-      receitas_total: BRL(sumRev),
-      receitas_qtd: revs.length,
-      despesas_total: BRL(sumExp),
-      despesas_qtd: exps.length,
-      saldo: BRL(sumRev - sumExp),
-    },
-    comissoes: {
-      pendentes_qtd: pendComs.length,
-      pendentes_total: BRL(pendComs.reduce((a: number, c: any) => a + Number(c.amount || 0), 0)),
-      pagas_qtd: paidComs.length,
-      pagas_total: BRL(paidComs.reduce((a: number, c: any) => a + Number(c.amount || 0), 0)),
+    links_ativos: activeLinks || 0,
+    acessos_catalogo_30d: monthViews || 0,
+    financeiro_mes: {
+      receita: BRL(monthRevenue),
+      despesas: BRL(monthExpenses),
+      resultado: BRL(monthRevenue - monthExpenses),
+      comissoes_pendentes: BRL(pendingComm),
+      comissoes_pagas_total: BRL(paidComm),
+      receitas_por_tipo: Object.fromEntries(
+        Object.entries(
+          (revenues || []).reduce((acc: Record<string, number>, r) => {
+            const k = r.service_type || "outro";
+            acc[k] = (acc[k] || 0) + Number(r.amount || 0);
+            return acc;
+          }, {}),
+        ).map(([k, v]) => [k, BRL(v)]),
+      ),
     },
     regularizacoes: {
-      total: (regs.data || []).length,
-      por_status: countBy(regs.data || [], "status"),
+      total: regs?.length || 0,
+      ativas: activeRegs,
+      por_status: byStatus(regs),
     },
     submissoes: {
-      total: (submissions.data || []).length,
-      por_status: countBy(submissions.data || [], "status"),
+      total: submissions?.length || 0,
+      por_status: byStatus(submissions as Array<{ status: string | null }> | null),
     },
-    gerado_em: new Date().toISOString(),
   };
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Não autenticado" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurada");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const authClient = createClient(SUPABASE_URL, ANON, {
+    const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: userData, error: userErr } = await authClient.auth.getUser();
-    if (userErr || !userData?.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: "Sessão inválida" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { message, history } = await req.json();
-    if (!message || typeof message !== "string") {
-      return new Response(JSON.stringify({ error: "message obrigatório" }), {
+    const { message, history } = await req.json() as {
+      message?: string;
+      history?: ChatMessage[];
+    };
+
+    if (!message?.trim()) {
+      return new Response(JSON.stringify({ error: "Mensagem vazia" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const admin = createClient(SUPABASE_URL, SERVICE);
-    const snapshot = await buildSnapshot(admin);
+    const admin = createClient(supabaseUrl, serviceKey);
+    const context = await buildPlatformContext(admin);
 
-    const systemPrompt = `Você é a Capí, mascote-assistente da Tijolo em Capital (regularização de imóveis).
-Responda SEMPRE em português do Brasil, de forma direta, calorosa e objetiva (máx. ~6 linhas por resposta salvo se pedirem detalhe).
+    const systemPrompt = `Você é a Capí, assistente da plataforma Tijolo em Capital (mascote capivara).
+Ajuda a equipe interna a consultar o painel: CRM/contatos, imóveis, financeiro, regularizações, links e engajamento.
 
-REGRAS RÍGIDAS:
-• Use APENAS os números do SNAPSHOT abaixo. NUNCA invente ou estime valores.
-• Se a informação não estiver no snapshot, diga que não tem esse dado agora e sugira onde ver no painel.
-• Valores monetários já vêm formatados como R$ — mantenha assim.
-• Ao citar áreas do painel, sugira os menus: Dashboard, Imóveis, Submissões, Links, Financeiro, Regularizações, Comunicações, Documentos, CRM (Funil), Contatos, Parceiros.
-• Sem markdown pesado; pode usar • para bullets curtos.
+REGRAS:
+• Responda em português do Brasil, de forma clara e objetiva.
+• Use APENAS os dados do CONTEXTO DO SISTEMA abaixo. Se a informação não estiver no contexto, diga que não encontrou no banco neste momento.
+• Valores monetários já podem vir formatados como R$ — mantenha assim.
+• Pode sugerir onde olhar no menu (Dashboard, CRM, Contatos, Financeiro, Imóveis, Regularizações).
+• Não invente leads, valores ou imóveis.
+• Não revele chaves, SQL ou detalhes técnicos internos.
+• Se perguntarem quem você é: assistente Capí da Tijolo em Capital, com dados ao vivo do sistema.
 
-SNAPSHOT (dados ao vivo do banco):
-${JSON.stringify(snapshot, null, 2)}`;
+CONTEXTO DO SISTEMA (JSON):
+${JSON.stringify(context, null, 2)}`;
 
-    const msgs = [
-      { role: "system", content: systemPrompt },
-      ...(Array.isArray(history) ? history.slice(-10) : []).map((m: any) => ({
-        role: m.role === "user" ? "user" : "assistant",
-        content: String(m.content || ""),
-      })),
-      { role: "user", content: message },
-    ];
+    const prior = (history || [])
+      .slice(-8)
+      .filter((m) => m.role === "user" || m.role === "assistant")
+      .map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }));
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
@@ -178,37 +211,42 @@ ${JSON.stringify(snapshot, null, 2)}`;
       },
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
-        messages: msgs,
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...prior,
+          { role: "user", content: message.trim().slice(0, 4000) },
+        ],
       }),
     });
 
-    if (!resp.ok) {
-      if (resp.status === 429) {
-        return new Response(JSON.stringify({ error: "Muitas requisições. Tente em alguns segundos." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+    if (!response.ok) {
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "Limite de requisições excedido. Tente em alguns segundos." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
       }
-      if (resp.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos de IA esgotados." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "Créditos de IA esgotados." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
       }
-      const txt = await resp.text();
-      console.error("AI gateway error:", resp.status, txt);
-      return new Response(JSON.stringify({ error: "Erro ao consultar IA" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      const errorText = await response.text();
+      console.error("AI gateway error:", response.status, errorText);
+      return new Response(
+        JSON.stringify({ error: "Erro ao consultar a assistente" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
-    const data = await resp.json();
-    const content = data.choices?.[0]?.message?.content || "Sem resposta.";
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || "Não consegui gerar uma resposta agora.";
 
-    return new Response(JSON.stringify({ content }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ content, context_at: context.gerado_em }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (e) {
     console.error("platform-assistant error:", e);
     return new Response(

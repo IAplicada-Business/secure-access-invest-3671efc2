@@ -300,7 +300,7 @@ export default function AdminLayout() {
                     <DropdownMenuItem asChild>
                       <Link to="/admin/crm" className="flex items-center gap-2">
                         <KanbanSquare className="h-4 w-4" />
-                        Funil (Kanban)
+                        Funil
                       </Link>
                     </DropdownMenuItem>
                     )}
@@ -433,7 +433,7 @@ export default function AdminLayout() {
               )}
               {can('crm') && (
               <Link to="/admin/crm" onClick={() => setMobileMenuOpen(false)} className={mobileItem}>
-                <KanbanSquare className="h-5 w-5" />CRM (Funil)
+                <KanbanSquare className="h-5 w-5" />Funil
               </Link>
               )}
               {can('clientes') && (

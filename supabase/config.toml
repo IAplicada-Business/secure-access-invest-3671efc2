@@ -8,6 +8,3 @@ verify_jwt = false
 
 [functions.platform-assistant]
 verify_jwt = false
-
-[functions.platform-assistant]
-verify_jwt = false

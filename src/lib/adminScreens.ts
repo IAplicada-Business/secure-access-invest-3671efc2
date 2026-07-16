@@ -16,7 +16,7 @@ export const ADMIN_SCREENS: AdminScreen[] = [
   { key: 'regularizacoes', label: 'Regularizações', paths: ['/admin/regularizacoes'] },
   { key: 'comunicacoes', label: 'Comunicações', paths: ['/admin/comunicacoes'] },
   { key: 'documentos', label: 'Documentos', paths: ['/admin/documentos'] },
-  { key: 'crm', label: 'CRM (Funil)', paths: ['/admin/crm'] },
+  { key: 'crm', label: 'Funil', paths: ['/admin/crm'] },
   { key: 'clientes', label: 'Contatos', paths: ['/admin/contatos', '/admin/clientes'] },
   { key: 'parceiros', label: 'Parceiros', paths: ['/admin/parceiros'] },
   { key: 'configuracoes', label: 'Configurações', paths: ['/admin/configuracoes'] },
