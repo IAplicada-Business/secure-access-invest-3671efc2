@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { ADMIN_SCREENS } from '@/lib/adminScreens';
+import { PlatformAssistant } from '@/components/PlatformAssistant';
 
 export default function AdminLayout() {
   const navigate = useNavigate();
@@ -464,6 +465,8 @@ export default function AdminLayout() {
       <main className="w-full px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 min-w-0">
         <Outlet />
       </main>
+
+      <PlatformAssistant />
     </div>
   );
 }

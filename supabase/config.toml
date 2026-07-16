@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.generate-communication]
 verify_jwt = false
+
+[functions.platform-assistant]
+verify_jwt = false
