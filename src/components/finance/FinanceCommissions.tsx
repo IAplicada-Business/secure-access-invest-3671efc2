@@ -8,16 +8,13 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
-} from '@/components/ui/dialog';
-import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Search, CheckCircle, DollarSign, Clock, LayoutGrid, List, TrendingUp } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { toast } from 'sonner';
 import { PeriodFilter, filterByPeriod, type PeriodPreset } from './PeriodFilter';
-import { KanbanBoard, type KanbanCard, type KanbanColumn } from '@/components/ui-system';
+import { Drawer, KanbanBoard, type KanbanCard, type KanbanColumn } from '@/components/ui-system';
 import {
   Area,
   AreaChart,
@@ -466,28 +463,31 @@ export function FinanceCommissions() {
         </div>
       )}
 
-      <Dialog open={payDialogOpen} onOpenChange={setPayDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Marcar comissão como paga</DialogTitle>
-            <DialogDescription>
-              Parceiro: {selectedCommission ? partners.get(selectedCommission.partner_id) : ''} — Valor:{' '}
-              {selectedCommission ? formatCurrency(selectedCommission.amount) : ''}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Data de pagamento</Label>
-              <Input type="date" value={paidAt} onChange={e => setPaidAt(e.target.value)} />
-            </div>
-            <p className="text-sm text-muted-foreground">Uma despesa do tipo “Comissão paga” será criada automaticamente.</p>
+      <Drawer
+        open={payDialogOpen}
+        onOpenChange={setPayDialogOpen}
+        title="Marcar comissão como paga"
+        description={`Parceiro: ${selectedCommission ? partners.get(selectedCommission.partner_id) : ''} — Valor: ${selectedCommission ? formatCurrency(selectedCommission.amount) : ''}`}
+        className="w-full overflow-y-auto sm:max-w-md"
+      >
+        <div className="space-y-5 pb-4">
+          <div className="space-y-2">
+            <Label>Data de pagamento</Label>
+            <Input type="date" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPayDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handlePay} disabled={paying}>{paying ? 'Processando...' : 'Confirmar pagamento'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <p className="text-sm text-muted-foreground">
+            Uma despesa do tipo “Comissão paga” será criada automaticamente.
+          </p>
+          <div className="flex justify-end gap-2 border-t border-cream-200 pt-4">
+            <Button variant="outline" onClick={() => setPayDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handlePay} disabled={paying}>
+              {paying ? 'Processando...' : 'Confirmar pagamento'}
+            </Button>
+          </div>
+        </div>
+      </Drawer>
     </div>
   );
 }

@@ -196,6 +196,13 @@ export interface Revenue {
   received_at: string;
   notes: string | null;
   created_at: string;
+  payment_type?: string | null;
+  category?: string | null;
+  entrada?: number | null;
+  installment_count?: number;
+  installment_number?: number;
+  parent_revenue_id?: string | null;
+  due_date?: string | null;
 }
 
 export interface Commission {
@@ -219,6 +226,12 @@ export interface Expense {
   is_recurring: boolean;
   related_commission_id: string | null;
   created_at: string;
+  payment_type?: string | null;
+  installment_count?: number;
+  installment_number?: number;
+  parent_expense_id?: string | null;
+  recurrence_months?: number | null;
+  due_date?: string | null;
 }
 
 // --- Document Templates & Generated Documents ---

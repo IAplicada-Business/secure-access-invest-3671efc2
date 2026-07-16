@@ -5,6 +5,7 @@ import { Property, Setting } from '@/types/database';
 import { formatCurrency, calculateAppreciation } from '@/lib/formatCurrency';
 import { DEFAULT_WHATSAPP } from '@/hooks/useWhatsappNumber';
 import { Logo } from '@/components/Logo';
+import { BrandMascot } from '@/components/BrandMascot';
 import { Button } from '@/components/ui/button';
 import { 
   ArrowLeft, 
@@ -272,17 +273,20 @@ export default function PropertyDetails() {
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
-      <header className="border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-50">
+      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link 
+          <div className="flex items-center justify-between gap-4">
+            <Link
               to={`/catalogo/${token}`}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
             >
               <ArrowLeft className="h-5 w-5" />
               <span className="hidden sm:inline">Voltar ao catálogo</span>
             </Link>
-            <Logo tone="gold" className="h-12 w-auto" />
+            <div className="flex items-center gap-3">
+              <BrandMascot size="sm" />
+              <Logo tone="gold" className="h-10 w-auto sm:h-12" />
+            </div>
           </div>
         </div>
       </header>

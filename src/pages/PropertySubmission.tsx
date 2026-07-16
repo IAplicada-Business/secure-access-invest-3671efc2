@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/Logo';
+import { BrandMascot } from '@/components/BrandMascot';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Upload, CheckCircle, X, Building2 } from 'lucide-react';
+import { Loader2, Upload, CheckCircle, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 type PropertyType = 'casa' | 'terreno' | 'apartamento' | 'comercial' | 'outro';
@@ -236,11 +237,11 @@ export default function PropertySubmission() {
     <div className="min-h-screen bg-secondary">
       {/* Header */}
       <header className="border-b border-border bg-card">
-        <div className="mx-auto max-w-2xl px-4 py-4 flex items-center gap-3">
-          <Building2 className="h-6 w-6 text-primary" />
+        <div className="mx-auto flex max-w-2xl items-center gap-3 px-4 py-4">
+          <BrandMascot size="md" />
           <div>
             <Logo className="h-7 w-28" />
-            <p className="text-xs text-muted-foreground mt-0.5">Submissão de Imóveis</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Submissão de Imóveis</p>
           </div>
         </div>
       </header>

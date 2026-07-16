@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Property, AccessLink } from '@/types/database';
 import { PropertyCard } from '@/components/PropertyCard';
 import { Logo } from '@/components/Logo';
+import { BrandMascot } from '@/components/BrandMascot';
 import { AlertCircle, Building2, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -176,26 +177,32 @@ export default function Catalog() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-50">
+      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Logo tone="gold" className="h-12 w-auto" />
-            <div className="text-right">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <BrandMascot size="md" />
+              <Logo tone="gold" className="h-11 w-auto sm:h-12" />
+            </div>
+            <div className="min-w-0 text-right">
               <p className="text-xs text-muted-foreground">Acesso exclusivo para</p>
-              <p className="font-medium text-foreground">{accessLink?.investor_name}</p>
+              <p className="truncate font-medium text-foreground">{accessLink?.investor_name}</p>
             </div>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="relative py-16 md:py-24 bg-gradient-to-b from-secondary via-background to-background">
+      <section className="relative bg-gradient-to-b from-secondary via-background to-background py-14 md:py-20">
         <div className="container relative mx-auto px-4 text-center">
-          <h1 className="mb-4 font-display text-3xl font-bold text-foreground md:text-4xl lg:text-5xl animate-slide-up">
+          <div className="mx-auto mb-6 flex justify-center">
+            <BrandMascot size="lg" />
+          </div>
+          <h1 className="mb-4 animate-slide-up font-display text-3xl font-bold text-foreground md:text-4xl lg:text-5xl">
             Oportunidades <span className="text-primary">Exclusivas</span> de Investimento
           </h1>
-          <p className="mx-auto max-w-2xl text-lg text-muted-foreground animate-fade-in">
-            Imóveis irregulares com alto potencial de valorização após regularização. 
+          <p className="mx-auto max-w-2xl animate-fade-in text-lg text-muted-foreground">
+            Imóveis irregulares com alto potencial de valorização após regularização.
             Selecionados especialmente para investidores qualificados.
           </p>
         </div>
@@ -307,7 +314,10 @@ export default function Catalog() {
       {/* Footer */}
       <footer className="border-t border-border bg-charcoal py-8">
         <div className="container mx-auto px-4 text-center">
-          <Logo tone="gold" className="mx-auto mb-4 h-8" />
+          <div className="mb-4 flex items-center justify-center gap-3">
+            <BrandMascot size="sm" className="ring-offset-charcoal" />
+            <Logo tone="gold" className="h-8" />
+          </div>
           <p className="text-sm text-white/70">
             © {new Date().getFullYear()} Tijolo em Capital. Todos os direitos reservados.
           </p>
