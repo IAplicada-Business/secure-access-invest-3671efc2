@@ -754,6 +754,7 @@ export type Database = {
           has_iptu: boolean | null
           has_matricula: boolean | null
           has_planta: boolean | null
+          has_retrofit: boolean
           highlight_tag: string | null
           id: string
           images: string[] | null
@@ -765,6 +766,10 @@ export type Database = {
           property_type: Database["public"]["Enums"]["property_type"] | null
           regularization_cost: number | null
           regularization_time: string | null
+          retrofit_appreciation: string | null
+          retrofit_completion_time: string | null
+          retrofit_image: string | null
+          retrofit_investment: number | null
           risk_level: string | null
           risks: string | null
           status: Database["public"]["Enums"]["property_status"] | null
@@ -782,6 +787,7 @@ export type Database = {
           has_iptu?: boolean | null
           has_matricula?: boolean | null
           has_planta?: boolean | null
+          has_retrofit?: boolean
           highlight_tag?: string | null
           id?: string
           images?: string[] | null
@@ -793,6 +799,10 @@ export type Database = {
           property_type?: Database["public"]["Enums"]["property_type"] | null
           regularization_cost?: number | null
           regularization_time?: string | null
+          retrofit_appreciation?: string | null
+          retrofit_completion_time?: string | null
+          retrofit_image?: string | null
+          retrofit_investment?: number | null
           risk_level?: string | null
           risks?: string | null
           status?: Database["public"]["Enums"]["property_status"] | null
@@ -810,6 +820,7 @@ export type Database = {
           has_iptu?: boolean | null
           has_matricula?: boolean | null
           has_planta?: boolean | null
+          has_retrofit?: boolean
           highlight_tag?: string | null
           id?: string
           images?: string[] | null
@@ -821,6 +832,10 @@ export type Database = {
           property_type?: Database["public"]["Enums"]["property_type"] | null
           regularization_cost?: number | null
           regularization_time?: string | null
+          retrofit_appreciation?: string | null
+          retrofit_completion_time?: string | null
+          retrofit_image?: string | null
+          retrofit_investment?: number | null
           risk_level?: string | null
           risks?: string | null
           status?: Database["public"]["Enums"]["property_status"] | null
