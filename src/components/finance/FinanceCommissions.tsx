@@ -10,11 +10,12 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Search, CheckCircle, DollarSign, Clock, LayoutGrid, List, TrendingUp } from 'lucide-react';
+import { Search, CheckCircle, DollarSign, Clock, LayoutGrid, List, TrendingUp, Plus } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { toast } from 'sonner';
 import { PeriodFilter, filterByPeriod, type PeriodPreset } from './PeriodFilter';
 import { Drawer, KanbanBoard, type KanbanCard, type KanbanColumn } from '@/components/ui-system';
+import { createCommissionFromDeal } from '@/lib/financeCommissions';
 import {
   Area,
   AreaChart,
@@ -55,8 +56,10 @@ interface CommissionRow {
 export function FinanceCommissions() {
   const [commissions, setCommissions] = useState<CommissionRow[]>([]);
   const [partners, setPartners] = useState<Map<string, string>>(new Map());
-  const [partnerList, setPartnerList] = useState<Array<{ id: string; name: string }>>([]);
+  const [partnerList, setPartnerList] = useState<Array<{ id: string; name: string; commission_rate: number | null }>>([]);
   const [clients, setClients] = useState<Map<string, string>>(new Map());
+  const [clientList, setClientList] = useState<Array<{ id: string; name: string; partner_id: string | null }>>([]);
+  const [revenueList, setRevenueList] = useState<Array<{ id: string; label: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -73,18 +76,30 @@ export function FinanceCommissions() {
   const [paidAt, setPaidAt] = useState(new Date().toISOString().split('T')[0]);
   const [paying, setPaying] = useState(false);
 
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    partner_id: '',
+    client_id: '',
+    revenue_id: '',
+    deal_amount: '',
+    rate: '',
+    notes: '',
+  });
+
   useEffect(() => { load(); }, []);
 
   async function load() {
     const [{ data: commData }, { data: pData }, { data: cData }, { data: revData }] = await Promise.all([
       supabase.from('commissions').select('*').order('created_at', { ascending: false }),
-      supabase.from('partners').select('id, name'),
-      supabase.from('clients').select('id, name'),
-      supabase.from('revenues').select('id, service_type'),
+      supabase.from('partners').select('id, name, commission_rate').eq('status', 'active').order('name'),
+      supabase.from('clients').select('id, name, partner_id').order('name'),
+      supabase.from('revenues').select('id, service_type, amount, received_at, client_id').order('received_at', { ascending: false }).limit(100),
     ]);
 
-    const revMap = new Map((revData || []).map(r => [r.id, r.service_type as ServiceType]));
-    const rows: CommissionRow[] = (commData || []).map(c => ({
+    const clientNameMap = new Map((cData || []).map((c) => [c.id, c.name]));
+    const revMap = new Map((revData || []).map((r) => [r.id, r.service_type as ServiceType]));
+    const rows: CommissionRow[] = (commData || []).map((c) => ({
       id: c.id,
       partner_id: c.partner_id,
       client_id: c.client_id,
@@ -99,9 +114,84 @@ export function FinanceCommissions() {
 
     setCommissions(rows);
     setPartnerList(pData || []);
-    setPartners(new Map(pData?.map(p => [p.id, p.name]) || []));
-    setClients(new Map(cData?.map(c => [c.id, c.name]) || []));
+    setPartners(new Map(pData?.map((p) => [p.id, p.name]) || []));
+    setClientList(cData || []);
+    setClients(new Map(cData?.map((c) => [c.id, c.name]) || []));
+    setRevenueList(
+      (revData || []).map((r) => ({
+        id: r.id,
+        label: `${new Date(r.received_at).toLocaleDateString('pt-BR')} · ${formatCurrency(Number(r.amount))} · ${clientNameMap.get(r.client_id || '') || 'Sem cliente'}`,
+      })),
+    );
     setLoading(false);
+  }
+
+  function openCreate() {
+    setCreateForm({
+      partner_id: '',
+      client_id: '',
+      revenue_id: '',
+      deal_amount: '',
+      rate: '',
+      notes: '',
+    });
+    setCreateOpen(true);
+  }
+
+  function onPickPartner(partnerId: string) {
+    const p = partnerList.find((x) => x.id === partnerId);
+    setCreateForm((f) => ({
+      ...f,
+      partner_id: partnerId,
+      rate: p?.commission_rate != null ? String(p.commission_rate) : f.rate,
+    }));
+  }
+
+  function onPickClient(clientId: string) {
+    const c = clientList.find((x) => x.id === clientId);
+    const next = { ...createForm, client_id: clientId === 'none' ? '' : clientId };
+    if (c?.partner_id) {
+      const p = partnerList.find((x) => x.id === c.partner_id);
+      next.partner_id = c.partner_id;
+      if (p?.commission_rate != null) next.rate = String(p.commission_rate);
+    }
+    setCreateForm(next);
+  }
+
+  async function handleCreateCommission() {
+    if (!createForm.partner_id) {
+      toast.error('Selecione quem vai receber a comissão');
+      return;
+    }
+    const deal = Number(createForm.deal_amount);
+    const rate = Number(createForm.rate);
+    if (!deal || deal <= 0) {
+      toast.error('Informe o valor base do negócio');
+      return;
+    }
+    if (!rate || rate <= 0) {
+      toast.error('Informe a taxa (%)');
+      return;
+    }
+    setCreating(true);
+    const { data, error } = await createCommissionFromDeal({
+      partnerId: createForm.partner_id,
+      clientId: createForm.client_id || null,
+      revenueId: createForm.revenue_id || null,
+      dealAmount: deal,
+      rate,
+      notes: createForm.notes || 'Lançamento manual na aba Comissões',
+    });
+    setCreating(false);
+    if (error) {
+      toast.error('Erro ao criar comissão: ' + error.message);
+      return;
+    }
+    toast.success(
+      `Comissão de ${formatCurrency(data?.amount || (deal * rate) / 100)} para ${partners.get(createForm.partner_id)}`,
+    );
+    setCreateOpen(false);
+    load();
   }
 
   async function handlePay() {
@@ -385,6 +475,9 @@ export function FinanceCommissions() {
             <LayoutGrid className="h-3.5 w-3.5" /> Kanban
           </button>
         </div>
+        <Button onClick={openCreate} className="lg:ml-auto">
+          <Plus className="mr-2 h-4 w-4" /> Nova comissão
+        </Button>
       </div>
 
       {view === 'kanban' ? (
@@ -462,6 +555,126 @@ export function FinanceCommissions() {
           </div>
         </div>
       )}
+
+      <Drawer
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        title="Nova comissão"
+        description="Defina quem recebe, o cliente/origem e o valor do negócio."
+        className="w-full overflow-y-auto sm:max-w-md"
+      >
+        <div className="space-y-5 pb-4">
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-300">Quem recebe</h3>
+            <div className="space-y-2">
+              <Label>Parceiro *</Label>
+              <Select value={createForm.partner_id || 'none'} onValueChange={(v) => onPickPartner(v === 'none' ? '' : v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o recebedor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Selecione...</SelectItem>
+                  {partnerList.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                      {p.commission_rate != null ? ` (${p.commission_rate}%)` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Cliente / lead (origem)</Label>
+              <Select value={createForm.client_id || 'none'} onValueChange={onPickClient}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Opcional" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem cliente</SelectItem>
+                  {clientList.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                Se o contato tiver parceiro cadastrado, ele é preenchido automaticamente.
+              </p>
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-300">Valores</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Valor do negócio (R$) *</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={createForm.deal_amount}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, deal_amount: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Taxa (%) *</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={createForm.rate}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, rate: e.target.value }))}
+                />
+              </div>
+            </div>
+            {Number(createForm.deal_amount) > 0 && Number(createForm.rate) > 0 && (
+              <p className="text-sm text-ink-700">
+                Comissão estimada:{' '}
+                <strong>
+                  {formatCurrency((Number(createForm.deal_amount) * Number(createForm.rate)) / 100)}
+                </strong>
+              </p>
+            )}
+            <div className="space-y-2">
+              <Label>Vincular a receita (opcional)</Label>
+              <Select
+                value={createForm.revenue_id || 'none'}
+                onValueChange={(v) => setCreateForm((f) => ({ ...f, revenue_id: v === 'none' ? '' : v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sem vínculo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem vínculo</SelectItem>
+                  {revenueList.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Observação / origem</Label>
+              <Input
+                value={createForm.notes}
+                onChange={(e) => setCreateForm((f) => ({ ...f, notes: e.target.value }))}
+                placeholder="Ex: indicação do corretor X, fechamento CRM..."
+              />
+            </div>
+          </section>
+
+          <div className="flex justify-end gap-2 border-t border-cream-200 pt-4">
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateCommission} disabled={creating}>
+              {creating ? 'Salvando...' : 'Criar comissão'}
+            </Button>
+          </div>
+        </div>
+      </Drawer>
 
       <Drawer
         open={payDialogOpen}

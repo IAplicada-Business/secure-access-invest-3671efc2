@@ -120,31 +120,27 @@ export default function SignContractDialog({ doc, open, onOpenChange, onComplete
     const { error: docErr } = await supabase.from('generated_documents').update({ status: 'assinado' }).eq('id', doc.id);
     if (docErr) { toast.error('Erro ao atualizar status'); setSaving(false); return; }
 
-    // 2. Insert revenue
-    const { data: rev, error: revErr } = await supabase.from('revenues').insert({
-      client_id: doc.client_id,
-      partner_id: partnerId,
-      service_type: serviceType,
+    // 2. Receita + comissão automática se o cliente tiver parceiro com taxa
+    const { createRevenueWithCommission } = await import('@/lib/financeCommissions');
+    const { revenue, commission, error: finErr } = await createRevenueWithCommission({
+      clientId: doc.client_id,
+      partnerId,
+      serviceType,
       amount: parsedAmount,
-      received_at: receivedAt,
+      receivedAt,
       notes: `Gerado automaticamente do documento: ${doc.title}`,
-    }).select('id').single();
+      autoCommission: true,
+    });
 
-    if (revErr || !rev) { toast.error('Erro ao registrar receita'); setSaving(false); return; }
-
-    // 3. Insert commission if applicable
-    if (partnerId && commissionRate > 0) {
-      await supabase.from('commissions').insert({
-        partner_id: partnerId,
-        client_id: doc.client_id,
-        revenue_id: rev.id,
-        rate: commissionRate,
-        amount: commissionAmount,
-        status: 'pending',
-      });
+    if (finErr || !revenue) {
+      toast.error('Documento assinado, mas erro ao registrar receita');
+      setSaving(false);
+      onOpenChange(false);
+      onComplete();
+      return;
     }
 
-    const msg = partnerId && commissionRate > 0
+    const msg = commission && partnerId && commissionRate > 0
       ? `Receita de ${formatCurrency(parsedAmount)} registrada e comissão calculada para ${partnerName}`
       : `Receita de ${formatCurrency(parsedAmount)} registrada com sucesso`;
     toast.success(msg);

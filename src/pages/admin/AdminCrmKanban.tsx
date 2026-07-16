@@ -124,6 +124,8 @@ interface CrmClient {
   created_at: string;
   crm_stage: CrmStage;
   status: 'prospect' | 'active' | 'completed';
+  partner_id: string | null;
+  partner_name: string | null;
 }
 
 export default function AdminCrmKanban() {
@@ -150,6 +152,17 @@ export default function AdminCrmKanban() {
   const [leadSaving, setLeadSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<CrmClient | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Fechamento → registrar receita/comissão
+  const [dealOpen, setDealOpen] = useState(false);
+  const [dealClient, setDealClient] = useState<CrmClient | null>(null);
+  const [dealSaving, setDealSaving] = useState(false);
+  const [dealForm, setDealForm] = useState({
+    service_type: 'regularizacao',
+    amount: '',
+    received_at: new Date().toISOString().slice(0, 10),
+    notes: '',
+  });
 
   function setStageCollapsed(stageId: string, collapsed: boolean) {
     setCollapsedStages(prev => {
@@ -286,6 +299,49 @@ export default function AdminCrmKanban() {
         ? `Movido para "${stage?.title}" e convertido em cliente`
         : `Movido para "${stage?.title}"`,
     );
+
+    // Fechamento / aguardando pagamento → oferecer lançamento financeiro conectado
+    if (
+      (toColumnId === 'fechamento' || toColumnId === 'aguardando_pagamento') &&
+      current
+    ) {
+      setDealClient({ ...current, crm_stage: toColumnId as CrmStage, ...(promote ? { status: 'active' as const } : {}) });
+      setDealForm({
+        service_type: current.type === 'incorporator' ? 'regularizacao' : 'venda_plataforma',
+        amount: '',
+        received_at: new Date().toISOString().slice(0, 10),
+        notes: `Fechamento CRM — etapa ${stage?.title || toColumnId}`,
+      });
+      setDealOpen(true);
+    }
+  }
+
+  async function handleRegisterDeal(e: React.FormEvent) {
+    e.preventDefault();
+    if (!dealClient || !dealForm.amount) return;
+    setDealSaving(true);
+    const { createRevenueWithCommission } = await import('@/lib/financeCommissions');
+    const { revenue, commission, rate, error } = await createRevenueWithCommission({
+      clientId: dealClient.id,
+      partnerId: dealClient.partner_id || null,
+      serviceType: dealForm.service_type as 'regularizacao' | 'venda_plataforma' | 'consultoria' | 'outro',
+      amount: Number(dealForm.amount),
+      receivedAt: dealForm.received_at,
+      notes: dealForm.notes || null,
+      autoCommission: true,
+    });
+    setDealSaving(false);
+    if (error || !revenue) {
+      toast.error('Erro ao registrar no financeiro: ' + (error?.message || 'falha'));
+      return;
+    }
+    toast.success(
+      commission && rate
+        ? `Receita no Financeiro + comissão ${rate}% para o parceiro`
+        : 'Receita registrada no Financeiro',
+    );
+    setDealOpen(false);
+    setDealClient(null);
   }
 
   const channels = useMemo(
@@ -614,6 +670,95 @@ export default function AdminCrmKanban() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Drawer
+        open={dealOpen}
+        onOpenChange={(open) => {
+          setDealOpen(open);
+          if (!open) setDealClient(null);
+        }}
+        title="Registrar no Financeiro"
+        description={
+          dealClient
+            ? `Fechamento de ${dealClient.name}. A receita vai para o Financeiro${
+                dealClient.partner_id
+                  ? ' e gera comissão automática para o parceiro vinculado.'
+                  : '. Vincule um parceiro no contato para gerar comissão automática.'
+              }`
+            : 'Lançar receita do negócio'
+        }
+        className="w-full overflow-y-auto sm:max-w-md"
+      >
+        <form onSubmit={handleRegisterDeal} className="space-y-4 pb-4">
+          {dealClient?.partner_id && (
+            <p className="rounded-md bg-brand-goldSoft/20 px-3 py-2 text-xs text-ink-700">
+              Parceiro / origem:{' '}
+              <strong>{dealClient.partner_name || 'parceiro vinculado'}</strong>
+              {' — '}comissão pela taxa cadastrada no parceiro.
+            </p>
+          )}
+          <div className="space-y-2">
+            <Label>Tipo de serviço</Label>
+            <Select
+              value={dealForm.service_type}
+              onValueChange={(v) => setDealForm((p) => ({ ...p, service_type: v }))}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="regularizacao">Regularização</SelectItem>
+                <SelectItem value="venda_plataforma">Venda Plataforma</SelectItem>
+                <SelectItem value="consultoria">Consultoria</SelectItem>
+                <SelectItem value="outro">Outro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Valor do negócio (R$) *</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={dealForm.amount}
+                onChange={(e) => setDealForm((p) => ({ ...p, amount: e.target.value }))}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Data</Label>
+              <Input
+                type="date"
+                value={dealForm.received_at}
+                onChange={(e) => setDealForm((p) => ({ ...p, received_at: e.target.value }))}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Observação</Label>
+            <Input
+              value={dealForm.notes}
+              onChange={(e) => setDealForm((p) => ({ ...p, notes: e.target.value }))}
+              placeholder="Ex: análise aprovada, compra fechada…"
+            />
+          </div>
+          <div className="flex justify-end gap-2 border-t border-cream-200 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setDealOpen(false);
+                setDealClient(null);
+              }}
+            >
+              Agora não
+            </Button>
+            <Button type="submit" disabled={dealSaving || !dealForm.amount}>
+              {dealSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Lançar receita
+            </Button>
+          </div>
+        </form>
+      </Drawer>
     </div>
   );
 }

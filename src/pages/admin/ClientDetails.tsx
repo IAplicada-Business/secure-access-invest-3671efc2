@@ -215,16 +215,26 @@ export default function ClientDetails() {
     e.preventDefault();
     if (!id || !chargeForm.amount) return;
     setChargeSaving(true);
-    const { error } = await supabase.from('revenues').insert({
-      client_id: id,
-      service_type: chargeForm.service_type as never,
+    const { createRevenueWithCommission } = await import('@/lib/financeCommissions');
+    const { revenue, commission, partnerId, rate, error } = await createRevenueWithCommission({
+      clientId: id,
+      partnerId: client?.partner_id || null,
+      serviceType: chargeForm.service_type as never,
       amount: Number(chargeForm.amount),
-      received_at: chargeForm.received_at,
+      receivedAt: chargeForm.received_at,
       notes: chargeForm.notes || null,
+      autoCommission: true,
     });
     setChargeSaving(false);
-    if (error) { toast.error('Erro: ' + error.message); return; }
-    toast.success('Receita lançada!');
+    if (error || !revenue) {
+      toast.error('Erro: ' + (error?.message || 'falha ao lançar receita'));
+      return;
+    }
+    toast.success(
+      commission && partnerId && rate
+        ? `Receita lançada e comissão de ${rate}% gerada para o parceiro`
+        : 'Receita lançada!',
+    );
     setChargeOpen(false);
     setChargeForm({ service_type: 'regularizacao', amount: '', received_at: new Date().toISOString().slice(0, 10), notes: '' });
     loadFinancials();
@@ -815,8 +825,18 @@ export default function ClientDetails() {
       </Tabs>
 
       {/* Lançar receita (cobrança) Drawer */}
-      <Drawer open={chargeOpen} onOpenChange={setChargeOpen} title="Lançar receita" description="Registra uma receita vinculada a este cliente.">
-        <form onSubmit={handleCreateCharge} className="space-y-4">
+      <Drawer
+        open={chargeOpen}
+        onOpenChange={setChargeOpen}
+        title="Lançar receita"
+        description={
+          client?.partner_id
+            ? 'A receita vai para o Financeiro e gera comissão automática para o parceiro vinculado.'
+            : 'A receita vai para o Financeiro. Vincule um parceiro no contato para gerar comissão automática.'
+        }
+        className="w-full overflow-y-auto sm:max-w-md"
+      >
+        <form onSubmit={handleCreateCharge} className="space-y-4 pb-4">
           <div className="space-y-2">
             <Label>Tipo de serviço</Label>
             <Select value={chargeForm.service_type} onValueChange={(v) => setChargeForm(p => ({ ...p, service_type: v }))}>
@@ -834,6 +854,11 @@ export default function ClientDetails() {
             <div className="space-y-2"><Label>Data</Label><Input type="date" value={chargeForm.received_at} onChange={(e) => setChargeForm(p => ({ ...p, received_at: e.target.value }))} /></div>
           </div>
           <div className="space-y-2"><Label>Observação</Label><Input value={chargeForm.notes} onChange={(e) => setChargeForm(p => ({ ...p, notes: e.target.value }))} /></div>
+          {client?.partner_id && (
+            <p className="rounded-md bg-brand-goldSoft/20 px-3 py-2 text-xs text-ink-700">
+              Parceiro vinculado: <strong>{client.partner_name || 'cadastrado'}</strong> — comissão será calculada pela taxa do parceiro.
+            </p>
+          )}
           <div className="flex justify-end gap-2 border-t border-cream-200 pt-4">
             <Button type="button" variant="outline" onClick={() => setChargeOpen(false)}>Cancelar</Button>
             <Button type="submit" disabled={chargeSaving}>{chargeSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Lançar</Button>
@@ -977,6 +1002,9 @@ export default function ClientDetails() {
               <div className="space-y-2">
                 <Label>Parceiro (texto livre)</Label>
                 <Input value={editForm.partner_name || ''} onChange={(e) => setEditForm(p => ({ ...p, partner_name: e.target.value }))} />
+                <p className="text-[11px] text-muted-foreground">
+                  Só nome livre não gera comissão no Financeiro. Selecione o parceiro cadastrado acima para conectar.
+                </p>
               </div>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

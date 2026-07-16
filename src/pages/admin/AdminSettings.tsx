@@ -435,27 +435,31 @@ export default function AdminSettings() {
               <CardDescription>Atualize seu nome, e-mail e senha de acesso.</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSaveProfile} className="max-w-lg space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="profile-name">Nome</Label>
-                  <Input
-                    id="profile-name"
-                    value={profileName}
-                    onChange={(e) => setProfileName(e.target.value)}
-                    placeholder="Seu nome"
-                  />
+              <form onSubmit={handleSaveProfile} className="w-full space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="profile-name">Nome</Label>
+                    <Input
+                      id="profile-name"
+                      value={profileName}
+                      onChange={(e) => setProfileName(e.target.value)}
+                      placeholder="Seu nome"
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="profile-email">E-mail</Label>
+                    <Input
+                      id="profile-email"
+                      type="email"
+                      value={profileEmail}
+                      onChange={(e) => setProfileEmail(e.target.value)}
+                      placeholder="voce@empresa.com"
+                      className="w-full"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="profile-email">E-mail</Label>
-                  <Input
-                    id="profile-email"
-                    type="email"
-                    value={profileEmail}
-                    onChange={(e) => setProfileEmail(e.target.value)}
-                    placeholder="voce@empresa.com"
-                  />
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="profile-password">Nova senha</Label>
                     <Input
@@ -465,6 +469,7 @@ export default function AdminSettings() {
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Deixe em branco para manter"
                       autoComplete="new-password"
+                      className="w-full"
                     />
                   </div>
                   <div className="space-y-2">
@@ -476,6 +481,7 @@ export default function AdminSettings() {
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Repita a nova senha"
                       autoComplete="new-password"
+                      className="w-full"
                     />
                   </div>
                 </div>
@@ -502,17 +508,18 @@ export default function AdminSettings() {
                 </div>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSaveCompany} className="max-w-lg space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="company-name">Nome da empresa</Label>
-                    <Input
-                      id="company-name"
-                      value={company.company_name}
-                      onChange={(e) => setCompany((p) => ({ ...p, company_name: e.target.value }))}
-                      placeholder="Tijolo em Capital"
-                    />
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
+                <form onSubmit={handleSaveCompany} className="w-full space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="company-name">Nome da empresa</Label>
+                      <Input
+                        id="company-name"
+                        value={company.company_name}
+                        onChange={(e) => setCompany((p) => ({ ...p, company_name: e.target.value }))}
+                        placeholder="Tijolo em Capital"
+                        className="w-full"
+                      />
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="company-cnpj">CNPJ</Label>
                       <Input
@@ -520,6 +527,7 @@ export default function AdminSettings() {
                         value={company.company_cnpj}
                         onChange={(e) => setCompany((p) => ({ ...p, company_cnpj: e.target.value }))}
                         placeholder="00.000.000/0000-00"
+                        className="w-full"
                       />
                     </div>
                     <div className="space-y-2">
@@ -529,27 +537,30 @@ export default function AdminSettings() {
                         value={company.company_phone}
                         onChange={(e) => setCompany((p) => ({ ...p, company_phone: e.target.value }))}
                         placeholder="5511999999999"
+                        className="w-full"
                       />
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="company-email">E-mail institucional</Label>
-                    <Input
-                      id="company-email"
-                      type="email"
-                      value={company.company_email}
-                      onChange={(e) => setCompany((p) => ({ ...p, company_email: e.target.value }))}
-                      placeholder="contato@empresa.com"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="company-address">Endereço</Label>
-                    <Input
-                      id="company-address"
-                      value={company.company_address}
-                      onChange={(e) => setCompany((p) => ({ ...p, company_address: e.target.value }))}
-                      placeholder="Rua, número, cidade"
-                    />
+                    <div className="space-y-2">
+                      <Label htmlFor="company-email">E-mail institucional</Label>
+                      <Input
+                        id="company-email"
+                        type="email"
+                        value={company.company_email}
+                        onChange={(e) => setCompany((p) => ({ ...p, company_email: e.target.value }))}
+                        placeholder="contato@empresa.com"
+                        className="w-full"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="company-address">Endereço</Label>
+                      <Input
+                        id="company-address"
+                        value={company.company_address}
+                        onChange={(e) => setCompany((p) => ({ ...p, company_address: e.target.value }))}
+                        placeholder="Rua, número, cidade"
+                        className="w-full"
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-3 rounded-lg border border-border p-4">
@@ -567,6 +578,7 @@ export default function AdminSettings() {
                         value={company.whatsapp_number}
                         onChange={(e) => setCompany((p) => ({ ...p, whatsapp_number: e.target.value }))}
                         placeholder="5511999999999"
+                        className="w-full"
                       />
                     </div>
                   </div>

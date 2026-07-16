@@ -209,12 +209,13 @@ export interface Commission {
   id: string;
   partner_id: string;
   client_id: string | null;
-  revenue_id: string;
+  revenue_id: string | null;
   rate: number;
   amount: number;
   status: CommissionStatus;
   paid_at: string | null;
   created_at: string;
+  notes?: string | null;
 }
 
 export interface Expense {

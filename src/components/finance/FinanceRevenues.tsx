@@ -24,6 +24,7 @@ import {
   splitAmount,
   type PaymentType,
 } from '@/lib/financePayments';
+import { createCommissionFromDeal } from '@/lib/financeCommissions';
 import type { ServiceType, CommissionStatus } from '@/types/database';
 
 const SERVICE_LABELS: Record<ServiceType, string> = {
@@ -173,20 +174,32 @@ export function FinanceRevenues() {
     }
 
     if (partnerId && commissionRate > 0 && firstId) {
-      await supabase.from('commissions').insert({
-        partner_id: partnerId,
-        client_id: clientId || null,
-        revenue_id: firstId,
+      const { error: commErr } = await createCommissionFromDeal({
+        partnerId,
+        clientId: clientId || null,
+        revenueId: firstId,
+        dealAmount: totalAmount,
         rate: commissionRate,
-        amount: commissionAmount,
-        status: 'pending',
+        notes: notes || 'Gerada automaticamente a partir da receita',
       });
+      if (commErr) {
+        toast.error('Receita salva, mas falha ao gerar comissão: ' + commErr.message);
+        setDrawerOpen(false);
+        resetForm();
+        setSaving(false);
+        loadAll();
+        return;
+      }
     }
 
     toast.success(
-      rows.length > 1
-        ? `Receita lançada em ${rows.length} lançamentos (entrada/parcelas)`
-        : 'Receita registrada',
+      partnerId && commissionRate > 0
+        ? rows.length > 1
+          ? `Receita em ${rows.length} lançamentos + comissão para o parceiro`
+          : 'Receita registrada e comissão gerada para o parceiro'
+        : rows.length > 1
+          ? `Receita lançada em ${rows.length} lançamentos (entrada/parcelas)`
+          : 'Receita registrada',
     );
     setDrawerOpen(false);
     resetForm();

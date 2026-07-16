@@ -220,10 +220,11 @@ export type Database = {
           client_id: string | null
           created_at: string
           id: string
+          notes: string | null
           paid_at: string | null
           partner_id: string
           rate: number
-          revenue_id: string
+          revenue_id: string | null
           status: Database["public"]["Enums"]["commission_status"]
         }
         Insert: {
@@ -231,10 +232,11 @@ export type Database = {
           client_id?: string | null
           created_at?: string
           id?: string
+          notes?: string | null
           paid_at?: string | null
           partner_id: string
           rate: number
-          revenue_id: string
+          revenue_id?: string | null
           status?: Database["public"]["Enums"]["commission_status"]
         }
         Update: {
@@ -242,10 +244,11 @@ export type Database = {
           client_id?: string | null
           created_at?: string
           id?: string
+          notes?: string | null
           paid_at?: string | null
           partner_id?: string
           rate?: number
-          revenue_id?: string
+          revenue_id?: string | null
           status?: Database["public"]["Enums"]["commission_status"]
         }
         Relationships: [
