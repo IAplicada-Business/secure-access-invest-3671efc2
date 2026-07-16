@@ -12,27 +12,46 @@ type ChatMessage = { role: "user" | "assistant"; content: string };
 const BRL = (n: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n || 0);
 
+function byKey<T>(rows: T[] | null | undefined, getKey: (row: T) => string | null | undefined) {
+  const map: Record<string, number> = {};
+  (rows || []).forEach((row) => {
+    const key = getKey(row) || "desconhecido";
+    map[key] = (map[key] || 0) + 1;
+  });
+  return map;
+}
+
 async function buildPlatformContext(admin: ReturnType<typeof createClient>) {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
+  // Schema real (types.ts / Postgres):
+  // - properties.has_retrofit (não retrofit_status)
+  // - access_links.is_active (não active)
+  // - page_views.viewed_at (não created_at)
+  // - commissions.status: pending | paid (não pendente/paga)
+  // - property_submissions.matricula_status (não status)
   const [
-    { data: properties },
-    { data: clients },
-    { count: activeLinks },
-    { data: revenues },
-    { data: expenses },
-    { data: commissions },
-    { data: regs },
-    { count: monthViews },
-    { data: submissions },
+    propsRes,
+    clientsRes,
+    linksRes,
+    revenuesRes,
+    expensesRes,
+    commissionsRes,
+    regsRes,
+    viewsRes,
+    submissionsRes,
   ] = await Promise.all([
     admin.from("properties").select("id, status, title"),
     admin.from("clients").select("id, status, crm_stage, type, name, created_at"),
     admin.from("access_links").select("id", { count: "exact", head: true }).eq("is_active", true),
-    admin.from("revenues").select("amount, service_type").gte("received_at", monthStart).lte("received_at", monthEnd),
+    admin
+      .from("revenues")
+      .select("amount, service_type")
+      .gte("received_at", monthStart)
+      .lte("received_at", monthEnd),
     admin.from("expenses").select("amount").gte("expense_date", monthStart).lte("expense_date", monthEnd),
     admin.from("commissions").select("amount, status, paid_at"),
     admin.from("regularization_processes").select("id, status, title"),
@@ -40,47 +59,65 @@ async function buildPlatformContext(admin: ReturnType<typeof createClient>) {
       .from("page_views")
       .select("id", { count: "exact", head: true })
       .gte("viewed_at", thirtyDaysAgo),
-    admin.from("property_submissions").select("id, status").limit(200),
+    admin.from("property_submissions").select("id, matricula_status").limit(200),
   ]);
 
-  const byStatus = (rows: Array<{ status: string | null }> | null) => {
-    const map: Record<string, number> = {};
-    (rows || []).forEach((r) => {
-      const s = r.status || "desconhecido";
-      map[s] = (map[s] || 0) + 1;
-    });
-    return map;
-  };
+  let retrofitCount = 0;
+  {
+    const { count, error } = await admin
+      .from("properties")
+      .select("id", { count: "exact", head: true })
+      .eq("has_retrofit", true);
+    if (error) {
+      console.error("platform-assistant has_retrofit query error:", error);
+    } else {
+      retrofitCount = count || 0;
+    }
+  }
 
-  const stageCount: Record<string, number> = {};
-  (clients || []).forEach((c) => {
-    const s = c.crm_stage || "contato";
-    stageCount[s] = (stageCount[s] || 0) + 1;
-  });
+  const queryErrors = [
+    ["properties", propsRes.error],
+    ["clients", clientsRes.error],
+    ["access_links", linksRes.error],
+    ["revenues", revenuesRes.error],
+    ["expenses", expensesRes.error],
+    ["commissions", commissionsRes.error],
+    ["regularization_processes", regsRes.error],
+    ["page_views", viewsRes.error],
+    ["property_submissions", submissionsRes.error],
+  ].filter(([, err]) => Boolean(err));
 
-  const leads = (clients || []).filter((c) => c.status === "prospect").length;
-  const converted = (clients || []).filter((c) => c.status === "active" || c.status === "completed").length;
-  const monthRevenue = (revenues || []).reduce((a, r) => a + Number(r.amount || 0), 0);
-  const monthExpenses = (expenses || []).reduce((a, r) => a + Number(r.amount || 0), 0);
-  const pendingComm = (commissions || [])
+  if (queryErrors.length) {
+    console.error(
+      "platform-assistant context query errors:",
+      queryErrors.map(([table, err]) => ({ table, err })),
+    );
+  }
+
+  const properties = propsRes.data || [];
+  const clients = clientsRes.data || [];
+  const revenues = revenuesRes.data || [];
+  const expenses = expensesRes.data || [];
+  const commissions = commissionsRes.data || [];
+  const regs = regsRes.data || [];
+  const submissions = submissionsRes.data || [];
+
+  const monthRevenue = revenues.reduce((a, r) => a + Number(r.amount || 0), 0);
+  const monthExpenses = expenses.reduce((a, r) => a + Number(r.amount || 0), 0);
+  const pendingComm = commissions
     .filter((c) => c.status === "pending")
     .reduce((a, c) => a + Number(c.amount || 0), 0);
-  const paidComm = (commissions || [])
+  const paidComm = commissions
     .filter((c) => c.status === "paid")
     .reduce((a, c) => a + Number(c.amount || 0), 0);
-  let retrofitSafe = 0;
-  {
-    const { data: retrofitRows, error: retrofitErr } = await admin
-      .from("properties")
-      .select("id")
-      .eq("has_retrofit", true);
-    if (!retrofitErr) retrofitSafe = retrofitRows?.length || 0;
-  }
-  const pendingReview = (properties || []).filter((p) => p.status === "pending_review").length;
-  const published = (properties || []).filter((p) => p.status === "published").length;
-  const activeRegs = (regs || []).filter((r) => !["concluida", "arquivada"].includes(r.status || "")).length;
 
-  const recentContacts = (clients || [])
+  const receitasPorTipoNum = revenues.reduce((acc: Record<string, number>, r) => {
+    const k = r.service_type || "outro";
+    acc[k] = (acc[k] || 0) + Number(r.amount || 0);
+    return acc;
+  }, {});
+
+  const recentContacts = clients
     .slice()
     .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
     .slice(0, 8)
@@ -93,22 +130,25 @@ async function buildPlatformContext(admin: ReturnType<typeof createClient>) {
 
   return {
     gerado_em: now.toISOString(),
+    avisos_consulta: queryErrors.length
+      ? queryErrors.map(([table]) => `Falha ao ler ${table}`)
+      : [],
     imoveis: {
-      total: properties?.length || 0,
-      por_status: byStatus(properties),
-      publicados: published,
-      aguardando_avaliacao: pendingReview,
-      com_retrofit: retrofitSafe,
+      total: properties.length,
+      por_status: byKey(properties, (p) => p.status),
+      publicados: properties.filter((p) => p.status === "published").length,
+      aguardando_avaliacao: properties.filter((p) => p.status === "pending_review").length,
+      com_retrofit: retrofitCount,
     },
     contatos: {
-      total: clients?.length || 0,
-      leads,
-      clientes: converted,
-      funil_por_etapa: stageCount,
+      total: clients.length,
+      leads: clients.filter((c) => c.status === "prospect").length,
+      clientes: clients.filter((c) => c.status === "active" || c.status === "completed").length,
+      funil_por_etapa: byKey(clients, (c) => c.crm_stage || "contato"),
       recentes: recentContacts,
     },
-    links_ativos: activeLinks || 0,
-    acessos_catalogo_30d: monthViews || 0,
+    links_ativos: linksRes.count || 0,
+    acessos_catalogo_30d: viewsRes.count || 0,
     financeiro_mes: {
       receita: BRL(monthRevenue),
       despesas: BRL(monthExpenses),
@@ -116,23 +156,17 @@ async function buildPlatformContext(admin: ReturnType<typeof createClient>) {
       comissoes_pendentes: BRL(pendingComm),
       comissoes_pagas_total: BRL(paidComm),
       receitas_por_tipo: Object.fromEntries(
-        Object.entries(
-          (revenues || []).reduce((acc: Record<string, number>, r) => {
-            const k = r.service_type || "outro";
-            acc[k] = (acc[k] || 0) + Number(r.amount || 0);
-            return acc;
-          }, {}),
-        ).map(([k, v]) => [k, BRL(v)]),
+        Object.entries(receitasPorTipoNum).map(([k, v]) => [k, BRL(v)]),
       ),
     },
     regularizacoes: {
-      total: regs?.length || 0,
-      ativas: activeRegs,
-      por_status: byStatus(regs),
+      total: regs.length,
+      ativas: regs.filter((r) => !["concluida", "arquivada"].includes(r.status || "")).length,
+      por_status: byKey(regs, (r) => r.status),
     },
     submissoes: {
-      total: submissions?.length || 0,
-      por_status: byStatus(submissions as Array<{ status: string | null }> | null),
+      total: submissions.length,
+      por_matricula_status: byKey(submissions, (s) => s.matricula_status),
     },
   };
 }
@@ -160,7 +194,10 @@ serve(async (req) => {
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await userClient.auth.getUser();
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Sessão inválida" }), {
         status: 401,
@@ -168,7 +205,7 @@ serve(async (req) => {
       });
     }
 
-    const { message, history } = await req.json() as {
+    const { message, history } = (await req.json()) as {
       message?: string;
       history?: ChatMessage[];
     };
@@ -201,7 +238,7 @@ ${JSON.stringify(context, null, 2)}`;
     const prior = (history || [])
       .slice(-8)
       .filter((m) => m.role === "user" || m.role === "assistant")
-      .map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }));
+      .map((m) => ({ role: m.role, content: String(m.content || "").slice(0, 2000) }));
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -227,26 +264,25 @@ ${JSON.stringify(context, null, 2)}`;
         );
       }
       if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Créditos de IA esgotados." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+        return new Response(JSON.stringify({ error: "Créditos de IA esgotados." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
-      return new Response(
-        JSON.stringify({ error: "Erro ao consultar a assistente" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "Erro ao consultar a assistente" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || "Não consegui gerar uma resposta agora.";
 
-    return new Response(
-      JSON.stringify({ content, context_at: context.gerado_em }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ content, context_at: context.gerado_em }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (e) {
     console.error("platform-assistant error:", e);
     return new Response(
