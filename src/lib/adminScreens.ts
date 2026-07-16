@@ -19,7 +19,7 @@ export const ADMIN_SCREENS: AdminScreen[] = [
   { key: 'crm', label: 'Funil', paths: ['/admin/crm'] },
   { key: 'clientes', label: 'Contatos', paths: ['/admin/contatos', '/admin/clientes'] },
   { key: 'parceiros', label: 'Parceiros', paths: ['/admin/parceiros'] },
-  { key: 'configuracoes', label: 'Configurações', paths: ['/admin/configuracoes'] },
+  { key: 'configuracoes', label: 'Perfil / Configurações', paths: ['/admin/configuracoes'] },
 ];
 
 export const ADMIN_SCREEN_KEYS = ADMIN_SCREENS.map((s) => s.key);

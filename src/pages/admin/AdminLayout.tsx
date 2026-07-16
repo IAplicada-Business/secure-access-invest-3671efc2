@@ -352,7 +352,7 @@ export default function AdminLayout() {
                   {can('configuracoes') && (
                   <DropdownMenuItem asChild>
                     <Link to="/admin/configuracoes" className="flex items-center gap-2">
-                      <Settings className="h-4 w-4" /> Configurações
+                      <Settings className="h-4 w-4" /> Perfil
                     </Link>
                   </DropdownMenuItem>
                   )}
@@ -448,7 +448,7 @@ export default function AdminLayout() {
               )}
               {can('configuracoes') && (
               <Link to="/admin/configuracoes" onClick={() => setMobileMenuOpen(false)} className={mobileItem}>
-                <Settings className="h-5 w-5" />Configurações
+                <Settings className="h-5 w-5" />Perfil
               </Link>
               )}
               {isAdmin && (
