@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/Logo';
-import { BrandMascot } from '@/components/BrandMascot';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -238,7 +237,6 @@ export default function PropertySubmission() {
       {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-2xl items-center gap-3 px-4 py-4">
-          <BrandMascot size="md" />
           <div>
             <Logo className="h-7 w-28" />
             <p className="mt-0.5 text-xs text-muted-foreground">Submissão de Imóveis</p>

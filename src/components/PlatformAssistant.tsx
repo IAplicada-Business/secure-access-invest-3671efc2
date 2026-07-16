@@ -3,10 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Loader2, Send, X, Minimize2 } from 'lucide-react';
-import ownerPhoto from '@/assets/owner-photo.jpg';
-
-/** Recorte do rosto da mascote (foto full-body: rosto no terço superior). */
-const CAPY_FACE = 'object-cover object-[center_14%]';
+import capiMascot from '@/assets/capi-mascot.png';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
@@ -81,9 +78,9 @@ export function PlatformAssistant() {
         >
           <div className="flex items-center gap-3 border-b border-cream-200 bg-gradient-to-r from-ink-900 to-ink-700 px-4 py-3 text-white">
             <img
-              src={ownerPhoto}
+              src={capiMascot}
               alt=""
-              className={cn('h-10 w-10 rounded-full scale-125 ring-2 ring-brand-gold/70', CAPY_FACE)}
+              className="h-10 w-10 rounded-full bg-white object-contain p-0.5 ring-2 ring-brand-gold/70"
             />
             <div className="min-w-0 flex-1">
               <p className="font-ds-display text-base font-medium leading-tight">Capí</p>
@@ -115,9 +112,9 @@ export function PlatformAssistant() {
               >
                 {m.role === 'assistant' && (
                   <img
-                    src={ownerPhoto}
+                    src={capiMascot}
                     alt=""
-                    className={cn('mt-0.5 h-7 w-7 flex-shrink-0 rounded-full scale-125', CAPY_FACE)}
+                    className="mt-0.5 h-7 w-7 flex-shrink-0 rounded-full bg-white object-contain p-0.5"
                   />
                 )}
                 <div
@@ -134,7 +131,7 @@ export function PlatformAssistant() {
             ))}
             {loading && (
               <div className="flex items-center gap-2 text-xs text-ink-300">
-                <img src={ownerPhoto} alt="" className={cn('h-7 w-7 rounded-full scale-125 opacity-80', CAPY_FACE)} />
+                <img src={capiMascot} alt="" className="h-7 w-7 rounded-full bg-white object-contain p-0.5 opacity-80" />
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-brand-gold" />
                 Consultando o sistema…
               </div>
@@ -189,7 +186,7 @@ export function PlatformAssistant() {
         )}
         aria-label={open ? 'Fechar assistente Capí' : 'Abrir assistente Capí'}
       >
-        <img src={ownerPhoto} alt="Capí" className={cn('h-full w-full scale-125', CAPY_FACE)} />
+        <img src={capiMascot} alt="Capí" className="h-full w-full bg-white object-contain p-1" />
         <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-white bg-semantic-success" />
       </button>
     </div>

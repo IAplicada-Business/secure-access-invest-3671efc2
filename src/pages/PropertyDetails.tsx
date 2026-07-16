@@ -5,7 +5,6 @@ import { Property, Setting } from '@/types/database';
 import { formatCurrency, calculateAppreciation } from '@/lib/formatCurrency';
 import { DEFAULT_WHATSAPP } from '@/hooks/useWhatsappNumber';
 import { Logo } from '@/components/Logo';
-import { BrandMascot } from '@/components/BrandMascot';
 import { Button } from '@/components/ui/button';
 import { 
   ArrowLeft, 
@@ -284,7 +283,6 @@ export default function PropertyDetails() {
               <span className="hidden sm:inline">Voltar ao catálogo</span>
             </Link>
             <div className="flex items-center gap-3">
-              <BrandMascot size="sm" />
               <Logo tone="gold" className="h-10 w-auto sm:h-12" />
             </div>
           </div>

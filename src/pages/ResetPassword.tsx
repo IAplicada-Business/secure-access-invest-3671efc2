@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2, Lock, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
-import ownerPhoto from '@/assets/owner-photo.jpg';
+import capiMascot from '@/assets/capi-mascot.png';
 import { Logo } from '@/components/Logo';
 
 export default function ResetPassword() {
@@ -62,14 +62,20 @@ export default function ResetPassword() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
-      <div className="absolute inset-0">
-        <img
-          src={ownerPhoto}
-          alt=""
-          className="h-full w-full object-cover object-[center_20%]"
+      <div className="absolute inset-0 bg-ink-900">
+        <div
+          className="absolute inset-0 opacity-50"
+          style={{
+            background:
+              'radial-gradient(circle at 50% 28%, hsl(40 45% 58% / 0.32) 0%, transparent 52%)',
+          }}
         />
-        <div className="absolute inset-0 bg-ink-900/55" />
-        <div className="absolute inset-0 bg-gradient-to-t from-ink-900/80 via-ink-900/35 to-ink-900/40" />
+        <img
+          src={capiMascot}
+          alt=""
+          className="pointer-events-none absolute left-1/2 top-[8%] h-[min(52vh,420px)] w-auto -translate-x-1/2 object-contain opacity-[0.18]"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-ink-900 via-ink-900/55 to-ink-900/30" />
       </div>
 
       <motion.div
@@ -78,6 +84,13 @@ export default function ResetPassword() {
         transition={{ duration: 0.55, ease: [0.22, 0.61, 0.36, 1] }}
         className="relative z-10 w-full max-w-[400px]"
       >
+        <div className="mb-5 flex justify-center">
+          <img
+            src={capiMascot}
+            alt="Capí — mascote Tijolo em Capital"
+            className="h-28 w-28 object-contain drop-shadow-[0_12px_28px_rgba(0,0,0,0.45)] sm:h-32 sm:w-32"
+          />
+        </div>
         <div className="rounded-2xl border border-white/15 bg-black/45 p-8 shadow-[0_24px_48px_-16px_rgba(0,0,0,0.55)] backdrop-blur-md sm:p-9">
           <div className="mb-8 text-center">
             <div className="flex justify-center">

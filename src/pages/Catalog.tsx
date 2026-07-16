@@ -4,7 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Property, AccessLink } from '@/types/database';
 import { PropertyCard } from '@/components/PropertyCard';
 import { Logo } from '@/components/Logo';
-import { BrandMascot } from '@/components/BrandMascot';
 import { AlertCircle, Building2, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -181,7 +180,6 @@ export default function Catalog() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <BrandMascot size="md" />
               <Logo tone="gold" className="h-11 w-auto sm:h-12" />
             </div>
             <div className="min-w-0 text-right">
@@ -195,9 +193,6 @@ export default function Catalog() {
       {/* Hero Section */}
       <section className="relative bg-gradient-to-b from-secondary via-background to-background py-14 md:py-20">
         <div className="container relative mx-auto px-4 text-center">
-          <div className="mx-auto mb-6 flex justify-center">
-            <BrandMascot size="lg" />
-          </div>
           <h1 className="mb-4 animate-slide-up font-display text-3xl font-bold text-foreground md:text-4xl lg:text-5xl">
             Oportunidades <span className="text-primary">Exclusivas</span> de Investimento
           </h1>
@@ -315,7 +310,6 @@ export default function Catalog() {
       <footer className="border-t border-border bg-charcoal py-8">
         <div className="container mx-auto px-4 text-center">
           <div className="mb-4 flex items-center justify-center gap-3">
-            <BrandMascot size="sm" className="ring-offset-charcoal" />
             <Logo tone="gold" className="h-8" />
           </div>
           <p className="text-sm text-white/70">
