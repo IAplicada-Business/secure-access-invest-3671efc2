@@ -38,7 +38,8 @@ const riskLevels: { value: RiskLevel; label: string }[] = [
 export default function PropertyForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const isEditing = id && id !== 'novo';
+  // Rota explícita /imoveis/novo não passa :id; /imoveis/:id usa "novo" ou o UUID.
+  const isEditing = Boolean(id && id !== 'novo');
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);

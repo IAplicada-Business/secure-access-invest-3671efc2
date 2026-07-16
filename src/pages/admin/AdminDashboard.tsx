@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { Button } from '@/components/ui/button';
@@ -99,6 +99,7 @@ function greeting(): string {
 }
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [chartRange, setChartRange] = useState<'7' | '30'>('7');
@@ -458,27 +459,30 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6 font-ds-body">
-      <Tabs defaultValue="estrategico" className="space-y-0">
-        <div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div className="space-y-1">
-              <h1 className="font-ds-display text-2xl font-semibold tracking-[-0.01em] text-ink-900 sm:text-3xl">
-                {greeting()}
-              </h1>
-              <p className="text-sm text-ink-500">
-                Visão do negócio em três lentes — estratégico, operacional e engajamento.
-              </p>
-            </div>
-            <Button asChild>
-              <Link to="/admin/imoveis/novo"><Plus className="mr-2 h-4 w-4" /> Novo imóvel</Link>
-            </Button>
-          </div>
-          <TabsList>
-            <TabsTrigger value="estrategico">Estratégico</TabsTrigger>
-            <TabsTrigger value="operacional">Operacional</TabsTrigger>
-            <TabsTrigger value="engajamento">Engajamento</TabsTrigger>
-          </TabsList>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="font-ds-display text-2xl font-semibold tracking-[-0.01em] text-ink-900 sm:text-3xl">
+            {greeting()}
+          </h1>
+          <p className="text-sm text-ink-500">
+            Visão do negócio em três lentes — estratégico, operacional e engajamento.
+          </p>
         </div>
+        <Button
+          type="button"
+          className="relative z-10 shrink-0"
+          onClick={() => navigate('/admin/imoveis/novo')}
+        >
+          <Plus className="mr-2 h-4 w-4" /> Novo imóvel
+        </Button>
+      </div>
+
+      <Tabs defaultValue="estrategico" className="space-y-0">
+        <TabsList>
+          <TabsTrigger value="estrategico">Estratégico</TabsTrigger>
+          <TabsTrigger value="operacional">Operacional</TabsTrigger>
+          <TabsTrigger value="engajamento">Engajamento</TabsTrigger>
+        </TabsList>
 
         {/* ——— ESTRATÉGICO ——— */}
         <TabsContent value="estrategico" className="mt-0 space-y-6">

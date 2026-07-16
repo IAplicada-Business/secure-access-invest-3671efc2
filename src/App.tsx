@@ -61,6 +61,7 @@ const App = () => (
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
             <Route path="imoveis" element={<AdminProperties />} />
+            <Route path="imoveis/novo" element={<PropertyForm />} />
             <Route path="imoveis/:id" element={<PropertyForm />} />
             <Route path="links" element={<AdminLinks />} />
             <Route path="relatorios" element={<AdminReports />} />

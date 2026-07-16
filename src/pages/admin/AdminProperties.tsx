@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Property, PropertyStatus } from '@/types/database';
 import { formatCurrency } from '@/lib/formatCurrency';
@@ -62,6 +62,7 @@ const statusColors: Record<PropertyStatus, string> = {
 };
 
 export default function AdminProperties() {
+  const navigate = useNavigate();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -138,11 +139,9 @@ export default function AdminProperties() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="font-display text-2xl font-bold">Imóveis</h1>
-        <Button asChild>
-          <Link to="/admin/imoveis/novo">
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Imóvel
-          </Link>
+        <Button type="button" onClick={() => navigate('/admin/imoveis/novo')}>
+          <Plus className="mr-2 h-4 w-4" />
+          Novo Imóvel
         </Button>
       </div>
 
