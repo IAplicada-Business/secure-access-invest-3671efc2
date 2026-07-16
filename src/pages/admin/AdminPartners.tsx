@@ -9,9 +9,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from '@/components/ui/dialog';
-import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
@@ -20,7 +17,7 @@ import {
 import { Plus, Loader2, MessageCircle, Search, Eye, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatCurrency';
-import { EmptyState } from '@/components/ui-system';
+import { EmptyState, Drawer } from '@/components/ui-system';
 
 const TYPE_LABELS: Record<PartnerType, string> = {
   imobiliaria: 'Imobiliária',
@@ -52,7 +49,7 @@ export default function AdminPartners() {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [agencies, setAgencies] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
@@ -73,6 +70,16 @@ export default function AdminPartners() {
 
   useEffect(() => { loadPartners(); }, []);
 
+  function openDrawer() {
+    setForm(defaultForm);
+    setDrawerOpen(true);
+  }
+
+  function handleDrawerChange(open: boolean) {
+    setDrawerOpen(open);
+    if (!open) setForm(defaultForm);
+  }
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -91,7 +98,7 @@ export default function AdminPartners() {
     });
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
     toast.success('Parceiro cadastrado!');
-    setDialogOpen(false);
+    setDrawerOpen(false);
     setForm(defaultForm);
     setSaving(false);
     loadPartners();
@@ -113,7 +120,7 @@ export default function AdminPartners() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="font-display text-2xl font-bold">Parceiros</h1>
-        <Button onClick={() => setDialogOpen(true)}>
+        <Button onClick={openDrawer}>
           <Plus className="mr-2 h-4 w-4" />
           Novo Parceiro
         </Button>
@@ -167,7 +174,7 @@ export default function AdminPartners() {
               {loading ? (
                 <TableRow><TableCell colSpan={6} className="text-center py-8"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="p-0"><EmptyState icon={Users} title="Nenhum parceiro encontrado" body="Cadastre um parceiro ou ajuste os filtros." /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="p-0"><EmptyState icon={Users} title="Nenhum parceiro encontrado" body="Cadastre um parceiro ou ajuste os filtros." action={<Button onClick={openDrawer}><Plus className="mr-2 h-4 w-4" /> Novo Parceiro</Button>} /></TableCell></TableRow>
               ) : filtered.map((partner) => (
                 <TableRow key={partner.id}>
                   <TableCell className="font-medium">{partner.name}</TableCell>
@@ -193,16 +200,21 @@ export default function AdminPartners() {
         </CardContent>
       </Card>
 
-      {/* Create Partner Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Novo Parceiro</DialogTitle></DialogHeader>
-          <form onSubmit={handleCreate} className="space-y-4">
+      <Drawer
+        open={drawerOpen}
+        onOpenChange={handleDrawerChange}
+        title="Novo parceiro"
+        description="Cadastre imobiliárias, corretores e outros parceiros da rede."
+        className="w-full overflow-y-auto sm:max-w-md"
+      >
+        <form onSubmit={handleCreate} className="space-y-5 pb-4">
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-300">Identificação</h3>
             <div className="space-y-2">
               <Label>Nome completo / Razão social *</Label>
               <Input value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} required />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Tipo *</Label>
                 <Select value={form.type} onValueChange={(v) => setForm(p => ({ ...p, type: v as PartnerType, parent_partner_id: '' }))}>
@@ -215,22 +227,45 @@ export default function AdminPartners() {
                 </Select>
               </div>
               <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={form.status} onValueChange={(v) => setForm(p => ({ ...p, status: v as PartnerStatus }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="inactive">Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-300">Contato</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
                 <Label>Telefone/WhatsApp *</Label>
                 <Input value={form.phone} onChange={(e) => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="5511999999999" required />
               </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>E-mail</Label>
                 <Input type="email" value={form.email} onChange={(e) => setForm(p => ({ ...p, email: e.target.value }))} />
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>CRECI</Label>
                 <Input value={form.creci} onChange={(e) => setForm(p => ({ ...p, creci: e.target.value }))} />
               </div>
+              <div className="space-y-2">
+                <Label>Comissão padrão (%)</Label>
+                <Input type="number" step="0.1" value={form.commission_rate} onChange={(e) => setForm(p => ({ ...p, commission_rate: e.target.value }))} placeholder="10" />
+              </div>
             </div>
+          </section>
 
-            {form.type === 'corretor_autonomo' && (
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-300">Vínculo e presença</h3>
+            {form.type === 'corretor_autonomo' ? (
               <div className="space-y-2">
                 <Label>Imobiliária vinculada</Label>
                 <Select value={form.parent_partner_id || 'none'} onValueChange={(v) => setForm(p => ({ ...p, parent_partner_id: v === 'none' ? '' : v }))}>
@@ -241,47 +276,28 @@ export default function AdminPartners() {
                   </SelectContent>
                 </Select>
               </div>
-            )}
-
-            {form.type !== 'corretor_autonomo' && (
+            ) : (
               <div className="space-y-2">
                 <Label>Imobiliária vinculada (texto livre)</Label>
                 <Input value={form.affiliated_agency} onChange={(e) => setForm(p => ({ ...p, affiliated_agency: e.target.value }))} />
               </div>
             )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Site / Portfólio</Label>
-                <Input value={form.website} onChange={(e) => setForm(p => ({ ...p, website: e.target.value }))} placeholder="https://..." />
-              </div>
-              <div className="space-y-2">
-                <Label>Comissão padrão (%)</Label>
-                <Input type="number" step="0.1" value={form.commission_rate} onChange={(e) => setForm(p => ({ ...p, commission_rate: e.target.value }))} placeholder="10" />
-              </div>
-            </div>
-
             <div className="space-y-2">
-              <Label>Status</Label>
-              <Select value={form.status} onValueChange={(v) => setForm(p => ({ ...p, status: v as PartnerStatus }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Ativo</SelectItem>
-                  <SelectItem value="inactive">Inativo</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Site / Portfólio</Label>
+              <Input value={form.website} onChange={(e) => setForm(p => ({ ...p, website: e.target.value }))} placeholder="https://..." />
             </div>
             <div className="space-y-2">
               <Label>Observações</Label>
               <Textarea value={form.notes} onChange={(e) => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="Contexto do relacionamento, condições comerciais..." rows={3} />
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Cadastrar</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+          </section>
+
+          <div className="flex justify-end gap-2 border-t border-cream-200 pt-4">
+            <Button type="button" variant="outline" onClick={() => handleDrawerChange(false)}>Cancelar</Button>
+            <Button type="submit" disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Cadastrar</Button>
+          </div>
+        </form>
+      </Drawer>
     </div>
   );
 }

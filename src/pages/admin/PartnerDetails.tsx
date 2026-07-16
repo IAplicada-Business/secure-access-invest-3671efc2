@@ -13,12 +13,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from '@/components/ui/dialog';
-import {
   ArrowLeft, MessageCircle, Pencil, Loader2, Clock, Plus, Eye, Users, DollarSign
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Drawer } from '@/components/ui-system';
 
 const TYPE_LABELS: Record<PartnerType, string> = {
   imobiliaria: 'Imobiliária', corretor_autonomo: 'Corretor Autônomo',
@@ -313,16 +311,21 @@ export default function PartnerDetails() {
         </TabsContent>
       </Tabs>
 
-      {/* Edit Dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Editar Parceiro</DialogTitle></DialogHeader>
-          <form onSubmit={handleEdit} className="space-y-4">
+      <Drawer
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        title="Editar parceiro"
+        description="Atualize os dados do parceiro."
+        className="w-full overflow-y-auto sm:max-w-md"
+      >
+        <form onSubmit={handleEdit} className="space-y-5 pb-4">
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-300">Identificação</h3>
             <div className="space-y-2">
               <Label>Nome *</Label>
               <Input value={editForm.name || ''} onChange={(e) => setEditForm(p => ({ ...p, name: e.target.value }))} required />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Tipo</Label>
                 <Select value={editForm.type} onValueChange={(v) => setEditForm(p => ({ ...p, type: v as PartnerType }))}>
@@ -345,7 +348,11 @@ export default function PartnerDetails() {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          </section>
+
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-300">Contato</h3>
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Telefone *</Label>
                 <Input value={editForm.phone || ''} onChange={(e) => setEditForm(p => ({ ...p, phone: e.target.value }))} required />
@@ -355,7 +362,7 @@ export default function PartnerDetails() {
                 <Input type="email" value={editForm.email || ''} onChange={(e) => setEditForm(p => ({ ...p, email: e.target.value }))} />
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>CRECI</Label>
                 <Input value={editForm.creci || ''} onChange={(e) => setEditForm(p => ({ ...p, creci: e.target.value }))} />
@@ -365,6 +372,10 @@ export default function PartnerDetails() {
                 <Input type="number" step="0.1" value={editForm.commission_rate ?? ''} onChange={(e) => setEditForm(p => ({ ...p, commission_rate: e.target.value ? parseFloat(e.target.value) : null }))} />
               </div>
             </div>
+          </section>
+
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-300">Vínculo e presença</h3>
             {editForm.type === 'corretor_autonomo' && (
               <div className="space-y-2">
                 <Label>Imobiliária vinculada</Label>
@@ -385,13 +396,14 @@ export default function PartnerDetails() {
               <Label>Observações</Label>
               <Textarea value={editForm.notes || ''} onChange={(e) => setEditForm(p => ({ ...p, notes: e.target.value }))} rows={3} />
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+          </section>
+
+          <div className="flex justify-end gap-2 border-t border-cream-200 pt-4">
+            <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
+            <Button type="submit" disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar</Button>
+          </div>
+        </form>
+      </Drawer>
     </div>
   );
 }
