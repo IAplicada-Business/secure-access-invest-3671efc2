@@ -13,10 +13,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  ArrowLeft, MessageCircle, Pencil, Loader2, Clock, Plus, Eye, Users, DollarSign
+  ArrowLeft, MessageCircle, Pencil, Loader2, Clock, Plus, Eye, Users, DollarSign, ImagePlus
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Drawer } from '@/components/ui-system';
+import { Drawer, PartnerAvatar } from '@/components/ui-system';
 
 const TYPE_LABELS: Record<PartnerType, string> = {
   imobiliaria: 'Imobiliária', corretor_autonomo: 'Corretor Autônomo',
@@ -26,6 +26,16 @@ const TYPE_LABELS: Record<PartnerType, string> = {
 const STATUS_LABELS: Record<PartnerStatus, string> = { active: 'Ativo', inactive: 'Inativo' };
 const INTERACTION_LABELS: Record<InteractionType, string> = { meeting: 'Reunião', whatsapp: 'WhatsApp', email: 'E-mail', call: 'Ligação', other: 'Outro' };
 
+const LOGO_BUCKET = 'partners-logos';
+const LOGO_MAX_SIZE_BYTES = 500 * 1024;
+const LOGO_ACCEPT = 'image/png,image/jpeg,image/svg+xml';
+const LOGO_TYPES = new Set(['image/png', 'image/jpeg', 'image/svg+xml']);
+
+function buildLogoPath(partnerId: string, file: File) {
+  const extension = file.name.split('.').pop()?.toLowerCase() || 'png';
+  return `${partnerId}/${Date.now()}.${extension}`;
+}
+
 export default function PartnerDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -33,6 +43,8 @@ export default function PartnerDetails() {
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Partner>>({});
+  const [editLogoFile, setEditLogoFile] = useState<File | null>(null);
+  const [editLogoPreview, setEditLogoPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Sub-partners (corretores vinculados)
@@ -86,9 +98,73 @@ export default function PartnerDetails() {
     loadAgencies();
   }, [id]);
 
+  function clearEditLogoSelection() {
+    setEditLogoFile(null);
+    setEditLogoPreview(prev => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  }
+
+  function openEditDrawer() {
+    if (!partner) return;
+    clearEditLogoSelection();
+    setEditForm(partner);
+    setEditOpen(true);
+  }
+
+  function handleEditDrawerChange(open: boolean) {
+    setEditOpen(open);
+    if (!open) clearEditLogoSelection();
+  }
+
+  function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) {
+      clearEditLogoSelection();
+      return;
+    }
+
+    if (!LOGO_TYPES.has(file.type)) {
+      toast.error('Envie um logo em PNG, JPG ou SVG.');
+      e.target.value = '';
+      return;
+    }
+
+    if (file.size > LOGO_MAX_SIZE_BYTES) {
+      toast.error('O logo deve ter no máximo 500KB.');
+      e.target.value = '';
+      return;
+    }
+
+    setEditLogoFile(file);
+    setEditLogoPreview(prev => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
+  }
+
   async function handleEdit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
+    let nextLogoPath = editForm.logo_path ?? null;
+
+    if (editLogoFile) {
+      nextLogoPath = buildLogoPath(id!, editLogoFile);
+      const { error: uploadError } = await supabase.storage
+        .from(LOGO_BUCKET)
+        .upload(nextLogoPath, editLogoFile, {
+          contentType: editLogoFile.type,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        toast.error('Erro no upload do logo: ' + uploadError.message);
+        setSaving(false);
+        return;
+      }
+    }
+
     const { error } = await supabase.from('partners').update({
       name: editForm.name,
       type: editForm.type,
@@ -101,10 +177,20 @@ export default function PartnerDetails() {
       notes: editForm.notes || null,
       status: editForm.status,
       parent_partner_id: editForm.parent_partner_id || null,
+      logo_path: nextLogoPath,
     }).eq('id', id!);
-    if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
+    if (error) {
+      if (editLogoFile && nextLogoPath) await supabase.storage.from(LOGO_BUCKET).remove([nextLogoPath]);
+      toast.error('Erro: ' + error.message);
+      setSaving(false);
+      return;
+    }
+    if (editLogoFile && partner?.logo_path && partner.logo_path !== nextLogoPath) {
+      await supabase.storage.from(LOGO_BUCKET).remove([partner.logo_path]);
+    }
     toast.success('Parceiro atualizado!');
     setEditOpen(false);
+    clearEditLogoSelection();
     setSaving(false);
     loadPartner();
   }
@@ -140,17 +226,20 @@ export default function PartnerDetails() {
       <Tabs defaultValue="summary" className="space-y-0">
         <div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1">
-              <h1 className="font-ds-display text-2xl font-semibold tracking-[-0.01em] text-ink-900 sm:text-3xl">
-                {partner.name}
-              </h1>
-              <p className="text-sm text-ink-500">
-                {TYPE_LABELS[partner.type]}
-                {partner.status === 'active' ? ' · Ativo' : ' · Inativo'}
-              </p>
+            <div className="flex min-w-0 items-center gap-3">
+              <PartnerAvatar partner={partner} size={56} />
+              <div className="min-w-0 space-y-1">
+                <h1 className="truncate font-ds-display text-2xl font-semibold tracking-[-0.01em] text-ink-900 sm:text-3xl">
+                  {partner.name}
+                </h1>
+                <p className="text-sm text-ink-500">
+                  {TYPE_LABELS[partner.type]}
+                  {partner.status === 'active' ? ' · Ativo' : ' · Inativo'}
+                </p>
+              </div>
             </div>
             <div className="flex flex-shrink-0 flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={() => { setEditForm(partner); setEditOpen(true); }}>
+              <Button variant="outline" size="sm" onClick={openEditDrawer}>
                 <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
               </Button>
               <Button size="sm" onClick={() => { const msg = encodeURIComponent(`Olá ${partner.name}!`); window.open(`https://wa.me/${partner.phone}?text=${msg}`, '_blank'); }}>
@@ -313,7 +402,7 @@ export default function PartnerDetails() {
 
       <Drawer
         open={editOpen}
-        onOpenChange={setEditOpen}
+        onOpenChange={handleEditDrawerChange}
         title="Editar parceiro"
         description="Atualize os dados do parceiro."
         className="w-full overflow-y-auto sm:max-w-md"
@@ -324,6 +413,25 @@ export default function PartnerDetails() {
             <div className="space-y-2">
               <Label>Nome *</Label>
               <Input value={editForm.name || ''} onChange={(e) => setEditForm(p => ({ ...p, name: e.target.value }))} required />
+            </div>
+            <div className="space-y-2">
+              <Label>Logo</Label>
+              <div className="flex items-center gap-3 rounded-ds-lg border border-cream-200 bg-cream-50 p-3">
+                {editLogoPreview ? (
+                  <span className="inline-flex h-12 w-12 shrink-0 overflow-hidden rounded-ds-pill border border-brand-gold/25 bg-white">
+                    <img src={editLogoPreview} alt="Prévia do logo" className="h-full w-full object-cover" />
+                  </span>
+                ) : (
+                  <PartnerAvatar name={editForm.name || partner.name} logoPath={editForm.logo_path ?? partner.logo_path} size={48} />
+                )}
+                <div className="min-w-0 flex-1">
+                  <Input type="file" accept={LOGO_ACCEPT} onChange={handleLogoChange} />
+                  <p className="mt-1 flex items-center gap-1 text-[11px] text-ink-300">
+                    <ImagePlus className="h-3 w-3" />
+                    PNG, JPG ou SVG até 500KB. Sugerido: 400x400px.
+                  </p>
+                </div>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { TrendingDown, TrendingUp, Clock, ArrowRight, Wallet, Sparkles } from 'lucide-react';
+import { PartnerAvatar } from '@/components/ui-system';
 import {
   Area,
   AreaChart,
@@ -23,7 +24,9 @@ interface MonthPoint {
 }
 
 interface RankItem {
+  id: string;
   name: string;
+  logo_path: string | null;
   value: number;
 }
 
@@ -76,7 +79,7 @@ export function FinanceOverview() {
       supabase.from('expenses').select('amount, expense_date').gte('expense_date', twelveMonthsAgo),
       supabase.from('revenues').select('amount, service_type'),
       supabase.from('revenues').select('amount, partner_id').not('partner_id', 'is', null),
-      supabase.from('partners').select('id, name, parent_partner_id'),
+      supabase.from('partners').select('id, name, parent_partner_id, logo_path'),
     ]);
 
     setCurrentRevenue(curRev?.reduce((s, r) => s + Number(r.amount), 0) || 0);
@@ -122,17 +125,23 @@ export function FinanceOverview() {
 
     if (revByPartner?.length) {
       const pMap = new Map((allPartners ?? []).map(p => [p.id, p]));
-      const agg: Record<string, number> = {};
+      const agg = new Map<string, RankItem>();
       revByPartner.forEach(r => {
         const p = r.partner_id ? pMap.get(r.partner_id) : null;
         if (!p) return;
         const parent = p.parent_partner_id ? pMap.get(p.parent_partner_id) : null;
-        const key = parent?.name ?? p.name;
-        agg[key] = (agg[key] || 0) + Number(r.amount);
+        const rankingPartner = parent ?? p;
+        const current = agg.get(rankingPartner.id) ?? {
+          id: rankingPartner.id,
+          name: rankingPartner.name,
+          logo_path: rankingPartner.logo_path,
+          value: 0,
+        };
+        current.value += Number(r.amount);
+        agg.set(rankingPartner.id, current);
       });
       setImobiliariaRanking(
-        Object.entries(agg)
-          .map(([name, value]) => ({ name, value }))
+        [...agg.values()]
           .sort((a, b) => b.value - a.value)
           .slice(0, 5),
       );
@@ -397,12 +406,15 @@ export function FinanceOverview() {
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {imobiliariaRanking.map((r, idx) => (
-              <div key={r.name} className="rounded-ds-lg border border-cream-200 px-3 py-3">
+              <div key={r.id} className="rounded-ds-lg border border-cream-200 px-3 py-3">
                 <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <span className="truncate text-sm font-medium text-ink-900">
-                    <span className="mr-1.5 font-ds-mono text-ink-300">#{idx + 1}</span>
-                    {r.name}
-                  </span>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <PartnerAvatar partner={r} size={32} />
+                    <span className="truncate text-sm font-medium text-ink-900">
+                      <span className="mr-1.5 font-ds-mono text-ink-300">#{idx + 1}</span>
+                      {r.name}
+                    </span>
+                  </div>
                   <span className="flex-shrink-0 font-ds-mono text-xs text-ink-700">{formatCurrency(r.value)}</span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-cream-100">
