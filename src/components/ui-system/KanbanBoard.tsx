@@ -24,6 +24,7 @@ export interface KanbanCard {
   id: string;
   columnId: string;
   content: ReactNode;
+  className?: string;
 }
 
 interface KanbanBoardProps {
@@ -56,6 +57,7 @@ function DraggableCard({ card }: { card: KanbanCard }) {
       className={cn(
         'cursor-grab rounded-ds-lg border border-cream-200 bg-white p-3 shadow-ds-sm transition-shadow duration-[240ms]',
         'hover:shadow-ds-md active:cursor-grabbing',
+        card.className,
         isDragging && 'opacity-50',
       )}
     >

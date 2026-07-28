@@ -76,6 +76,9 @@ export default function AdminDadosIniciais() {
       service_type: rForm.service_type as never,
       amount: Number(rForm.amount),
       received_at: rForm.received_at,
+      due_date: rForm.received_at,
+      vencimento: rForm.received_at,
+      status: 'aguardando',
       partner_id: rForm.partner_id || null,
       notes: rForm.notes || null,
     });

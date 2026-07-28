@@ -17,6 +17,8 @@ export type GeneratedDocumentStatus = 'rascunho' | 'enviado' | 'assinado' | 'arq
 export type ServiceType = 'regularizacao' | 'venda_plataforma' | 'consultoria' | 'outro';
 export type ExpenseCategory = 'salario' | 'comissao_paga' | 'fornecedor' | 'escritorio' | 'marketing' | 'outro';
 export type CommissionStatus = 'pending' | 'paid';
+export type RevenueStatus = 'aguardando' | 'pago';
+export type RevenueKanbanStatus = RevenueStatus | 'em_atraso';
 
 // --- Core entities ---
 
@@ -67,6 +69,9 @@ export interface Client {
   status: ClientStatus;
   notes: string | null;
   created_at: string;
+  valor_contrato: number | null;
+  data_inicio_contrato: string | null;
+  data_fim_contrato: string | null;
 }
 
 export interface Partner {
@@ -82,6 +87,7 @@ export interface Partner {
   notes: string | null;
   status: PartnerStatus;
   parent_partner_id: string | null;
+  logo_path: string | null;
   created_at: string;
 }
 
@@ -196,6 +202,9 @@ export interface Revenue {
   received_at: string;
   notes: string | null;
   created_at: string;
+  status: RevenueStatus;
+  vencimento: string | null;
+  status_kanban?: RevenueKanbanStatus | null;
   payment_type?: string | null;
   category?: string | null;
   entrada?: number | null;
