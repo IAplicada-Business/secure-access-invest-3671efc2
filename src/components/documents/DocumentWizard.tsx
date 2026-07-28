@@ -11,6 +11,11 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, ArrowLeft, ArrowRight, FileText, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  buildTemplateVariablesData,
+  isHtmlTemplateContent,
+  renderTemplateContent,
+} from '@/lib/documentTemplates';
 
 interface EditingDoc {
   id: string;
@@ -45,6 +50,9 @@ interface Client {
   phone: string;
   email: string | null;
   cpf_cnpj: string | null;
+  cnpj: string | null;
+  endereco: string | null;
+  cidade: string | null;
 }
 
 export default function DocumentWizard({ type, onComplete, onCancel, preselectedClientId, preselectedProcessId, preselectedScope, editingDoc }: Props) {
@@ -71,7 +79,7 @@ export default function DocumentWizard({ type, onComplete, onCancel, preselected
 
   async function loadData() {
     const [{ data: clientsData }, { data: templatesData }] = await Promise.all([
-      supabase.from('clients').select('id, name, phone, email, cpf_cnpj').order('name'),
+      supabase.from('clients').select('id, name, phone, email, cpf_cnpj, cnpj, endereco, cidade').order('name'),
       supabase.from('document_templates').select('*').eq('status', 'ativo').eq('type', type).order('name'),
     ]);
     setClients((clientsData || []) as Client[]);
@@ -92,15 +100,12 @@ export default function DocumentWizard({ type, onComplete, onCancel, preselected
     setSelectedTemplateId(templateId);
     const tmpl = templates.find(t => t.id === templateId);
     if (tmpl) {
-      // Pre-populate auto variables
-      const autoVars: Record<string, string> = {};
-      if (selectedClient) {
-        autoVars['nome_cliente'] = selectedClient.name;
-        autoVars['telefone_cliente'] = selectedClient.phone;
-        autoVars['email_cliente'] = selectedClient.email || '';
-        autoVars['cpf_cnpj_cliente'] = selectedClient.cpf_cnpj || '';
-      }
-      autoVars['data'] = new Date().toLocaleDateString('pt-BR');
+      const autoVars = buildTemplateVariablesData(
+        tmpl.variables,
+        selectedClient,
+        editingDoc?.variables_data || {},
+        preselectedScope ? { escopo_servico: preselectedScope, servicos_contratados: preselectedScope } : {},
+      );
       if (preselectedScope) {
         autoVars['escopo_servico'] = preselectedScope;
       }
@@ -130,12 +135,8 @@ export default function DocumentWizard({ type, onComplete, onCancel, preselected
       }
     }
 
-    // Generate preview
-    let content = selectedTemplate?.content || '';
-    for (const [key, value] of Object.entries(variablesData)) {
-      const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-      content = content.replace(regex, value || `[${key}]`);
-    }
+    // Generate preview. Missing values intentionally render blank.
+    const content = renderTemplateContent(selectedTemplate?.content || '', variablesData);
     setPreviewContent(content);
     setStep(3);
   }
@@ -367,9 +368,16 @@ export default function DocumentWizard({ type, onComplete, onCancel, preselected
           <Card className="border-primary/20">
             <CardContent className="p-6">
               <h3 className="font-display text-xl font-bold mb-4">{title}</h3>
-              <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                {previewContent}
-              </div>
+              {isHtmlTemplateContent(previewContent) ? (
+                <div
+                  className="prose prose-sm max-w-none leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: previewContent }}
+                />
+              ) : (
+                <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                  {previewContent}
+                </div>
+              )}
             </CardContent>
           </Card>
 

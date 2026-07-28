@@ -18,6 +18,7 @@ import { EmptyState } from '@/components/ui-system';
 import { toast } from 'sonner';
 import DocumentWizard from '@/components/documents/DocumentWizard';
 import SignContractDialog from '@/components/documents/SignContractDialog';
+import { isHtmlTemplateContent, renderTemplateContent } from '@/lib/documentTemplates';
 
 interface GeneratedDoc {
   id: string;
@@ -48,23 +49,31 @@ function PreviewContent({ doc }: { doc: GeneratedDoc }) {
 
   useEffect(() => {
     async function load() {
-      if (!doc.template_id) {
-        setContent(null);
-        setLoading(false);
-        return;
+      let data: { content: string } | null = null;
+
+      if (doc.template_id) {
+        const { data: templateById } = await supabase
+          .from('document_templates')
+          .select('content')
+          .eq('id', doc.template_id)
+          .maybeSingle();
+        data = templateById;
       }
-      const { data } = await supabase
-        .from('document_templates')
-        .select('content')
-        .eq('id', doc.template_id)
-        .single();
+
+      if (!data?.content) {
+        const { data: activeTemplate } = await supabase
+          .from('document_templates')
+          .select('content')
+          .eq('type', doc.type)
+          .eq('status', 'ativo')
+          .order('name')
+          .limit(1)
+          .maybeSingle();
+        data = activeTemplate;
+      }
+
       if (data?.content) {
-        let processed = data.content;
-        const vars = doc.variables_data || {};
-        for (const [key, value] of Object.entries(vars)) {
-          processed = processed.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value || '');
-        }
-        setContent(processed);
+        setContent(renderTemplateContent(data.content, doc.variables_data || {}));
       }
       setLoading(false);
     }
@@ -93,15 +102,22 @@ function PreviewContent({ doc }: { doc: GeneratedDoc }) {
     <div className="space-y-4">
       <h2 className="font-display text-xl font-bold">{doc.title}</h2>
       <div className="border rounded-lg p-6 bg-white">
-        <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-          {content.split('\n').map((line, i) => {
-            const isBold = line.startsWith('**') && line.endsWith('**');
-            const text = isBold ? line.slice(2, -2) : line;
-            if (isBold) return <p key={i} className="font-bold text-base mt-4 mb-1 border-b border-[hsl(var(--primary))] pb-1">{text}</p>;
-            if (!line.trim()) return <br key={i} />;
-            return <p key={i} className="mb-1">{text}</p>;
-          })}
-        </div>
+        {isHtmlTemplateContent(content) ? (
+          <div
+            className="prose prose-sm max-w-none leading-relaxed text-foreground"
+            dangerouslySetInnerHTML={{ __html: content }}
+          />
+        ) : (
+          <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+            {content.split('\n').map((line, i) => {
+              const isBold = line.startsWith('**') && line.endsWith('**');
+              const text = isBold ? line.slice(2, -2) : line;
+              if (isBold) return <p key={i} className="font-bold text-base mt-4 mb-1 border-b border-[hsl(var(--primary))] pb-1">{text}</p>;
+              if (!line.trim()) return <br key={i} />;
+              return <p key={i} className="mb-1">{text}</p>;
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
