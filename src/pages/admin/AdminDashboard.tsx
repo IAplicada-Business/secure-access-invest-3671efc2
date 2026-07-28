@@ -33,7 +33,7 @@ import {
 import { cn } from '@/lib/utils';
 import { CRM_STAGE_LABELS, contactRelation } from '@/lib/contacts';
 import { tokens } from '@/lib/design-tokens';
-import { EmptyState, StatCard } from '@/components/ui-system';
+import { EmptyState, PartnerAvatar, StatCard } from '@/components/ui-system';
 
 interface DashboardStats {
   totalProperties: number;
@@ -75,6 +75,7 @@ interface DashboardStats {
   closedThisMonth: number;
   contactsByWeek: Array<{ week: string; label: string; leads: number; clients: number }>;
   regByStatus: Array<{ status: string; label: string; count: number }>;
+  topPartners: Array<{ id: string; name: string; logo_path: string | null; revenue: number }>;
   conversionRate: number;
   avgWeeklyLeads: number;
   projectedClients30d: number;
@@ -152,6 +153,7 @@ export default function AdminDashboard() {
         { data: prevRevenues },
         { data: expenses },
         { data: pendComm },
+        { data: allPartners },
         { count: hotLeads },
       ] = await Promise.all([
         supabase.from('properties').select('id, status, title, cover_image'),
@@ -170,10 +172,11 @@ export default function AdminDashboard() {
         supabase
           .from('regularization_processes')
           .select('id, status, created_at'),
-        supabase.from('revenues').select('amount').gte('received_at', monthStart).lte('received_at', monthEnd),
+        supabase.from('revenues').select('amount, partner_id').gte('received_at', monthStart).lte('received_at', monthEnd),
         supabase.from('revenues').select('amount').gte('received_at', prevStart).lte('received_at', prevEnd),
         supabase.from('expenses').select('amount').gte('expense_date', monthStart).lte('expense_date', monthEnd),
         supabase.from('commissions').select('amount').eq('status', 'pending'),
+        supabase.from('partners').select('id, name, parent_partner_id, logo_path'),
         supabase
           .from('notifications')
           .select('id', { count: 'exact', head: true })
@@ -388,6 +391,27 @@ export default function AdminDashboard() {
         return s !== 'perdido';
       }).length;
 
+      const partnerMap = new Map((allPartners || []).map(p => [p.id, p]));
+      const topPartnerMap = new Map<string, { id: string; name: string; logo_path: string | null; revenue: number }>();
+      (revenues || []).forEach(r => {
+        if (!r.partner_id) return;
+        const partner = partnerMap.get(r.partner_id);
+        if (!partner) return;
+        const parent = partner.parent_partner_id ? partnerMap.get(partner.parent_partner_id) : null;
+        const rankingPartner = parent ?? partner;
+        const current = topPartnerMap.get(rankingPartner.id) ?? {
+          id: rankingPartner.id,
+          name: rankingPartner.name,
+          logo_path: rankingPartner.logo_path,
+          revenue: 0,
+        };
+        current.revenue += Number(r.amount || 0);
+        topPartnerMap.set(rankingPartner.id, current);
+      });
+      const topPartners = [...topPartnerMap.values()]
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 4);
+
       setStats({
         totalProperties: total,
         publishedProperties: published,
@@ -417,6 +441,7 @@ export default function AdminDashboard() {
         closedThisMonth,
         contactsByWeek,
         regByStatus,
+        topPartners,
         conversionRate,
         avgWeeklyLeads: Math.round(avgWeeklyLeads * 10) / 10,
         projectedClients30d,
@@ -569,6 +594,43 @@ export default function AdminDashboard() {
                 {stats.totalProperties} no total · {stats.soldProperties} vendido{stats.soldProperties === 1 ? '' : 's'}
               </p>
             </div>
+          </div>
+
+          {/* Performance de parceiros */}
+          <div className="rounded-ds-xl border border-cream-200 bg-white p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="font-ds-display text-lg font-medium text-ink-900">Performance de parceiros</h2>
+                <p className="text-xs text-ink-300">Maiores receitas vinculadas no mês</p>
+              </div>
+              <Button asChild variant="ghost" size="sm" className="h-8 text-xs">
+                <Link to="/admin/financeiro">Ver financeiro <ArrowRight className="ml-1 h-3 w-3" /></Link>
+              </Button>
+            </div>
+            {stats.topPartners.length === 0 ? (
+              <p className="rounded-ds-lg bg-cream-50 px-4 py-6 text-center text-sm text-ink-300">
+                Sem receitas vinculadas a parceiros neste mês.
+              </p>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {stats.topPartners.map((partner, idx) => (
+                  <Link
+                    key={partner.id}
+                    to={`/admin/parceiros/${partner.id}`}
+                    className="flex items-center gap-3 rounded-ds-lg border border-cream-200 px-3 py-3 transition hover:border-brand-gold/40 hover:bg-cream-50"
+                  >
+                    <PartnerAvatar partner={partner} size={40} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-ink-900">
+                        <span className="mr-1 font-ds-mono text-ink-300">#{idx + 1}</span>
+                        {partner.name}
+                      </p>
+                      <p className="font-ds-mono text-xs text-ink-700">{formatCurrency(partner.revenue)}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Pendências estratégicas */}

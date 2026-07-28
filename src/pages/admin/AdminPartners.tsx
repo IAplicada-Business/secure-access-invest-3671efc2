@@ -14,10 +14,10 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Plus, Loader2, MessageCircle, Search, Eye, Users } from 'lucide-react';
+import { Plus, Loader2, MessageCircle, Search, Eye, Users, ImagePlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatCurrency';
-import { EmptyState, Drawer } from '@/components/ui-system';
+import { EmptyState, Drawer, PartnerAvatar } from '@/components/ui-system';
 
 const TYPE_LABELS: Record<PartnerType, string> = {
   imobiliaria: 'Imobiliária',
@@ -45,6 +45,16 @@ const defaultForm = {
   notes: '', status: 'active' as PartnerStatus, parent_partner_id: '',
 };
 
+const LOGO_BUCKET = 'partners-logos';
+const LOGO_MAX_SIZE_BYTES = 500 * 1024;
+const LOGO_ACCEPT = 'image/png,image/jpeg,image/svg+xml';
+const LOGO_TYPES = new Set(['image/png', 'image/jpeg', 'image/svg+xml']);
+
+function buildLogoPath(partnerId: string, file: File) {
+  const extension = file.name.split('.').pop()?.toLowerCase() || 'png';
+  return `${partnerId}/${Date.now()}.${extension}`;
+}
+
 export default function AdminPartners() {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [agencies, setAgencies] = useState<Partner[]>([]);
@@ -55,6 +65,8 @@ export default function AdminPartners() {
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [form, setForm] = useState(defaultForm);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   async function loadPartners() {
     const { data, error } = await supabase
@@ -71,19 +83,77 @@ export default function AdminPartners() {
   useEffect(() => { loadPartners(); }, []);
 
   function openDrawer() {
+    clearLogoSelection();
     setForm(defaultForm);
     setDrawerOpen(true);
   }
 
   function handleDrawerChange(open: boolean) {
     setDrawerOpen(open);
-    if (!open) setForm(defaultForm);
+    if (!open) {
+      setForm(defaultForm);
+      clearLogoSelection();
+    }
+  }
+
+  function clearLogoSelection() {
+    setLogoFile(null);
+    setLogoPreview(prev => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  }
+
+  function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) {
+      clearLogoSelection();
+      return;
+    }
+
+    if (!LOGO_TYPES.has(file.type)) {
+      toast.error('Envie um logo em PNG, JPG ou SVG.');
+      e.target.value = '';
+      return;
+    }
+
+    if (file.size > LOGO_MAX_SIZE_BYTES) {
+      toast.error('O logo deve ter no máximo 500KB.');
+      e.target.value = '';
+      return;
+    }
+
+    setLogoFile(file);
+    setLogoPreview(prev => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
   }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
+    const partnerId = crypto.randomUUID();
+    let logoPath: string | null = null;
+
+    if (logoFile) {
+      logoPath = buildLogoPath(partnerId, logoFile);
+      const { error: uploadError } = await supabase.storage
+        .from(LOGO_BUCKET)
+        .upload(logoPath, logoFile, {
+          contentType: logoFile.type,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        toast.error('Erro no upload do logo: ' + uploadError.message);
+        setSaving(false);
+        return;
+      }
+    }
+
     const { error } = await supabase.from('partners').insert({
+      id: partnerId,
       name: form.name,
       type: form.type,
       phone: form.phone,
@@ -95,11 +165,18 @@ export default function AdminPartners() {
       notes: form.notes || null,
       status: form.status,
       parent_partner_id: form.parent_partner_id || null,
+      logo_path: logoPath,
     });
-    if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
+    if (error) {
+      if (logoPath) await supabase.storage.from(LOGO_BUCKET).remove([logoPath]);
+      toast.error('Erro: ' + error.message);
+      setSaving(false);
+      return;
+    }
     toast.success('Parceiro cadastrado!');
     setDrawerOpen(false);
     setForm(defaultForm);
+    clearLogoSelection();
     setSaving(false);
     loadPartners();
   }
@@ -162,6 +239,7 @@ export default function AdminPartners() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-16">Logo</TableHead>
                 <TableHead>Nome</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead className="hidden md:table-cell">Comissão (%)</TableHead>
@@ -172,11 +250,14 @@ export default function AdminPartners() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="p-0"><EmptyState icon={Users} title="Nenhum parceiro encontrado" body="Cadastre um parceiro ou ajuste os filtros." action={<Button onClick={openDrawer}><Plus className="mr-2 h-4 w-4" /> Novo Parceiro</Button>} /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="p-0"><EmptyState icon={Users} title="Nenhum parceiro encontrado" body="Cadastre um parceiro ou ajuste os filtros." action={<Button onClick={openDrawer}><Plus className="mr-2 h-4 w-4" /> Novo Parceiro</Button>} /></TableCell></TableRow>
               ) : filtered.map((partner) => (
                 <TableRow key={partner.id}>
+                  <TableCell>
+                    <PartnerAvatar partner={partner} size={40} />
+                  </TableCell>
                   <TableCell className="font-medium">{partner.name}</TableCell>
                   <TableCell><Badge variant="outline">{TYPE_LABELS[partner.type]}</Badge></TableCell>
                   <TableCell className="hidden md:table-cell text-muted-foreground">{partner.commission_rate != null ? `${partner.commission_rate}%` : '-'}</TableCell>
@@ -213,6 +294,25 @@ export default function AdminPartners() {
             <div className="space-y-2">
               <Label>Nome completo / Razão social *</Label>
               <Input value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} required />
+            </div>
+            <div className="space-y-2">
+              <Label>Logo</Label>
+              <div className="flex items-center gap-3 rounded-ds-lg border border-cream-200 bg-cream-50 p-3">
+                {logoPreview ? (
+                  <span className="inline-flex h-12 w-12 shrink-0 overflow-hidden rounded-ds-pill border border-brand-gold/25 bg-white">
+                    <img src={logoPreview} alt="Prévia do logo" className="h-full w-full object-cover" />
+                  </span>
+                ) : (
+                  <PartnerAvatar name={form.name || 'Parceiro'} size={48} />
+                )}
+                <div className="min-w-0 flex-1">
+                  <Input type="file" accept={LOGO_ACCEPT} onChange={handleLogoChange} />
+                  <p className="mt-1 flex items-center gap-1 text-[11px] text-ink-300">
+                    <ImagePlus className="h-3 w-3" />
+                    PNG, JPG ou SVG até 500KB. Sugerido: 400x400px.
+                  </p>
+                </div>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">

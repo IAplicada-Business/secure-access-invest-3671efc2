@@ -9,3 +9,4 @@ export type { KanbanColumn, KanbanCard } from './KanbanBoard';
 export { TimelineItem } from './TimelineItem';
 export { Drawer } from './Drawer';
 export { InstallPWAPrompt } from './InstallPWAPrompt';
+export { PartnerAvatar } from './PartnerAvatar';
