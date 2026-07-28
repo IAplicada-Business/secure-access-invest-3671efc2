@@ -138,6 +138,8 @@ export type Database = {
           created_at: string
           crm_stage: Database["public"]["Enums"]["crm_stage_enum"]
           crm_stage_changed_at: string | null
+          data_fim_contrato: string | null
+          data_inicio_contrato: string | null
           data_nascimento: string | null
           drive_link: string | null
           email: string | null
@@ -153,6 +155,7 @@ export type Database = {
           status: Database["public"]["Enums"]["client_status"]
           tags: string[]
           type: Database["public"]["Enums"]["client_type"]
+          valor_contrato: number | null
         }
         Insert: {
           canal_entrada?: string | null
@@ -163,6 +166,8 @@ export type Database = {
           created_at?: string
           crm_stage?: Database["public"]["Enums"]["crm_stage_enum"]
           crm_stage_changed_at?: string | null
+          data_fim_contrato?: string | null
+          data_inicio_contrato?: string | null
           data_nascimento?: string | null
           drive_link?: string | null
           email?: string | null
@@ -178,6 +183,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["client_status"]
           tags?: string[]
           type?: Database["public"]["Enums"]["client_type"]
+          valor_contrato?: number | null
         }
         Update: {
           canal_entrada?: string | null
@@ -188,6 +194,8 @@ export type Database = {
           created_at?: string
           crm_stage?: Database["public"]["Enums"]["crm_stage_enum"]
           crm_stage_changed_at?: string | null
+          data_fim_contrato?: string | null
+          data_inicio_contrato?: string | null
           data_nascimento?: string | null
           drive_link?: string | null
           email?: string | null
@@ -203,6 +211,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["client_status"]
           tags?: string[]
           type?: Database["public"]["Enums"]["client_type"]
+          valor_contrato?: number | null
         }
         Relationships: [
           {
@@ -676,6 +685,7 @@ export type Database = {
           creci: string | null
           email: string | null
           id: string
+          logo_path: string | null
           name: string
           notes: string | null
           parent_partner_id: string | null
@@ -691,6 +701,7 @@ export type Database = {
           creci?: string | null
           email?: string | null
           id?: string
+          logo_path?: string | null
           name: string
           notes?: string | null
           parent_partner_id?: string | null
@@ -706,6 +717,7 @@ export type Database = {
           creci?: string | null
           email?: string | null
           id?: string
+          logo_path?: string | null
           name?: string
           notes?: string | null
           parent_partner_id?: string | null
@@ -1119,33 +1131,63 @@ export type Database = {
       revenues: {
         Row: {
           amount: number
+          category: string | null
           client_id: string | null
           created_at: string
+          due_date: string | null
+          entrada: number | null
           id: string
+          installment_count: number
+          installment_number: number
           notes: string | null
+          parent_revenue_id: string | null
           partner_id: string | null
+          payment_type: string | null
           received_at: string
           service_type: Database["public"]["Enums"]["service_type"]
+          status: "aguardando" | "pago"
+          status_kanban: "aguardando" | "em_atraso" | "pago" | null
+          vencimento: string | null
         }
         Insert: {
           amount: number
+          category?: string | null
           client_id?: string | null
           created_at?: string
+          due_date?: string | null
+          entrada?: number | null
           id?: string
+          installment_count?: number
+          installment_number?: number
           notes?: string | null
+          parent_revenue_id?: string | null
           partner_id?: string | null
+          payment_type?: string | null
           received_at?: string
           service_type?: Database["public"]["Enums"]["service_type"]
+          status?: "aguardando" | "pago"
+          status_kanban?: never
+          vencimento?: string | null
         }
         Update: {
           amount?: number
+          category?: string | null
           client_id?: string | null
           created_at?: string
+          due_date?: string | null
+          entrada?: number | null
           id?: string
+          installment_count?: number
+          installment_number?: number
           notes?: string | null
+          parent_revenue_id?: string | null
           partner_id?: string | null
+          payment_type?: string | null
           received_at?: string
           service_type?: Database["public"]["Enums"]["service_type"]
+          status?: "aguardando" | "pago"
+          status_kanban?: never
+          vencimento?: string | null
         }
         Relationships: [
           {

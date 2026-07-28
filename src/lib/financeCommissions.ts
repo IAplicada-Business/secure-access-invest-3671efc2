@@ -91,6 +91,8 @@ export async function createRevenueWithCommission(input: CreateRevenueWithCommis
       category: input.category || null,
       payment_type: input.paymentType || null,
       due_date: input.receivedAt,
+      vencimento: input.receivedAt,
+      status: 'aguardando',
       installment_count: 1,
       installment_number: 1,
     })

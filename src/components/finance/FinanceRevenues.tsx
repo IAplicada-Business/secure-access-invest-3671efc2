@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,11 +12,12 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Plus, Search } from 'lucide-react';
+import { CheckCircle, LayoutGrid, List, Plus, Search } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { toast } from 'sonner';
 import { PeriodFilter, filterByPeriod, type PeriodPreset } from './PeriodFilter';
-import { Drawer } from '@/components/ui-system';
+import { Drawer, KanbanBoard, type KanbanCard, type KanbanColumn } from '@/components/ui-system';
+import { cn } from '@/lib/utils';
 import {
   PAYMENT_TYPE_LABELS,
   REVENUE_CATEGORY_LABELS,
@@ -25,7 +26,7 @@ import {
   type PaymentType,
 } from '@/lib/financePayments';
 import { createCommissionFromDeal } from '@/lib/financeCommissions';
-import type { ServiceType, CommissionStatus } from '@/types/database';
+import type { CommissionStatus, Revenue, RevenueKanbanStatus, RevenueStatus, ServiceType } from '@/types/database';
 
 const SERVICE_LABELS: Record<ServiceType, string> = {
   regularizacao: 'Regularização',
@@ -33,6 +34,50 @@ const SERVICE_LABELS: Record<ServiceType, string> = {
   consultoria: 'Consultoria',
   outro: 'Outro',
 };
+
+const KANBAN_COLUMNS: KanbanColumn[] = [
+  { id: 'aguardando', title: 'Aguardando', accentClassName: 'bg-cream-100' },
+  { id: 'em_atraso', title: 'Em atraso', accentClassName: 'bg-[hsl(0,72%,96%)]' },
+  { id: 'pago', title: 'Pago', accentClassName: 'bg-brand-goldSoft/20' },
+];
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+function todayInput() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function dateOnlyToUtc(value?: string | null) {
+  if (!value) return null;
+  const [year, month, day] = value.slice(0, 10).split('-').map(Number);
+  if (!year || !month || !day) return null;
+  return Date.UTC(year, month - 1, day);
+}
+
+function formatDateOnly(value?: string | null) {
+  if (!value) return '-';
+  const [year, month, day] = value.slice(0, 10).split('-');
+  if (!year || !month || !day) return '-';
+  return `${day}/${month}/${year}`;
+}
+
+function getRevenueDueDate(revenue: Pick<Revenue, 'vencimento' | 'due_date' | 'received_at'>) {
+  return revenue.vencimento || revenue.due_date || revenue.received_at;
+}
+
+function getDaysOverdue(revenue: Pick<Revenue, 'status' | 'vencimento' | 'due_date' | 'received_at'>) {
+  if (revenue.status === 'pago') return 0;
+  const dueUtc = dateOnlyToUtc(getRevenueDueDate(revenue));
+  if (!dueUtc) return 0;
+  const now = new Date();
+  const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.max(0, Math.floor((todayUtc - dueUtc) / MS_PER_DAY));
+}
+
+function getRevenueKanbanColumn(revenue: Pick<Revenue, 'status' | 'vencimento' | 'due_date' | 'received_at'>): RevenueKanbanStatus {
+  if (revenue.status === 'pago') return 'pago';
+  return getDaysOverdue(revenue) > 0 ? 'em_atraso' : 'aguardando';
+}
 
 interface ClientOption {
   id: string;
@@ -49,13 +94,14 @@ interface PartnerOption {
 }
 
 export function FinanceRevenues() {
-  const [revenues, setRevenues] = useState<any[]>([]);
+  const [revenues, setRevenues] = useState<Revenue[]>([]);
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [partners, setPartners] = useState<PartnerOption[]>([]);
   const [commissionMap, setCommissionMap] = useState<Map<string, CommissionStatus>>(new Map());
   const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [view, setView] = useState<'table' | 'kanban'>('table');
 
   const [period, setPeriod] = useState<PeriodPreset>('all');
   const [customStart, setCustomStart] = useState('');
@@ -69,7 +115,7 @@ export function FinanceRevenues() {
   const [amount, setAmount] = useState('');
   const [entrada, setEntrada] = useState('');
   const [installmentCount, setInstallmentCount] = useState('1');
-  const [receivedAt, setReceivedAt] = useState(new Date().toISOString().split('T')[0]);
+  const [receivedAt, setReceivedAt] = useState(todayInput());
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -95,10 +141,16 @@ export function FinanceRevenues() {
       supabase.from('partners').select('id, name, commission_rate'),
       supabase.from('commissions').select('revenue_id, status'),
     ]);
-    setRevenues(revData || []);
+    setRevenues((revData || []) as Revenue[]);
     setClients(cData || []);
     setPartners(pData || []);
-    setCommissionMap(new Map((commData || []).map((c) => [c.revenue_id, c.status as CommissionStatus])));
+    setCommissionMap(
+      new Map(
+        (commData || [])
+          .filter((c) => c.revenue_id)
+          .map((c) => [c.revenue_id as string, c.status as CommissionStatus]),
+      ),
+    );
     setLoading(false);
   }
 
@@ -113,6 +165,7 @@ export function FinanceRevenues() {
     const rows: Record<string, unknown>[] = [];
 
     if (entradaValue > 0) {
+      const dueDate = receivedAt;
       rows.push({
         client_id: clientId || null,
         partner_id: partnerId,
@@ -124,7 +177,9 @@ export function FinanceRevenues() {
         installment_count: parcels,
         installment_number: 0,
         received_at: receivedAt,
-        due_date: receivedAt,
+        due_date: dueDate,
+        vencimento: dueDate,
+        status: 'aguardando' satisfies RevenueStatus,
         notes: notes ? `${notes} (entrada)` : 'Entrada',
       });
     }
@@ -132,6 +187,7 @@ export function FinanceRevenues() {
     if (saldo > 0) {
       const parts = splitAmount(saldo, parcels);
       parts.forEach((part, idx) => {
+        const dueDate = addMonths(receivedAt, entradaValue > 0 ? idx + 1 : idx);
         rows.push({
           client_id: clientId || null,
           partner_id: partnerId,
@@ -143,7 +199,9 @@ export function FinanceRevenues() {
           installment_count: parcels,
           installment_number: idx + 1,
           received_at: receivedAt,
-          due_date: addMonths(receivedAt, entradaValue > 0 ? idx + 1 : idx),
+          due_date: dueDate,
+          vencimento: dueDate,
+          status: 'aguardando' satisfies RevenueStatus,
           notes: notes || null,
         });
       });
@@ -215,15 +273,33 @@ export function FinanceRevenues() {
     setAmount('');
     setEntrada('');
     setInstallmentCount('1');
-    setReceivedAt(new Date().toISOString().split('T')[0]);
+    setReceivedAt(todayInput());
     setNotes('');
+  }
+
+  async function handleKanbanMove(cardId: string, toColumnId: string) {
+    const revenue = revenues.find((r) => r.id === cardId);
+    if (!revenue) return;
+
+    const nextStatus: RevenueStatus = toColumnId === 'pago' ? 'pago' : 'aguardando';
+    const update: { status: RevenueStatus; received_at?: string } = { status: nextStatus };
+    if (nextStatus === 'pago') update.received_at = todayInput();
+
+    const { error } = await supabase.from('revenues').update(update).eq('id', cardId);
+    if (error) {
+      toast.error('Erro ao mover receita: ' + error.message);
+      return;
+    }
+
+    toast.success(nextStatus === 'pago' ? 'Receita marcada como paga' : 'Receita voltou para aguardando');
+    loadAll();
   }
 
   const clientMap = new Map(clients.map((c) => [c.id, c.name]));
   const partnerMap = new Map(partners.map((p) => [p.id, p.name]));
 
   const filtered = revenues.filter((r) => {
-    if (!filterByPeriod(r.received_at, period, customStart, customEnd)) return false;
+    if (!filterByPeriod(getRevenueDueDate(r), period, customStart, customEnd)) return false;
     if (serviceTypeFilter !== 'all' && r.service_type !== serviceTypeFilter) return false;
     if (search) {
       const cName = clientMap.get(r.client_id) || '';
@@ -240,8 +316,92 @@ export function FinanceRevenues() {
     return true;
   });
 
+  const kanbanCards: KanbanCard[] = useMemo(
+    () =>
+      filtered
+        .map((revenue) => {
+          const columnId = getRevenueKanbanColumn(revenue);
+          return {
+            revenue,
+            columnId,
+            daysOverdue: getDaysOverdue(revenue),
+            dueUtc: dateOnlyToUtc(getRevenueDueDate(revenue)) ?? 0,
+          };
+        })
+        .sort((a, b) => {
+          if (a.columnId === 'em_atraso' && b.columnId === 'em_atraso') {
+            return b.daysOverdue - a.daysOverdue;
+          }
+          return a.dueUtc - b.dueUtc;
+        })
+        .map(({ revenue, columnId, daysOverdue }) => {
+          const clientName = clientMap.get(revenue.client_id || '') || 'Sem cliente';
+          const partnerName = partnerMap.get(revenue.partner_id || '') || null;
+          const parcelLabel =
+            revenue.installment_number === 0
+              ? 'Entrada'
+              : (revenue.installment_count || 1) > 1
+                ? `${revenue.installment_number}/${revenue.installment_count}`
+                : 'À vista';
+
+          return {
+            id: revenue.id,
+            columnId,
+            className: columnId === 'em_atraso' ? 'border-l-[3px] border-l-semantic-danger' : undefined,
+            content: (
+              <div className="space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate font-ds-display text-sm font-medium text-ink-900">{clientName}</p>
+                    {partnerName && <p className="truncate text-xs text-ink-300">{partnerName}</p>}
+                  </div>
+                  {columnId === 'em_atraso' ? (
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 border-semantic-danger/30 bg-[hsl(0,72%,96%)] text-[10px] text-semantic-danger"
+                    >
+                      {daysOverdue} dia{daysOverdue === 1 ? '' : 's'} em atraso
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="shrink-0 text-[10px]">
+                      {SERVICE_LABELS[revenue.service_type] || revenue.service_type}
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-ds-mono text-sm font-semibold text-ink-900">
+                    {formatCurrency(Number(revenue.amount))}
+                  </p>
+                  <Badge variant="secondary" className="text-[10px]">
+                    {parcelLabel}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between gap-2 text-xs text-ink-300">
+                  <span>Vence {formatDateOnly(getRevenueDueDate(revenue))}</span>
+                  {columnId !== 'pago' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-2 text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleKanbanMove(revenue.id, 'pago');
+                      }}
+                    >
+                      <CheckCircle className="mr-1 h-3 w-3" />
+                      Pago
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ),
+          };
+        }),
+    [filtered, clientMap, partnerMap],
+  );
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 font-ds-body">
       <div className="flex flex-col flex-wrap items-stretch justify-between gap-3 sm:flex-row sm:items-center">
         <div className="flex flex-col flex-wrap items-stretch gap-3 sm:flex-row sm:items-center">
           <div className="relative min-w-[200px] max-w-sm flex-1">
@@ -274,6 +434,28 @@ export function FinanceRevenues() {
               ))}
             </SelectContent>
           </Select>
+          <div className="flex rounded-ds-pill border border-cream-200 bg-cream-50 p-0.5">
+            <button
+              type="button"
+              onClick={() => setView('table')}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-ds-pill px-3 py-1.5 text-xs font-medium transition',
+                view === 'table' ? 'bg-ink-900 text-white' : 'text-ink-500 hover:text-ink-900',
+              )}
+            >
+              <List className="h-3.5 w-3.5" /> Lista
+            </button>
+            <button
+              type="button"
+              onClick={() => setView('kanban')}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-ds-pill px-3 py-1.5 text-xs font-medium transition',
+                view === 'kanban' ? 'bg-ink-900 text-white' : 'text-ink-500 hover:text-ink-900',
+              )}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" /> Kanban
+            </button>
+          </div>
         </div>
         <Button
           onClick={() => {
@@ -286,79 +468,115 @@ export function FinanceRevenues() {
         </Button>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Vencimento</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Pagamento</TableHead>
-                  <TableHead>Parcela</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Comissão</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="py-8 text-center">
-                      Carregando...
-                    </TableCell>
-                  </TableRow>
-                ) : filtered.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
-                      Nenhuma receita registrada
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filtered.map((r) => {
-                    const commStatus = commissionMap.get(r.id);
-                    const parcelLabel =
-                      r.installment_number === 0
-                        ? 'Entrada'
-                        : r.installment_count > 1
-                          ? `${r.installment_number}/${r.installment_count}`
-                          : 'À vista';
-                    return (
-                      <TableRow key={r.id}>
-                        <TableCell>
-                          {new Date(r.due_date || r.received_at).toLocaleDateString('pt-BR')}
-                        </TableCell>
-                        <TableCell className="font-medium">{clientMap.get(r.client_id) || '-'}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {SERVICE_LABELS[r.service_type as ServiceType] || r.service_type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {PAYMENT_TYPE_LABELS[r.payment_type as PaymentType] || r.payment_type || '—'}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{parcelLabel}</Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">{formatCurrency(Number(r.amount))}</TableCell>
-                        <TableCell>
-                          {commStatus === 'pending' ? (
-                            <Badge variant="secondary">Pendente</Badge>
-                          ) : commStatus === 'paid' ? (
-                            <Badge className="bg-primary/10 text-primary">Paga</Badge>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
+      {view === 'kanban' ? (
+        loading ? (
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            {KANBAN_COLUMNS.map((column) => (
+              <div key={column.id} className="w-72 flex-shrink-0 space-y-2">
+                <div className="h-5 w-28 animate-pulse rounded bg-cream-200" />
+                <div className="h-28 animate-pulse rounded-ds-lg bg-cream-100" />
+              </div>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+        ) : (
+          <KanbanBoard
+            columns={KANBAN_COLUMNS}
+            cards={kanbanCards}
+            onMove={handleKanbanMove}
+            emptyHint="Nenhuma receita nesta coluna."
+            columnMinHeight="min-h-[320px]"
+          />
+        )
+      ) : (
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Vencimento</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Pagamento</TableHead>
+                    <TableHead>Parcela</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Comissão</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="py-8 text-center">
+                        Carregando...
+                      </TableCell>
+                    </TableRow>
+                  ) : filtered.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
+                        Nenhuma receita registrada
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filtered.map((r) => {
+                      const commStatus = commissionMap.get(r.id);
+                      const kanbanStatus = getRevenueKanbanColumn(r);
+                      const daysOverdue = getDaysOverdue(r);
+                      const parcelLabel =
+                        r.installment_number === 0
+                          ? 'Entrada'
+                          : (r.installment_count || 1) > 1
+                            ? `${r.installment_number}/${r.installment_count}`
+                            : 'À vista';
+                      return (
+                        <TableRow key={r.id}>
+                          <TableCell>{formatDateOnly(getRevenueDueDate(r))}</TableCell>
+                          <TableCell className="font-medium">{clientMap.get(r.client_id || '') || '-'}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {SERVICE_LABELS[r.service_type as ServiceType] || r.service_type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {PAYMENT_TYPE_LABELS[r.payment_type as PaymentType] || r.payment_type || '—'}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">{parcelLabel}</Badge>
+                          </TableCell>
+                          <TableCell className="font-ds-mono font-medium">{formatCurrency(Number(r.amount))}</TableCell>
+                          <TableCell>
+                            {kanbanStatus === 'pago' ? (
+                              <Badge className="bg-brand-goldSoft/30 text-brand-goldDeep">Pago</Badge>
+                            ) : kanbanStatus === 'em_atraso' ? (
+                              <Badge
+                                variant="outline"
+                                className="border-semantic-danger/30 bg-[hsl(0,72%,96%)] text-semantic-danger"
+                              >
+                                {daysOverdue} dia{daysOverdue === 1 ? '' : 's'} em atraso
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary">Aguardando</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {commStatus === 'pending' ? (
+                              <Badge variant="secondary">Pendente</Badge>
+                            ) : commStatus === 'paid' ? (
+                              <Badge className="bg-primary/10 text-primary">Paga</Badge>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Drawer
         open={drawerOpen}
@@ -479,7 +697,7 @@ export function FinanceRevenues() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Data base</Label>
+                <Label>Vencimento base</Label>
                 <Input type="date" value={receivedAt} onChange={(e) => setReceivedAt(e.target.value)} />
               </div>
             </div>
