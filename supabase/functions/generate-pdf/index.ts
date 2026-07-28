@@ -13,6 +13,50 @@ const GRAPHITE = rgb(61 / 255, 61 / 255, 61 / 255); // #3D3D3D
 const LIGHT_GRAY = rgb(0.6, 0.6, 0.6);
 const WHITE = rgb(1, 1, 1);
 
+function decodeHtmlEntities(value: string) {
+  const namedEntities: Record<string, string> = {
+    amp: "&",
+    lt: "<",
+    gt: ">",
+    quot: "\"",
+    apos: "'",
+    nbsp: " ",
+  };
+
+  return value.replace(/&(#x?[0-9a-f]+|\w+);/gi, (entity, code) => {
+    if (code[0] === "#") {
+      const radix = code[1]?.toLowerCase() === "x" ? 16 : 10;
+      const rawCodePoint = code[1]?.toLowerCase() === "x" ? code.slice(2) : code.slice(1);
+      const codePoint = Number.parseInt(rawCodePoint, radix);
+      return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : entity;
+    }
+
+    return namedEntities[code.toLowerCase()] || entity;
+  });
+}
+
+function normalizeTemplateContentForPdf(content: string) {
+  if (!/<\/?[a-z][\s\S]*>/i.test(content)) return content;
+
+  const text = content
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<h[1-6][^>]*>/gi, "\n**")
+    .replace(/<\/h[1-6]>/gi, "**\n")
+    .replace(/<li[^>]*>/gi, "\n- ")
+    .replace(/<\/li>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|section|article|header|footer|tr|table)>/gi, "\n")
+    .replace(/<\/(td|th)>/gi, " | ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return decodeHtmlEntities(text);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -59,6 +103,8 @@ Deno.serve(async (req) => {
       const regex = new RegExp(`\\{\\{${key}\\}\\}`, "g");
       processedContent = processedContent.replace(regex, value || "");
     }
+    processedContent = processedContent.replace(/\{\{\s*\w+\s*\}\}/g, "");
+    processedContent = normalizeTemplateContentForPdf(processedContent);
 
     // Generate PDF
     const pdfDoc = await PDFDocument.create();
