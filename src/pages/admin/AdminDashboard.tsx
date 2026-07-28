@@ -13,7 +13,6 @@ import {
   TrendingDown,
   Inbox,
   Users,
-  ClipboardList,
   ArrowRight,
   Flame,
   Wallet,
@@ -33,6 +32,8 @@ import {
 } from 'recharts';
 import { cn } from '@/lib/utils';
 import { CRM_STAGE_LABELS, contactRelation } from '@/lib/contacts';
+import { tokens } from '@/lib/design-tokens';
+import { EmptyState, StatCard } from '@/components/ui-system';
 
 interface DashboardStats {
   totalProperties: number;
@@ -57,7 +58,6 @@ interface DashboardStats {
   }>;
   unregisteredOwners: number;
   activeRegularizations: number;
-  stagnantRegularizations: number;
   topProperties: Array<{
     property_id: string;
     title: string;
@@ -69,6 +69,10 @@ interface DashboardStats {
   hotLeads: number;
   pipelineOpen: number;
   pipelineByStage: Array<{ stage: string; label: string; count: number }>;
+  pipelineProjectionTotal: number;
+  pipelineProjectionByStage: Array<{ stage: string; label: string; value: number; color: string }>;
+  pipelineProjectionHasValues: boolean;
+  closedThisMonth: number;
   contactsByWeek: Array<{ week: string; label: string; leads: number; clients: number }>;
   regByStatus: Array<{ status: string; label: string; count: number }>;
   conversionRate: number;
@@ -97,6 +101,29 @@ function greeting(): string {
   if (h < 18) return 'Boa tarde';
   return 'Boa noite';
 }
+
+const PIPELINE_ORDER = [
+  'contato',
+  'agendar_reuniao',
+  'envio_proposta',
+  'follow_up',
+  'fechamento',
+  'aguardando_pagamento',
+  'perdido',
+];
+
+const PIPELINE_CLOSED_STAGE = 'fechamento';
+const PIPELINE_LOST_STAGE = 'perdido';
+const PIPELINE_PROJECTION_EXCLUDED_STAGES = new Set([PIPELINE_CLOSED_STAGE, PIPELINE_LOST_STAGE]);
+const PIPELINE_STAGE_COLORS: Record<string, string> = {
+  contato: tokens.color.neutral[300],
+  agendar_reuniao: tokens.color.brand.goldSoft,
+  envio_proposta: tokens.color.brand.gold,
+  follow_up: tokens.color.brand.goldDeep,
+  fechamento: tokens.color.semantic.success,
+  aguardando_pagamento: tokens.color.semantic.info,
+  perdido: tokens.color.semantic.danger,
+};
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -129,7 +156,7 @@ export default function AdminDashboard() {
       ] = await Promise.all([
         supabase.from('properties').select('id, status, title, cover_image'),
         supabase.from('access_links').select('id', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('clients').select('id, crm_stage, status, created_at'),
+        supabase.from('clients').select('id, crm_stage, status, created_at, valor_contrato, data_inicio_contrato'),
         supabase
           .from('page_views')
           .select('time_spent_seconds, viewed_at, access_link_id, property_id')
@@ -244,22 +271,6 @@ export default function AdminDashboard() {
         r => r.status !== 'concluida' && r.status !== 'arquivada',
       );
       const activeReg = activeRegProcs.length;
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      let stagnant = 0;
-      if (activeRegProcs.length) {
-        const procIds = activeRegProcs.map(r => r.id);
-        const { data: regInteractions } = await supabase
-          .from('regularization_interactions')
-          .select('process_id, interaction_date')
-          .in('process_id', procIds);
-        const lastActivity = new Map<string, string>();
-        regInteractions?.forEach(i => {
-          const cur = lastActivity.get(i.process_id);
-          if (!cur || i.interaction_date > cur) lastActivity.set(i.process_id, i.interaction_date);
-        });
-        stagnant = activeRegProcs.filter(r => (lastActivity.get(r.id) ?? r.created_at) < sevenDaysAgo).length;
-      }
-
       const regStatusOrder = ['nova', 'em_analise', 'proposta_enviada', 'em_execucao', 'concluida', 'arquivada'];
       const regCountMap = new Map<string, number>();
       (regProcs || []).forEach(r => {
@@ -274,15 +285,6 @@ export default function AdminDashboard() {
           count: regCountMap.get(s) || 0,
         }));
 
-      const PIPELINE_ORDER = [
-        'contato',
-        'agendar_reuniao',
-        'envio_proposta',
-        'follow_up',
-        'fechamento',
-        'aguardando_pagamento',
-        'perdido',
-      ];
       const stageCount = new Map<string, number>();
       PIPELINE_ORDER.forEach(s => stageCount.set(s, 0));
       (clients || []).forEach(c => {
@@ -293,6 +295,39 @@ export default function AdminDashboard() {
         stage: s,
         label: CRM_STAGE_LABELS[s] ?? s,
         count: stageCount.get(s) || 0,
+      }));
+
+      const projectionStages = PIPELINE_ORDER.filter(s => !PIPELINE_PROJECTION_EXCLUDED_STAGES.has(s));
+      const stageValue = new Map<string, number>();
+      projectionStages.forEach(s => stageValue.set(s, 0));
+      let pipelineProjectionTotal = 0;
+      let closedThisMonth = 0;
+      const pipelineProjectionHasValues = (clients || []).some(c => c.valor_contrato != null);
+
+      (clients || []).forEach(c => {
+        if (c.valor_contrato == null) return;
+
+        const value = Number(c.valor_contrato || 0);
+        const stage = c.crm_stage || 'contato';
+        if (!PIPELINE_PROJECTION_EXCLUDED_STAGES.has(stage)) {
+          pipelineProjectionTotal += value;
+          stageValue.set(stage, (stageValue.get(stage) || 0) + value);
+        }
+        if (
+          stage === PIPELINE_CLOSED_STAGE &&
+          c.data_inicio_contrato &&
+          c.data_inicio_contrato >= monthStart &&
+          c.data_inicio_contrato <= monthEnd
+        ) {
+          closedThisMonth += value;
+        }
+      });
+
+      const pipelineProjectionByStage = projectionStages.map(s => ({
+        stage: s,
+        label: CRM_STAGE_LABELS[s] ?? s,
+        value: stageValue.get(s) || 0,
+        color: PIPELINE_STAGE_COLORS[s] ?? tokens.color.brand.gold,
       }));
 
       const leadsCount = (clients || []).filter(c => contactRelation(c.status) === 'lead').length;
@@ -371,12 +406,15 @@ export default function AdminDashboard() {
         recentViews: uniqueInvestors,
         unregisteredOwners: unregisteredCount,
         activeRegularizations: activeReg,
-        stagnantRegularizations: stagnant,
         topProperties,
         viewsByDay,
         hotLeads: hotLeads || 0,
         pipelineOpen,
         pipelineByStage,
+        pipelineProjectionTotal,
+        pipelineProjectionByStage,
+        pipelineProjectionHasValues,
+        closedThisMonth,
         contactsByWeek,
         regByStatus,
         conversionRate,
@@ -414,13 +452,6 @@ export default function AdminDashboard() {
 
   const net = stats.monthRevenue - stats.monthExpenses;
   const pendencias = [
-    stats.stagnantRegularizations > 0 && {
-      href: '/admin/regularizacoes',
-      icon: ClipboardList,
-      title: `${stats.stagnantRegularizations} regularização${stats.stagnantRegularizations === 1 ? '' : 'ões'} parada${stats.stagnantRegularizations === 1 ? '' : 's'}`,
-      body: 'Sem atualização há mais de 7 dias',
-      tone: 'warn' as const,
-    },
     stats.pendingReview > 0 && {
       href: '/admin/submissoes',
       icon: Inbox,
@@ -690,7 +721,7 @@ export default function AdminDashboard() {
         {/* ——— OPERACIONAL ——— */}
         <TabsContent value="operacional" className="space-y-6">
           {/* KPIs operacionais densos */}
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <div className="rounded-ds-xl border border-cream-200 bg-white p-5">
               <p className="text-sm text-ink-500">Leads no pipeline</p>
               <p className="mt-2 font-ds-mono text-2xl font-semibold text-ink-900">{stats.leadsCount}</p>
@@ -710,14 +741,79 @@ export default function AdminDashboard() {
                 novas conversões se ritmo atual se mantiver ({stats.avgWeeklyLeads}/sem)
               </p>
             </div>
-            <div className={cn(
-              'rounded-ds-xl border bg-white p-5',
-              stats.stagnantRegularizations > 0 ? 'border-semantic-warning/40 bg-semantic-warning/5' : 'border-cream-200',
-            )}>
-              <p className="text-sm text-ink-500">Reg. estagnadas</p>
-              <p className="mt-2 font-ds-mono text-2xl font-semibold text-ink-900">{stats.stagnantRegularizations}</p>
-              <p className="mt-1 text-xs text-ink-300">{stats.activeRegularizations} ativas no total</p>
+          </div>
+
+          <div className="rounded-ds-xl border border-cream-200 bg-white p-5">
+            <div className="mb-4 flex items-end justify-between gap-3">
+              <div>
+                <h2 className="font-ds-display text-lg font-medium text-ink-900">Projeção financeira do pipeline</h2>
+                <p className="text-xs text-ink-300">Soma dos contratos em etapas abertas do CRM</p>
+              </div>
+              <Button asChild variant="ghost" size="sm" className="h-8 text-xs">
+                <Link to="/admin/crm">Abrir CRM <ArrowRight className="ml-1 h-3 w-3" /></Link>
+              </Button>
             </div>
+            {!stats.pipelineProjectionHasValues ? (
+              <EmptyState
+                icon={Wallet}
+                title="Cadastre o valor do contrato nos leads pra ver a projeção aqui"
+                className="py-8"
+              />
+            ) : (
+              <div className="grid gap-4 lg:grid-cols-3">
+                <StatCard
+                  label="Pipeline aberto"
+                  value={formatCurrency(stats.pipelineProjectionTotal)}
+                  icon={Wallet}
+                  className="lg:col-span-2"
+                />
+                <StatCard
+                  label="Fechado no mês"
+                  value={formatCurrency(stats.closedThisMonth)}
+                  icon={TrendingUp}
+                />
+                <div className="space-y-3 lg:col-span-3">
+                  {stats.pipelineProjectionTotal > 0 ? (
+                    <div
+                      className="flex h-4 overflow-hidden rounded-ds-pill bg-cream-100"
+                      aria-label="Distribuição financeira por etapa do pipeline"
+                    >
+                      {stats.pipelineProjectionByStage.filter(row => row.value > 0).map(row => (
+                        <div
+                          key={row.stage}
+                          className="h-full"
+                          style={{
+                            width: `${(row.value / stats.pipelineProjectionTotal) * 100}%`,
+                            backgroundColor: row.color,
+                          }}
+                          title={`${row.label}: ${formatCurrency(row.value)}`}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="rounded-ds-lg bg-cream-50 px-4 py-3 text-sm text-ink-500">
+                      Os contratos cadastrados estão em etapas fechadas ou perdidas.
+                    </p>
+                  )}
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {stats.pipelineProjectionByStage.map(row => (
+                      <div key={row.stage} className="flex items-center justify-between gap-3 rounded-ds-md border border-cream-200 px-3 py-2">
+                        <span className="inline-flex min-w-0 items-center gap-2 text-sm text-ink-700">
+                          <span
+                            className="h-2.5 w-2.5 flex-shrink-0 rounded-ds-pill"
+                            style={{ backgroundColor: row.color }}
+                          />
+                          <span className="truncate">{row.label}</span>
+                        </span>
+                        <span className="font-ds-mono text-xs font-semibold tabular-nums text-ink-900">
+                          {formatCurrency(row.value)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Pipeline + tendência */}

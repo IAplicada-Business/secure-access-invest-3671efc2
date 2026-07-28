@@ -4,6 +4,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Client, ClientDocument, ClientInteraction, ClientType, ClientStatus, InteractionType, DocumentCategory, Partner } from '@/types/database';
 import { GeneratedDocument } from '@/types/database';
 import { formatCurrency } from '@/lib/formatCurrency';
+import {
+  contractFormFromClient,
+  emptyContractFormValues,
+  maskBrlCurrencyInput,
+  normalizeContractForm,
+} from '@/lib/clientContract';
 import { StatCard, Drawer } from '@/components/ui-system';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,6 +65,9 @@ interface ClientExt extends Client {
   observacoes: string | null;
   tags: string[] | null;
   crm_stage: string | null;
+  valor_contrato: number | null;
+  data_inicio_contrato: string | null;
+  data_fim_contrato: string | null;
 }
 
 const CANAL: Record<string, { label: string; icon: LucideIcon }> = {
@@ -81,6 +90,7 @@ export default function ClientDetails() {
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState<Partial<ClientExt>>({});
+  const [contractForm, setContractForm] = useState(emptyContractFormValues);
   const [saving, setSaving] = useState(false);
 
   // Documents
@@ -133,6 +143,7 @@ export default function ClientDetails() {
     if (error || !data) { toast.error('Contato não encontrado'); navigate('/admin/contatos'); return; }
     setClient(data);
     setEditForm(data);
+    setContractForm(contractFormFromClient(data));
     setLoading(false);
   }
 
@@ -255,8 +266,19 @@ export default function ClientDetails() {
     if (client?.type === 'investor') loadLinkedProperties();
   }, [client]);
 
+  function openEditClient(nextClient: ClientExt) {
+    setEditForm(nextClient);
+    setContractForm(contractFormFromClient(nextClient));
+    setEditOpen(true);
+  }
+
   async function handleEdit(e: React.FormEvent) {
     e.preventDefault();
+    const contract = normalizeContractForm(contractForm);
+    if (!contract.success) {
+      toast.error(contract.message);
+      return;
+    }
     setSaving(true);
     const selectedPartner = partners.find(p => p.id === editForm.partner_id);
     const payload = {
@@ -278,6 +300,7 @@ export default function ClientDetails() {
       drive_link: editForm.drive_link || null,
       tags: editForm.tags ?? [],
       observacoes: editForm.observacoes || null,
+      ...contract.data,
     };
     const { error } = await supabase.from('clients').update(payload).eq('id', id!);
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
@@ -467,11 +490,11 @@ export default function ClientDetails() {
                   <a href={client.drive_link} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-1 h-3.5 w-3.5" /> Abrir Drive</a>
                 </Button>
               ) : (
-                <Button variant="outline" size="sm" onClick={() => { setEditForm(client); setEditOpen(true); }}>
+                <Button variant="outline" size="sm" onClick={() => openEditClient(client)}>
                   <FolderPlus className="mr-1 h-3.5 w-3.5" /> Adicionar Drive
                 </Button>
               )}
-              <Button variant="outline" size="sm" onClick={() => { setEditForm(client); setEditOpen(true); }}>
+              <Button variant="outline" size="sm" onClick={() => openEditClient(client)}>
                 <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
               </Button>
               <Button size="sm" onClick={() => { const msg = encodeURIComponent(`Olá ${client.name}!`); window.open(`https://wa.me/${client.phone}?text=${msg}`, '_blank'); }}>
@@ -538,6 +561,37 @@ export default function ClientDetails() {
                   </p>
                 </div>
               </div>
+              <Card className="mt-4 border-cream-200 bg-cream-50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Contrato</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div>
+                      <span className="text-sm text-muted-foreground">Valor</span>
+                      <p className="font-ds-mono font-medium">
+                        {client.valor_contrato != null ? formatCurrency(client.valor_contrato) : '-'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-sm text-muted-foreground">Data início</span>
+                      <p className="font-medium">
+                        {client.data_inicio_contrato
+                          ? new Date(client.data_inicio_contrato + 'T00:00:00').toLocaleDateString('pt-BR')
+                          : '-'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-sm text-muted-foreground">Data fim</span>
+                      <p className="font-medium">
+                        {client.data_fim_contrato
+                          ? new Date(client.data_fim_contrato + 'T00:00:00').toLocaleDateString('pt-BR')
+                          : '-'}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
               {(client.partner_name || client.partner_id) && (
                 <Card className="mt-4 border-primary/20 bg-primary/5">
                   <CardContent className="p-4">
@@ -1027,6 +1081,36 @@ export default function ClientDetails() {
               <Label>Detalhe do canal</Label>
               <Input value={editForm.canal_entrada_detalhe || ''} onChange={(e) => setEditForm(p => ({ ...p, canal_entrada_detalhe: e.target.value }))} placeholder="Ex: quem indicou, qual evento..." />
             </div>
+            <section className="space-y-3 rounded-ds-lg border border-cream-200 bg-cream-50 p-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-300">Contrato</h3>
+              <div className="space-y-2">
+                <Label>Valor do contrato</Label>
+                <Input
+                  inputMode="numeric"
+                  value={contractForm.valor_contrato}
+                  onChange={(e) => setContractForm(p => ({ ...p, valor_contrato: maskBrlCurrencyInput(e.target.value) }))}
+                  placeholder="R$ 0,00"
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Data início</Label>
+                  <Input
+                    type="date"
+                    value={contractForm.data_inicio_contrato}
+                    onChange={(e) => setContractForm(p => ({ ...p, data_inicio_contrato: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Data fim</Label>
+                  <Input
+                    type="date"
+                    value={contractForm.data_fim_contrato}
+                    onChange={(e) => setContractForm(p => ({ ...p, data_fim_contrato: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </section>
             <div className="space-y-2">
               <Label>Link do Drive</Label>
               <Input value={editForm.drive_link || ''} onChange={(e) => setEditForm(p => ({ ...p, drive_link: e.target.value }))} placeholder="https://drive.google.com/..." />
