@@ -20,6 +20,11 @@ import { format, formatDistanceToNow, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { PageHeader, DataTable, EmptyState, Drawer } from '@/components/ui-system';
 import {
+  emptyContractFormValues,
+  maskBrlCurrencyInput,
+  normalizeContractForm,
+} from '@/lib/clientContract';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -71,6 +76,7 @@ const emptyForm = {
   data_nascimento: '', endereco: '', cidade: '', canal_entrada: '', canal_entrada_detalhe: '',
   partner_id: '', partner_name: '', relation: 'lead' as ContactRelation,
   drive_link: '', tags: '', observacoes: '',
+  ...emptyContractFormValues,
 };
 
 function relationToStatus(relation: ContactRelation): ClientStatus {
@@ -121,6 +127,15 @@ export default function AdminClients() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
+    const contract = normalizeContractForm({
+      valor_contrato: form.valor_contrato,
+      data_inicio_contrato: form.data_inicio_contrato,
+      data_fim_contrato: form.data_fim_contrato,
+    });
+    if (!contract.success) {
+      toast.error(contract.message);
+      return;
+    }
     setSaving(true);
     const selectedPartner = partners.find(p => p.id === form.partner_id);
     const tags = form.tags.split(',').map(t => t.trim()).filter(Boolean);
@@ -145,6 +160,7 @@ export default function AdminClients() {
       drive_link: form.drive_link || null,
       tags,
       observacoes: form.observacoes || null,
+      ...contract.data,
     };
     const { error } = await supabase.from('clients').insert(payload as any);
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return; }
@@ -568,6 +584,37 @@ export default function AdminClients() {
                 <Input value={form.partner_name} onChange={(e) => setForm(p => ({ ...p, partner_name: e.target.value }))} placeholder="Nome de quem indicou (se não cadastrado)" />
               </div>
             )}
+          </section>
+
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-300">Contrato</h3>
+            <div className="space-y-2">
+              <Label>Valor do contrato</Label>
+              <Input
+                inputMode="numeric"
+                value={form.valor_contrato}
+                onChange={(e) => setForm(p => ({ ...p, valor_contrato: maskBrlCurrencyInput(e.target.value) }))}
+                placeholder="R$ 0,00"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Data início</Label>
+                <Input
+                  type="date"
+                  value={form.data_inicio_contrato}
+                  onChange={(e) => setForm(p => ({ ...p, data_inicio_contrato: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Data fim</Label>
+                <Input
+                  type="date"
+                  value={form.data_fim_contrato}
+                  onChange={(e) => setForm(p => ({ ...p, data_fim_contrato: e.target.value }))}
+                />
+              </div>
+            </div>
           </section>
 
           <section className="space-y-3">

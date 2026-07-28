@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/formatCurrency';
 import { PageHeader, KanbanBoard, Drawer, type KanbanColumn, type KanbanCard } from '@/components/ui-system';
 import { shouldPromoteToClient, relationLabel, RELATION_BADGE, contactRelation } from '@/lib/contacts';
 import {
@@ -126,6 +127,7 @@ interface CrmClient {
   status: 'prospect' | 'active' | 'completed';
   partner_id: string | null;
   partner_name: string | null;
+  valor_contrato: number | null;
 }
 
 export default function AdminCrmKanban() {
@@ -396,6 +398,11 @@ export default function AdminCrmKanban() {
             </span>
             <div className="min-w-0 flex-1 space-y-1">
               <p className="truncate font-ds-display text-[15px] font-medium leading-tight text-ink-900">{c.name}</p>
+              {c.valor_contrato != null && (
+                <p className="font-ds-mono text-[12px] font-semibold tabular-nums text-brand-goldDeep">
+                  {formatCurrency(c.valor_contrato)}
+                </p>
+              )}
               <div className="flex flex-wrap items-center gap-1.5">
                 <Badge className={cn('text-[10px]', RELATION_BADGE[contactRelation(c.status)])}>
                   {relationLabel(c.status)}
